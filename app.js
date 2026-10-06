@@ -114,8 +114,8 @@ function criarCardHTML(res) {
           <span class="kpi-value">${kpis.nivelMin} / ${kpis.nivelMax}</span>
         </div>
         <div class="kpi-box">
-          <span class="kpi-label">Vazão Atual</span>
-          <span class="kpi-value">${kpis.vazaoAtual}</span>
+          <span class="kpi-label">Vazão Mín/Máx</span>
+          <span class="kpi-value">${kpis.vazaoMin} / ${kpis.vazaoMax}</span>
         </div>
         <div class="kpi-box">
           <span class="kpi-label">Vazão Média</span>
