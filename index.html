@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard de Reservatórios - Estilo Grafana</title>
+
+    <!-- Estilos CSS -->
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Biblioteca Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>Monitorização de Reservatórios</h1>
+      <div class="header-controls">
+        <label for="seletor-data">Data:</label>
+        <select id="seletor-data"></select>
+        <div class="meta-info">
+          Última Atualização: <span id="lbl-atualizacao">--</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Grid onde os cards dos reservatórios serão injetados -->
+    <main class="dashboard-grid" id="grid-reservatorios"></main>
+
+    <!-- Scripts JavaScript -->
+    <script src="dados.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

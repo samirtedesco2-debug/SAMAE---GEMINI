@@ -1,0 +1,217 @@
+/* ==========================================================================
+   Configurações Globais e Tema (Grafana Dark Theme)
+   ========================================================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+}
+
+body {
+  background-color: #111217;
+  color: #d8d9da;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+/* ==========================================================================
+   Cabeçalho (Header)
+   ========================================================================== */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #181b1f;
+  padding: 15px 20px;
+  border-radius: 6px;
+  border: 1px solid #22252b;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+header h1 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #f2f4f8;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.header-controls label {
+  font-size: 0.9rem;
+  color: #8e8e8e;
+  font-weight: 500;
+}
+
+#seletor-data {
+  background-color: #111217;
+  color: #33a2e5;
+  border: 1px solid #33a2e5;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+#seletor-data:hover {
+  background-color: #181b1f;
+}
+
+#seletor-data:focus {
+  box-shadow: 0 0 0 2px rgba(51, 162, 229, 0.3);
+}
+
+.meta-info {
+  font-size: 0.85rem;
+  color: #8e8e8e;
+  background-color: #111217;
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid #22252b;
+}
+
+.meta-info span {
+  color: #33a2e5;
+  font-weight: bold;
+}
+
+/* ==========================================================================
+   Grid do Dashboard
+   ========================================================================== */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+/* ==========================================================================
+   Cards dos Reservatórios
+   ========================================================================== */
+.card {
+  background-color: #181b1f;
+  border: 1px solid #22252b;
+  border-radius: 6px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.card:hover {
+  border-color: #33a2e5;
+  transform: translateY(-2px);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #22252b;
+  padding-bottom: 10px;
+}
+
+.card-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #f2f4f8;
+}
+
+/* Status Badges */
+.badge-status {
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.status-normal {
+  background-color: rgba(115, 191, 105, 0.2);
+  color: #73bf69;
+  border: 1px solid #73bf69;
+}
+
+.status-atencao {
+  background-color: rgba(255, 153, 0, 0.2);
+  color: #ff9900;
+  border: 1px solid #ff9900;
+}
+
+.status-critico {
+  background-color: rgba(242, 73, 73, 0.2);
+  color: #f24949;
+  border: 1px solid #f24949;
+}
+
+/* ==========================================================================
+   Métricas KPI
+   ========================================================================== */
+.kpi-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  background-color: #111217;
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.kpi-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.kpi-label {
+  font-size: 0.75rem;
+  color: #8e8e8e;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.kpi-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #d8d9da;
+}
+
+/* ==========================================================================
+   Gráfico (Chart Box)
+   ========================================================================== */
+.chart-box {
+  position: relative;
+  height: 200px;
+  width: 100%;
+}
+
+/* ==========================================================================
+   Responsividade
+   ========================================================================== */
+@media (max-width: 600px) {
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
