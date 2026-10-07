@@ -27,6 +27,21 @@ carregados pelo navegador a partir do arquivo dados.js.
 8. O botao de sol/lua alterna entre os temas claro e escuro. A preferencia fica
    salva neste navegador.
 
+O boletim operacional da madrugada resume quantos reservatorios estao normais,
+em atencao, criticos ou com dados incompletos. Reservatorios sem leituras
+validas de nivel tambem entram em "Incompletos". O boletim compara nivel e
+vazao com a ultima data disponivel anterior, mostra os horarios das leituras
+minima e maxima e informa quantas leituras esperadas estao ausentes. Se um
+reservatorio que constava na data anterior nao tiver registro no dia
+selecionado, ele entra na contagem de dados incompletos. A comparacao usa a
+data anterior disponivel, que pode nao ser o dia imediatamente anterior no
+calendario.
+Clique em uma categoria do resumo para abrir os detalhes dos reservatorios e
+dos indicadores que explicam a classificacao. Em "Incompletos", o painel lista
+os horarios e tipos de leitura ausentes. Use "Abrir reservatorio" para ir ao
+card e ao grafico daquele reservatorio; clique novamente na categoria ou em
+"Fechar" para recolher os detalhes.
+
 Na visao geral, os graficos dos cards ficam escondidos para reduzir a
 informacao visual. Eles aparecem ao escolher um grupo ou reservatorio.
 
@@ -118,4 +133,6 @@ ser refinados sem alterar a regra descrita acima.
 O script atualizar_dados.py percorre as planilhas na pasta de monitoramento e
 atualiza dados.js. Depois da atualizacao, recarregue a pagina no navegador.
 Consulte o ambiente Python do projeto antes de executar o script e confirme
-que as bibliotecas necessarias estao instaladas.
+que as bibliotecas necessarias estao instaladas. O boletim apresenta os dados
+da ultima data carregada; confira a contagem de leituras ausentes antes de
+interpretar uma variacao ou o status de um reservatorio.

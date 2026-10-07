@@ -120,6 +120,35 @@
       role="tabpanel"
       aria-labelledby="tab-operacional"
     >
+      <section
+        class="operational-brief"
+        aria-labelledby="operational-brief-title"
+      >
+        <div class="operational-brief-heading">
+          <div>
+            <p class="analysis-eyebrow">RESUMO DO MONITORAMENTO</p>
+            <h2 id="operational-brief-title">
+              Boletim operacional da madrugada
+            </h2>
+            <p
+              id="operational-brief-description"
+              class="operational-brief-description"
+            ></p>
+          </div>
+        </div>
+        <div
+          id="operational-summary"
+          class="operational-summary"
+          aria-live="polite"
+        ></div>
+        <section
+          id="operational-details"
+          class="operational-details"
+          aria-live="polite"
+          hidden
+        ></section>
+        <p id="operational-data-quality" class="operational-data-quality"></p>
+      </section>
       <div class="dashboard-grid" id="grid-reservatorios"></div>
     </main>
 
