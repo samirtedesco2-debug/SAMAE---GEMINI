@@ -77,8 +77,154 @@
       </div>
     </header>
 
+    <nav class="view-tabs" role="tablist" aria-label="Visualizações do painel">
+      <button
+        id="tab-operacional"
+        class="view-tab is-active"
+        type="button"
+        role="tab"
+        aria-selected="true"
+        aria-controls="painel-operacional"
+        tabindex="0"
+      >
+        Visão operacional
+      </button>
+      <button
+        id="tab-analitico"
+        class="view-tab"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        aria-controls="painel-analitico"
+        tabindex="-1"
+      >
+        Análises
+      </button>
+    </nav>
+
     <!-- Grid onde os cards dos reservatórios serão injetados -->
-    <main class="dashboard-grid" id="grid-reservatorios"></main>
+    <main
+      class="view-panel"
+      id="painel-operacional"
+      role="tabpanel"
+      aria-labelledby="tab-operacional"
+    >
+      <div class="dashboard-grid" id="grid-reservatorios"></div>
+    </main>
+
+    <section
+      class="analysis-view view-panel"
+      id="painel-analitico"
+      role="tabpanel"
+      aria-labelledby="tab-analitico"
+      hidden
+    >
+      <div class="analysis-intro">
+        <div>
+          <p class="analysis-eyebrow">HISTÓRICO E COMPARAÇÃO</p>
+          <h2>Visão analítica</h2>
+          <p class="analysis-description">
+            Compare tendências diárias de nível e vazão no período selecionado.
+          </p>
+        </div>
+      </div>
+
+      <div class="analysis-filters">
+        <div class="control-group">
+          <label for="analise-inicio">Data inicial</label>
+          <select id="analise-inicio"></select>
+        </div>
+        <div class="control-group">
+          <label for="analise-fim">Data final</label>
+          <select id="analise-fim"></select>
+        </div>
+        <div class="control-group">
+          <label for="analise-grupo">Grupo</label>
+          <select id="analise-grupo"></select>
+        </div>
+        <div class="control-group analysis-reservoir-filter">
+          <label for="analise-reservatorios">Reservatórios para comparar</label>
+          <select
+            id="analise-reservatorios"
+            multiple
+            size="5"
+            aria-describedby="dica-selecao-reservatorios"
+          ></select>
+          <span class="filter-hint" id="dica-selecao-reservatorios">
+            Use Ctrl (ou ⌘) + clique para selecionar vários.
+          </span>
+        </div>
+      </div>
+
+      <p
+        class="analysis-message"
+        id="analise-mensagem"
+        role="status"
+        aria-live="polite"
+      ></p>
+
+      <div class="analysis-summary" id="analise-resumo"></div>
+
+      <div class="analysis-charts">
+        <article class="analysis-card">
+          <div class="analysis-card-heading">
+            <div>
+              <h3>Nível médio diário</h3>
+              <p>Percentual médio das leituras válidas de cada dia.</p>
+            </div>
+          </div>
+          <div class="analysis-chart-box">
+            <canvas id="grafico-analise-nivel"></canvas>
+          </div>
+        </article>
+        <article class="analysis-card">
+          <div class="analysis-card-heading">
+            <div>
+              <h3>Vazão média diária</h3>
+              <p>Média das leituras disponíveis, em L/s.</p>
+            </div>
+          </div>
+          <div class="analysis-chart-box">
+            <canvas id="grafico-analise-vazao"></canvas>
+          </div>
+        </article>
+        <article class="analysis-card analysis-card-wide">
+          <div class="analysis-card-heading">
+            <div>
+              <h3>Faixa diária de vazão</h3>
+              <p>Vazões mínima e máxima registradas em cada dia, em L/s.</p>
+            </div>
+          </div>
+          <div class="analysis-chart-box">
+            <canvas id="grafico-analise-vazao-faixa"></canvas>
+          </div>
+        </article>
+      </div>
+
+      <article class="analysis-card comparison-card">
+        <div class="analysis-card-heading">
+          <div>
+            <h3>Comparação no período</h3>
+            <p>Resumo calculado a partir das médias diárias disponíveis.</p>
+          </div>
+        </div>
+        <div class="comparison-table-wrap">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th scope="col">Reservatório</th>
+                <th scope="col">Nível médio</th>
+                <th scope="col">Mín. / Máx.</th>
+                <th scope="col">Variação</th>
+                <th scope="col">Vazão média</th>
+                <th scope="col">Dias com dados</th>
+              </tr>
+            </thead>
+            <tbody id="analise-comparacao"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
 
     <!-- Scripts JavaScript -->
     <script src="dados.js"></script>
