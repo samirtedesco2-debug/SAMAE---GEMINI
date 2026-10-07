@@ -4,6 +4,7 @@
 let instanciasGraficos = {};
 let graficosAnaliticos = {};
 let graficosEngenharia = {};
+let categoriaBoletimAtiva = null;
 
 const coresAnaliticas = [
   "#33a2e5",
@@ -92,6 +93,30 @@ function inicializarDashboard() {
   inicializarEngenharia();
 
   const containerGrid = document.getElementById("grid-reservatorios");
+  const resumoOperacional = document.getElementById("operational-summary");
+  resumoOperacional.addEventListener("click", (e) => {
+    const botaoCategoria = e.target.closest("[data-operational-category]");
+    if (!botaoCategoria) return;
+
+    const categoria = botaoCategoria.dataset.operationalCategory;
+    categoriaBoletimAtiva =
+      categoriaBoletimAtiva === categoria ? null : categoria;
+    renderizarDashboard();
+  });
+  document
+    .getElementById("operational-details")
+    .addEventListener("click", (e) => {
+      const botaoReservatorio = e.target.closest("[data-detail-reservoir]");
+      if (!botaoReservatorio) return;
+
+      const chave = botaoReservatorio.dataset.detailReservoir;
+      seletorFiltro.value = `reservatorio:${chave}`;
+      seletorFiltro.dispatchEvent(new Event("change", { bubbles: true }));
+      document.getElementById("painel-operacional").scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
   containerGrid.addEventListener("click", (e) => {
     const card = e.target.closest(".card");
     if (card) selecionarCard(card);
@@ -1271,6 +1296,11 @@ function renderizarDashboard() {
   const reservatorios = dadosDoDia.reservatorios || {};
   const horarios = dadosDoDia.horarios || [];
   const visaoGeral = filtroSelecionado === "TODOS";
+  const datas = banco.datasDisponiveis;
+  const indiceData = datas.indexOf(dataSelecionada);
+  const dataAnterior = indiceData > 0 ? datas[indiceData - 1] : null;
+  const dadosDiaAnterior = dataAnterior ? banco.historico[dataAnterior] : null;
+  const reservatoriosDiaAnterior = dadosDiaAnterior?.reservatorios ?? {};
 
   // Lógica de filtragem
   let chavesParaExibir = Object.keys(reservatorios);
@@ -1289,18 +1319,336 @@ function renderizarDashboard() {
     );
   }
 
+  renderizarBoletimOperacional({
+    dataSelecionada,
+    dataAnterior,
+    filtroSelecionado,
+    reservatorios,
+    reservatoriosDiaAnterior,
+    horarios,
+  });
+
   // Renderiza os cards
   chavesParaExibir.forEach((chave) => {
     const res = reservatorios[chave];
+    const resAnterior = reservatoriosDiaAnterior[chave];
     const selecionado = filtroSelecionado === `reservatorio:${chave}`;
     const exibirGrafico = !visaoGeral;
-    const cardHTML = criarCardHTML(res, chave, exibirGrafico, selecionado);
+    const cardHTML = criarCardHTML(
+      res,
+      chave,
+      exibirGrafico,
+      selecionado,
+      resAnterior,
+      dataAnterior,
+      horarios,
+    );
     containerGrid.insertAdjacentHTML("beforeend", cardHTML);
 
     if (exibirGrafico) {
       renderizarGrafico(res.nome, horarios, res.leituras);
     }
   });
+}
+
+function renderizarBoletimOperacional({
+  dataSelecionada,
+  dataAnterior,
+  filtroSelecionado,
+  reservatorios,
+  reservatoriosDiaAnterior,
+  horarios,
+}) {
+  const descricao = document.getElementById("operational-brief-description");
+  const resumo = document.getElementById("operational-summary");
+  const detalhes = document.getElementById("operational-details");
+  const qualidadeDados = document.getElementById("operational-data-quality");
+  const textoComparacao = dataAnterior
+    ? `Comparação com ${dataAnterior}, última data disponível anterior.`
+    : "Não há uma data anterior disponível para comparação.";
+  descricao.textContent = `Dados de ${dataSelecionada}. ${textoComparacao}`;
+
+  const chavesAuditoria = new Set([
+    ...Object.keys(reservatorios),
+    ...Object.keys(reservatoriosDiaAnterior),
+  ]);
+  const chavesFiltradas = Array.from(chavesAuditoria).filter((chave) => {
+    const atual = reservatorios[chave];
+    const anterior = reservatoriosDiaAnterior[chave];
+    if (filtroSelecionado.startsWith("grupo:")) {
+      const grupo = filtroSelecionado.slice("grupo:".length);
+      return (atual ?? anterior)?.grupo === grupo;
+    }
+    if (filtroSelecionado.startsWith("reservatorio:")) {
+      return chave === filtroSelecionado.slice("reservatorio:".length);
+    }
+    return true;
+  });
+
+  const contagens = {
+    normal: [],
+    atencao: [],
+    critico: [],
+    incompletos: [],
+    semRegistro: 0,
+    leiturasAusentes: 0,
+    leiturasEsperadas: 0,
+  };
+  const quantidadeSlots = horarios.length;
+
+  chavesFiltradas.forEach((chave) => {
+    const reservatorio = reservatorios[chave];
+    const leituras = reservatorio?.leituras;
+    const niveis = resumirLeiturasEstruturadas(leituras?.nivel, horarios);
+    const vazoes = resumirLeiturasEstruturadas(leituras?.vazao, horarios);
+    const esperadasPorVariavel = Math.max(
+      quantidadeSlots,
+      leituras?.nivel?.length ?? 0,
+      leituras?.vazao?.length ?? 0,
+    );
+    const esperadas = esperadasPorVariavel * 2;
+    const validas = niveis.quantidade + vazoes.quantidade;
+
+    contagens.leiturasEsperadas += esperadas;
+    contagens.leiturasAusentes += esperadas - validas;
+    const registro = {
+      chave,
+      reservatorio: reservatorio ?? reservatoriosDiaAnterior[chave],
+      atual: reservatorio,
+      anterior: reservatoriosDiaAnterior[chave],
+      ausentes: obterLeiturasAusentes(leituras, esperadasPorVariavel, horarios),
+    };
+    if (!reservatorio) {
+      contagens.semRegistro += 1;
+      contagens.incompletos.push(registro);
+      return;
+    }
+
+    const status = reservatorio.kpis?.status;
+    if (status === "Normal") contagens.normal.push(registro);
+    if (status === "Atenção") contagens.atencao.push(registro);
+    if (status === "Crítico") contagens.critico.push(registro);
+    if (validas < esperadas || status === "Sem Dados") {
+      contagens.incompletos.push(registro);
+    }
+  });
+
+  const categorias = [
+    {
+      chave: "normal",
+      rotulo: "Normais",
+      classe: "",
+      registros: contagens.normal,
+    },
+    {
+      chave: "critico",
+      rotulo: "Críticos",
+      classe: "is-critical",
+      registros: contagens.critico,
+    },
+    {
+      chave: "atencao",
+      rotulo: "Atenção",
+      classe: "is-attention",
+      registros: contagens.atencao,
+    },
+    {
+      chave: "incompletos",
+      rotulo: "Incompletos",
+      classe: "is-incomplete",
+      registros: contagens.incompletos,
+    },
+  ];
+  resumo.replaceChildren(
+    ...categorias.map(({ chave, rotulo, classe, registros }) => {
+      const botao = document.createElement("button");
+      botao.type = "button";
+      botao.className = `operational-summary-card ${classe}`.trim();
+      botao.dataset.operationalCategory = chave;
+      botao.setAttribute(
+        "aria-pressed",
+        String(categoriaBoletimAtiva === chave),
+      );
+      botao.setAttribute(
+        "aria-expanded",
+        String(categoriaBoletimAtiva === chave),
+      );
+      botao.setAttribute("aria-controls", "operational-details");
+
+      const label = document.createElement("span");
+      label.className = "operational-summary-label";
+      label.textContent = rotulo;
+      const total = document.createElement("strong");
+      total.textContent = String(registros.length);
+      botao.append(label, total);
+      return botao;
+    }),
+  );
+  renderizarDetalhesBoletim(
+    detalhes,
+    categorias.find(({ chave }) => chave === categoriaBoletimAtiva) ?? null,
+    dataSelecionada,
+    dataAnterior,
+    horarios,
+  );
+
+  const ausencias = `${contagens.leiturasAusentes} de ${contagens.leiturasEsperadas} leituras esperadas ausentes`;
+  const registrosAusentes = contagens.semRegistro
+    ? ` ${contagens.semRegistro} reservatório(s) sem registro em ${dataSelecionada}.`
+    : "";
+  qualidadeDados.textContent = `${ausencias}.${registrosAusentes}`;
+  qualidadeDados.classList.toggle(
+    "has-missing-data",
+    contagens.leiturasAusentes > 0 || contagens.semRegistro > 0,
+  );
+}
+
+function obterLeiturasAusentes(leituras, quantidadeSlots, horarios) {
+  const ausentes = [];
+  ["nivel", "vazao"].forEach((tipo) => {
+    for (let indice = 0; indice < quantidadeSlots; indice += 1) {
+      const valor = leituras?.[tipo]?.[indice];
+      if (
+        valor !== null &&
+        valor !== undefined &&
+        valor !== "" &&
+        Number.isFinite(Number(valor))
+      ) {
+        continue;
+      }
+      ausentes.push({
+        tipo: tipo === "nivel" ? "Nível" : "Vazão",
+        horario: horarios[indice] ?? `Leitura ${indice + 1}`,
+      });
+    }
+  });
+  return ausentes;
+}
+
+function renderizarDetalhesBoletim(
+  container,
+  categoria,
+  dataSelecionada,
+  dataAnterior,
+  horarios,
+) {
+  container.replaceChildren();
+  container.hidden = !categoria;
+  if (!categoria) return;
+
+  const heading = document.createElement("div");
+  heading.className = "operational-details-heading";
+  const titulo = document.createElement("h3");
+  titulo.textContent = `${categoria.rotulo} (${categoria.registros.length})`;
+  const fechar = document.createElement("button");
+  fechar.type = "button";
+  fechar.className = "operational-details-close";
+  fechar.textContent = "Fechar";
+  fechar.addEventListener("click", () => {
+    categoriaBoletimAtiva = null;
+    renderizarDashboard();
+  });
+  heading.append(titulo, fechar);
+
+  const descricao = document.createElement("p");
+  descricao.className = "operational-details-description";
+  descricao.textContent =
+    categoria.chave === "incompletos"
+      ? `Leituras ausentes em ${dataSelecionada}. Reservatórios sem registro também aparecem aqui.`
+      : `Reservatórios classificados como ${categoria.rotulo.toLowerCase()} em ${dataSelecionada}.`;
+
+  const lista = document.createElement("div");
+  lista.className = "operational-details-list";
+  if (!categoria.registros.length) {
+    const vazio = document.createElement("p");
+    vazio.className = "operational-details-empty";
+    vazio.textContent =
+      "Nenhum reservatório nesta categoria para os filtros selecionados.";
+    lista.append(vazio);
+  }
+
+  categoria.registros.forEach((registro) => {
+    const card = document.createElement("article");
+    card.className = "operational-detail-item";
+    const topo = document.createElement("div");
+    topo.className = "operational-detail-heading";
+    const nome = document.createElement("h4");
+    nome.textContent = `${registro.reservatorio?.nome ?? registro.chave} (${registro.reservatorio?.grupo ?? "Grupo não informado"})`;
+    const status = document.createElement("span");
+    status.className = `badge-status ${obterClasseStatus(registro.atual?.kpis?.status)}`;
+    status.textContent = registro.atual?.kpis?.status ?? "Sem registro";
+    topo.append(nome, status);
+
+    const metricas = document.createElement("p");
+    metricas.className = "operational-detail-metrics";
+    if (registro.atual) {
+      const nivelAnterior = obterUltimaLeitura(
+        registro.anterior?.leituras?.nivel,
+      );
+      const nivelAtual = obterUltimaLeitura(registro.atual.leituras?.nivel);
+      const variacaoNivel =
+        dataAnterior && nivelAtual !== null && nivelAnterior !== null
+          ? ` · ${formatarVariacao(nivelAtual, nivelAnterior, " p.p.", "Variação do nível")}`
+          : "";
+      const nivelNumerico = obterUltimaLeitura(registro.atual.leituras?.nivel);
+      const explicacaoStatus =
+        registro.atual.kpis?.status === "Crítico"
+          ? `Classificação crítica: nível abaixo de 40% (${registro.atual.kpis?.nivelAtual ?? "N/A"}).`
+          : registro.atual.kpis?.status === "Atenção"
+            ? `Classificação de atenção: nível abaixo de 60% (${registro.atual.kpis?.nivelAtual ?? "N/A"}).`
+            : registro.atual.kpis?.status === "Sem Dados"
+              ? "Não há leituras válidas de nível nesta madrugada; incluído em Incompletos."
+              : nivelNumerico === null
+                ? "Não há leitura de nível válida para classificar o reservatório."
+                : "";
+      metricas.textContent = `Nível atual: ${registro.atual.kpis?.nivelAtual ?? "N/A"} · Vazão atual: ${registro.atual.kpis?.vazaoAtual ?? "N/A"}${variacaoNivel}`;
+      if (explicacaoStatus) {
+        const explicacao = document.createElement("p");
+        explicacao.className = "operational-detail-reason";
+        explicacao.textContent = explicacaoStatus;
+        card.append(topo, metricas, explicacao);
+      } else {
+        card.append(topo, metricas);
+      }
+    } else {
+      metricas.textContent = `Sem registro em ${dataSelecionada}. Último registro disponível: ${dataAnterior ?? "não disponível"}.`;
+      card.append(topo, metricas);
+    }
+
+    if (registro.ausentes.length) {
+      const ausencias = document.createElement("p");
+      ausencias.className = "operational-detail-missing";
+      ausencias.textContent = `Ausentes: ${registro.ausentes
+        .map(({ tipo, horario }) => `${tipo} às ${horario}`)
+        .join(", ")}`;
+      card.append(ausencias);
+    } else if (!registro.atual) {
+      const aviso = document.createElement("p");
+      aviso.className = "operational-detail-missing";
+      aviso.textContent =
+        "Não foi possível verificar leituras: o registro diário está ausente.";
+      card.append(aviso);
+    }
+
+    if (registro.atual) {
+      const abrir = document.createElement("button");
+      abrir.type = "button";
+      abrir.className = "operational-detail-open";
+      abrir.dataset.detailReservoir = registro.chave;
+      abrir.textContent = "Abrir reservatório";
+      card.append(abrir);
+    }
+    lista.append(card);
+  });
+
+  container.append(heading, descricao, lista);
+}
+
+function obterClasseStatus(status) {
+  if (status === "Atenção") return "status-atencao";
+  if (status === "Crítico") return "status-critico";
+  if (status === "Sem Dados") return "status-sem-dados";
+  return "status-normal";
 }
 
 function selecionarCard(card) {
@@ -1310,12 +1658,56 @@ function selecionarCard(card) {
   seletorFiltro.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
-function criarCardHTML(res, chave, exibirGraficos, selecionado) {
+function criarCardHTML(
+  res,
+  chave,
+  exibirGraficos,
+  selecionado,
+  resAnterior,
+  dataAnterior,
+  horarios,
+) {
   const kpis = res.kpis;
   let statusClass = "status-normal";
   if (kpis.status === "Atenção") statusClass = "status-atencao";
   if (kpis.status === "Crítico") statusClass = "status-critico";
+  if (kpis.status === "Sem Dados") statusClass = "status-sem-dados";
 
+  const niveis = resumirLeiturasEstruturadas(res.leituras?.nivel, horarios);
+  const vazoes = resumirLeiturasEstruturadas(res.leituras?.vazao, horarios);
+  const comparacaoHTML = dataAnterior
+    ? `<div class="card-comparison">
+        <span class="card-comparison-label">Variação vs. ${dataAnterior}</span>
+        <span>${formatarVariacao(
+          obterUltimaLeitura(res.leituras?.nivel),
+          obterUltimaLeitura(resAnterior?.leituras?.nivel),
+          " p.p.",
+          "Nível",
+        )}</span>
+        <span>${formatarVariacao(
+          obterUltimaLeitura(res.leituras?.vazao),
+          obterUltimaLeitura(resAnterior?.leituras?.vazao),
+          " L/s",
+          "Vazão",
+        )}</span>
+      </div>`
+    : `<div class="card-comparison">
+        <span class="card-comparison-label">Sem data anterior para comparação</span>
+      </div>`;
+  const quantidadeSlots = Math.max(
+    horarios.length,
+    res.leituras?.nivel?.length ?? 0,
+    res.leituras?.vazao?.length ?? 0,
+  );
+  const leiturasValidas = niveis.quantidade + vazoes.quantidade;
+  const leiturasAusentes = quantidadeSlots * 2 - leiturasValidas;
+  const qualidadeHTML = `<div class="card-data-quality${
+    leiturasAusentes > 0 ? " has-missing-data" : ""
+  }">
+    ${leiturasValidas}/${quantidadeSlots * 2} leituras válidas${
+      leiturasAusentes > 0 ? ` · ${leiturasAusentes} ausentes` : ""
+    }
+  </div>`;
   const idCanvas = `chart-${res.nome.replace(/[^a-zA-Z0-9]/g, "_")}`;
   const graficoHTML = exibirGraficos
     ? `<div class="chart-box"><canvas id="${idCanvas}"></canvas></div>`
@@ -1343,10 +1735,16 @@ function criarCardHTML(res, chave, exibirGraficos, selecionado) {
         <div class="kpi-box">
           <span class="kpi-label">Nível Mín/Máx</span>
           <span class="kpi-value">${kpis.nivelMin} / ${kpis.nivelMax}</span>
+          <span class="kpi-detail">Mín. ${niveis.horarioMinimo ?? "--"} · Máx. ${
+            niveis.horarioMaximo ?? "--"
+          }</span>
         </div>
         <div class="kpi-box">
           <span class="kpi-label">Vazão Mín/Máx</span>
           <span class="kpi-value">${kpis.vazaoMin} / ${kpis.vazaoMax}</span>
+          <span class="kpi-detail">Mín. ${vazoes.horarioMinimo ?? "--"} · Máx. ${
+            vazoes.horarioMaximo ?? "--"
+          }</span>
         </div>
         <div class="kpi-box">
           <span class="kpi-label">Vazão Média</span>
@@ -1354,9 +1752,36 @@ function criarCardHTML(res, chave, exibirGraficos, selecionado) {
         </div>
       </div>
 
+      ${comparacaoHTML}
+      ${qualidadeHTML}
       ${graficoHTML}
     </div>
   `;
+}
+
+function obterUltimaLeitura(valores) {
+  if (!Array.isArray(valores)) return null;
+  for (let indice = valores.length - 1; indice >= 0; indice -= 1) {
+    const valor = valores[indice];
+    if (valor !== null && valor !== undefined && valor !== "") {
+      const numero = Number(valor);
+      if (Number.isFinite(numero)) return numero;
+    }
+  }
+  return null;
+}
+
+function formatarVariacao(atual, anterior, unidade, rotulo) {
+  if (atual === null || anterior === null) {
+    return rotulo ? `${rotulo}: sem comparação` : "Sem comparação";
+  }
+  const diferenca = atual - anterior;
+  const sinal = diferenca > 0 ? "+" : "";
+  const valor = new Intl.NumberFormat("pt-BR", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 1,
+  }).format(diferenca);
+  return `${rotulo ? `${rotulo}: ` : ""}${sinal}${valor}${unidade}`;
 }
 
 function renderizarGrafico(nomeReservatorio, horarios, leituras) {
