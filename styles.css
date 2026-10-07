@@ -484,6 +484,211 @@ header h1 {
   gap: 20px;
 }
 
+.engineering-view {
+  display: grid;
+  gap: 20px;
+}
+
+.engineering-note {
+  padding: 12px 14px;
+  border: 1px solid var(--accent-color);
+  border-radius: 8px;
+  background-color: color-mix(
+    in srgb,
+    var(--accent-color) 9%,
+    var(--surface-bg)
+  );
+  color: var(--text-color);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.engineering-note.has-alerts {
+  border-color: var(--status-attention-color);
+  background-color: var(--status-attention-background);
+  color: var(--status-attention-color);
+}
+
+.engineering-table-wrap {
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background-color: var(--surface-bg);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.engineering-table {
+  min-width: 1120px;
+}
+
+.engineering-table > thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--surface-bg);
+}
+
+.engineering-table > thead th {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.engineering-table > thead tr:first-child th[colspan] {
+  color: var(--accent-color);
+}
+
+.engineering-table > thead tr:nth-child(2) th {
+  font-size: 0.65rem;
+}
+
+.engineering-table th:first-child,
+.engineering-table td:first-child {
+  min-width: 88px;
+}
+
+.engineering-table th:nth-child(2),
+.engineering-table td:nth-child(2) {
+  min-width: 100px;
+}
+
+.engineering-table > tbody > tr:not(.engineering-details-row) > td:nth-child(n + 3) {
+  text-align: center;
+}
+
+.engineering-id-button {
+  padding: 5px 7px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--accent-color);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.engineering-id-button:hover,
+.engineering-id-button[aria-expanded="true"] {
+  border-color: color-mix(in srgb, var(--accent-color) 35%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--accent-color) 10%,
+    var(--surface-bg)
+  );
+}
+
+.engineering-id-button:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.engineering-table .engineering-details-row > td {
+  padding: 14px 18px;
+  text-align: left;
+  white-space: normal;
+  background-color: var(--surface-inset);
+}
+
+.engineering-details-content {
+  display: grid;
+  gap: 10px;
+}
+
+.engineering-details-content > strong {
+  color: var(--heading-color);
+}
+
+.engineering-details-content > span {
+  color: var(--muted-color);
+  font-size: 0.8rem;
+}
+
+.engineering-expanded-readings {
+  max-width: 900px;
+}
+
+.engineering-extreme {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+
+.engineering-extreme strong {
+  color: var(--heading-color);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.engineering-extreme span {
+  color: var(--muted-color);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.engineering-day summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  color: var(--heading-color);
+}
+
+.engineering-day summary::marker {
+  color: var(--accent-color);
+}
+
+.engineering-day summary span {
+  color: var(--muted-color);
+  font-size: 0.78rem;
+}
+
+.engineering-day[open] summary {
+  margin-bottom: 12px;
+}
+
+.hourly-readings-table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: normal;
+}
+
+.hourly-readings-table th,
+.hourly-readings-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--border-color);
+  text-align: left;
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.hourly-readings-table th {
+  color: var(--muted-color);
+  font-weight: 600;
+}
+
+.hourly-readings-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.engineering-flags {
+  display: grid;
+  gap: 4px;
+  min-width: 135px;
+  padding-left: 16px;
+  color: var(--status-attention-color);
+  white-space: normal;
+}
+
+.engineering-ok {
+  color: var(--muted-color);
+}
+
+.engineering-no-data {
+  color: var(--muted-color);
+  font-size: 0.8rem;
+}
+
 .analysis-intro h2 {
   margin-top: 4px;
   color: var(--heading-color);
@@ -758,6 +963,10 @@ header h1 {
   }
 
   .analysis-view {
+    gap: 14px;
+  }
+
+  .engineering-view {
     gap: 14px;
   }
 

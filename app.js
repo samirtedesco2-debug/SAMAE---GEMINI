@@ -3,6 +3,7 @@
 // Guarda as instâncias do Chart.js para destruí-las adequadamente ao atualizar a interface
 let instanciasGraficos = {};
 let graficosAnaliticos = {};
+let graficosEngenharia = {};
 
 const coresAnaliticas = [
   "#33a2e5",
@@ -32,10 +33,12 @@ function inicializarTema() {
       document.documentElement.dataset.theme === "dark" ? "light" : "dark";
     aplicarTema(novoTema, botaoTema);
     if (window.bancoDeDados?.datasDisponiveis?.length) {
-      if (document.getElementById("painel-analitico").hidden) {
+      if (!document.getElementById("painel-operacional").hidden) {
         renderizarDashboard();
-      } else {
+      } else if (!document.getElementById("painel-analitico").hidden) {
         renderizarAnalises();
+      } else {
+        renderizarEngenharia();
       }
     }
   });
@@ -86,6 +89,7 @@ function inicializarDashboard() {
   preencherSeletorFiltro(ultimaDataDoBanco, "TODOS");
   inicializarNavegacao();
   inicializarAnalises();
+  inicializarEngenharia();
 
   const containerGrid = document.getElementById("grid-reservatorios");
   containerGrid.addEventListener("click", (e) => {
@@ -127,6 +131,7 @@ function inicializarNavegacao() {
   const paineis = {
     "tab-operacional": document.getElementById("painel-operacional"),
     "tab-analitico": document.getElementById("painel-analitico"),
+    "tab-engenharia": document.getElementById("painel-engenharia"),
   };
 
   function ativarAba(abaAtiva) {
@@ -139,6 +144,7 @@ function inicializarNavegacao() {
     });
 
     if (abaAtiva.id === "tab-analitico") renderizarAnalises();
+    if (abaAtiva.id === "tab-engenharia") renderizarEngenharia();
   }
 
   abas.forEach((aba) => {
@@ -198,6 +204,555 @@ function inicializarAnalises() {
   document
     .getElementById("analise-reservatorios")
     .addEventListener("change", renderizarAnalises);
+}
+
+function inicializarEngenharia() {
+  const banco = window.bancoDeDados;
+  const datas = banco.datasDisponiveis;
+  const ultimaData = datas[datas.length - 1];
+  const reservatorios = banco.historico[ultimaData].reservatorios;
+  const seletorInicio = document.getElementById("engenharia-inicio");
+  const seletorFim = document.getElementById("engenharia-fim");
+  const seletorGrupo = document.getElementById("engenharia-grupo");
+
+  datas.forEach((data) => {
+    seletorInicio.add(new Option(data, data));
+    seletorFim.add(new Option(data, data));
+  });
+  seletorInicio.value = datas[0];
+  seletorFim.value = ultimaData;
+
+  seletorGrupo.add(new Option("Todos os grupos", "TODOS"));
+  const grupos = new Set(
+    Object.values(reservatorios).map((reservatorio) => reservatorio.grupo),
+  );
+  grupos.forEach((grupo) => seletorGrupo.add(new Option(grupo, grupo)));
+  preencherReservatoriosEngenharia("TODOS", []);
+
+  seletorInicio.addEventListener("change", renderizarEngenharia);
+  seletorFim.addEventListener("change", renderizarEngenharia);
+  seletorGrupo.addEventListener("change", () => {
+    const selecionados = Array.from(
+      document.getElementById("engenharia-reservatorios").selectedOptions,
+      (option) => option.value,
+    );
+    preencherReservatoriosEngenharia(seletorGrupo.value, selecionados);
+    renderizarEngenharia();
+  });
+  document
+    .getElementById("engenharia-reservatorios")
+    .addEventListener("change", renderizarEngenharia);
+}
+
+function preencherReservatoriosEngenharia(
+  grupoSelecionado,
+  selecoesAnteriores,
+) {
+  const banco = window.bancoDeDados;
+  const ultimaData = banco.datasDisponiveis[banco.datasDisponiveis.length - 1];
+  const reservatorios = banco.historico[ultimaData].reservatorios;
+  const seletor = document.getElementById("engenharia-reservatorios");
+  const disponiveis = Object.entries(reservatorios).filter(
+    ([, reservatorio]) =>
+      grupoSelecionado === "TODOS" || reservatorio.grupo === grupoSelecionado,
+  );
+  const selecoesValidas = selecoesAnteriores.filter((chave) =>
+    disponiveis.some(([disponivel]) => disponivel === chave),
+  );
+  const chavesSelecionadas = selecoesValidas.length
+    ? selecoesValidas
+    : disponiveis.slice(0, 3).map(([chave]) => chave);
+
+  seletor.replaceChildren();
+  disponiveis.forEach(([chave, reservatorio]) => {
+    const option = new Option(
+      `${reservatorio.nome} (${reservatorio.grupo})`,
+      chave,
+    );
+    option.selected = chavesSelecionadas.includes(chave);
+    seletor.add(option);
+  });
+}
+
+function renderizarEngenharia() {
+  Object.values(graficosEngenharia).forEach((grafico) => grafico.destroy());
+  graficosEngenharia = {};
+
+  const datas = window.bancoDeDados.datasDisponiveis;
+  const inicio = document.getElementById("engenharia-inicio").value;
+  const fim = document.getElementById("engenharia-fim").value;
+  const inicioIndex = datas.indexOf(inicio);
+  const fimIndex = datas.indexOf(fim);
+  const mensagem = document.getElementById("engenharia-mensagem");
+  const resumo = document.getElementById("engenharia-resumo");
+  const corpoTabela = document.getElementById("engenharia-registros");
+  mensagem.classList.remove("has-alerts");
+  resumo.replaceChildren();
+  corpoTabela.replaceChildren();
+
+  if (inicioIndex < 0 || fimIndex < 0 || inicioIndex > fimIndex) {
+    mensagem.classList.add("has-alerts");
+    mensagem.textContent =
+      "A data inicial deve ser anterior ou igual à data final.";
+    return;
+  }
+
+  const datasPeriodo = datas.slice(inicioIndex, fimIndex + 1);
+  const chavesSelecionadas = Array.from(
+    document.getElementById("engenharia-reservatorios").selectedOptions,
+    (option) => option.value,
+  );
+  if (!chavesSelecionadas.length) {
+    mensagem.textContent =
+      "Selecione pelo menos um reservatório para consultar os dados.";
+    return;
+  }
+
+  const catalogo =
+    window.bancoDeDados.historico[datas[datas.length - 1]].reservatorios;
+  const totais = {
+    registros: 0,
+    nivelValidas: 0,
+    nivelEsperadas: 0,
+    vazaoValidas: 0,
+    vazaoEsperadas: 0,
+    nivelAcimaDe100: 0,
+    nivelAcimaDe110: 0,
+    nivelNegativo: 0,
+    vazaoNegativa: 0,
+    diasSemRegistro: 0,
+  };
+  const series = chavesSelecionadas.map((chave, indice) => ({
+    chave,
+    reservatorio: catalogo[chave],
+    color: coresAnaliticas[indice % coresAnaliticas.length],
+    leiturasPorData: [],
+  }));
+
+  datasPeriodo.forEach((data) => {
+    const dadosDoDia = window.bancoDeDados.historico[data];
+    const horarios = dadosDoDia?.horarios ?? [];
+    chavesSelecionadas.forEach((chave, indiceReservatorio) => {
+      const reservatorio = dadosDoDia?.reservatorios?.[chave];
+      const leituras = reservatorio?.leituras;
+      const niveis = resumirLeiturasEstruturadas(leituras?.nivel, horarios);
+      const vazoes = resumirLeiturasEstruturadas(leituras?.vazao, horarios);
+      const quantidadeSlots = Math.max(
+        horarios.length,
+        leituras?.nivel?.length ?? 0,
+        leituras?.vazao?.length ?? 0,
+      );
+      const qualidade = avaliarQualidadeLeituras(
+        leituras?.nivel,
+        leituras?.vazao,
+        quantidadeSlots,
+      );
+
+      totais.registros += reservatorio ? 1 : 0;
+      totais.diasSemRegistro += reservatorio ? 0 : 1;
+      totais.nivelValidas += niveis.quantidade;
+      totais.nivelEsperadas += quantidadeSlots;
+      totais.vazaoValidas += vazoes.quantidade;
+      totais.vazaoEsperadas += quantidadeSlots;
+      Object.keys(qualidade).forEach((tipo) => {
+        totais[tipo] += qualidade[tipo];
+      });
+      series[indiceReservatorio].leiturasPorData.push({
+        nivelMin: niveis.minimo,
+        nivelMedia: niveis.media,
+        nivelMax: niveis.maximo,
+        vazaoMin: vazoes.minimo,
+        vazaoMedia: vazoes.media,
+        vazaoMax: vazoes.maximo,
+      });
+
+      corpoTabela.append(
+        criarLinhaEngenharia({
+          chave,
+          data,
+          reservatorio: reservatorio ?? catalogo[chave],
+          horarios,
+          niveis,
+          vazoes,
+          qualidade,
+          temRegistro: Boolean(reservatorio),
+          quantidadeSlots,
+        }),
+      );
+    });
+  });
+
+  const totalSinalizacoes =
+    totais.nivelAcimaDe100 +
+    totais.nivelAcimaDe110 +
+    totais.nivelNegativo +
+    totais.vazaoNegativa;
+  criarResumoAnalitico(resumo, [
+    ["Período consultado", `${inicio} – ${fim}`],
+    ["Registros diários", String(totais.registros)],
+    [
+      "Cobertura de nível",
+      `${totais.nivelValidas} / ${totais.nivelEsperadas} leituras`,
+    ],
+    [
+      "Cobertura de vazão",
+      `${totais.vazaoValidas} / ${totais.vazaoEsperadas} leituras`,
+    ],
+    ["Sinalizações para revisão", String(totalSinalizacoes)],
+  ]);
+  renderizarGraficosEngenharia(datasPeriodo, series);
+  mensagem.textContent =
+    "Os valores originais são preservados nesta visão. Sinalizações destacam " +
+    "leituras para revisão e não representam alarmes ou limites operacionais.";
+  if (totais.diasSemRegistro) {
+    mensagem.textContent +=
+      ` Há ${totais.diasSemRegistro} combinação(ões) de reservatório/data ` +
+      "sem registro no histórico.";
+  }
+}
+
+function renderizarGraficosEngenharia(datas, series) {
+  const metricas = [
+    {
+      id: "nivel",
+      canvas: document.getElementById("grafico-engenharia-nivel"),
+      eixo: "Nível (%)",
+      minimo: "nivelMin",
+      media: "nivelMedia",
+      maximo: "nivelMax",
+    },
+    {
+      id: "vazao",
+      canvas: document.getElementById("grafico-engenharia-vazao"),
+      eixo: "Vazão (L/s)",
+      minimo: "vazaoMin",
+      media: "vazaoMedia",
+      maximo: "vazaoMax",
+    },
+  ];
+  const estilos = [
+    { rotulo: "Mínima", dash: [5, 4], pointStyle: "circle" },
+    { rotulo: "Média", dash: [], pointStyle: "rectRounded" },
+    { rotulo: "Máxima", dash: [2, 3], pointStyle: "triangle" },
+  ];
+
+  metricas.forEach((metrica) => {
+    const datasets = series.flatMap((serie) =>
+      [
+        { campo: metrica.minimo, estilo: estilos[0] },
+        { campo: metrica.media, estilo: estilos[1] },
+        { campo: metrica.maximo, estilo: estilos[2] },
+      ].map(({ campo, estilo }) => ({
+        label: `${serie.reservatorio.nome} · ${estilo.rotulo}`,
+        data: serie.leiturasPorData.map((leituras) => leituras[campo]),
+        borderColor: serie.color,
+        backgroundColor: serie.color,
+        borderWidth: estilo.rotulo === "Média" ? 2.5 : 1.5,
+        borderDash: estilo.dash,
+        pointStyle: estilo.pointStyle,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        tension: 0.2,
+        spanGaps: false,
+      })),
+    );
+    graficosEngenharia[metrica.id] = new Chart(metrica.canvas, {
+      type: "line",
+      data: { labels: datas, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: {
+              color: obterVariavelCSS("--text-color"),
+              usePointStyle: true,
+              boxWidth: 8,
+              padding: 14,
+            },
+          },
+          tooltip: {
+            callbacks: {
+              label(context) {
+                const valor = context.parsed.y;
+                return `${context.dataset.label}: ${valor === null ? "Sem dados" : valor.toFixed(1)}`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: obterVariavelCSS("--muted-color"),
+              autoSkip: true,
+              maxTicksLimit: 12,
+              maxRotation: 0,
+            },
+            grid: { color: obterVariavelCSS("--border-color") },
+          },
+          y: {
+            beginAtZero: true,
+            suggestedMax: metrica.id === "nivel" ? 110 : undefined,
+            title: {
+              display: true,
+              text: metrica.eixo,
+              color: obterVariavelCSS("--muted-color"),
+            },
+            ticks: { color: obterVariavelCSS("--muted-color") },
+            grid: { color: obterVariavelCSS("--border-color") },
+          },
+        },
+      },
+    });
+  });
+}
+
+function resumirLeiturasEstruturadas(valores, horarios) {
+  const leituras = Array.isArray(valores)
+    ? valores
+        .map((valor, indice) => ({
+          valor: Number(valor),
+          indice,
+        }))
+        .filter(
+          ({ valor }, indice) =>
+            valores[indice] !== null &&
+            valores[indice] !== undefined &&
+            valores[indice] !== "" &&
+            Number.isFinite(valor),
+        )
+    : [];
+  const numeros = leituras.map(({ valor }) => valor);
+  const minimo = numeros.length ? Math.min(...numeros) : null;
+  const maximo = numeros.length ? Math.max(...numeros) : null;
+  const leituraMinima = leituras.find(({ valor }) => valor === minimo);
+  const leituraMaxima = leituras.find(({ valor }) => valor === maximo);
+
+  return {
+    quantidade: numeros.length,
+    minimo,
+    media: calcularMediaValida(numeros),
+    maximo,
+    horarioMinimo: leituraMinima
+      ? (horarios[leituraMinima.indice] ??
+        `Leitura ${leituraMinima.indice + 1}`)
+      : null,
+    horarioMaximo: leituraMaxima
+      ? (horarios[leituraMaxima.indice] ??
+        `Leitura ${leituraMaxima.indice + 1}`)
+      : null,
+  };
+}
+
+function avaliarQualidadeLeituras(niveis, vazoes, quantidadeSlots) {
+  const valoresNumericos = (valores) =>
+    Array.isArray(valores)
+      ? valores
+          .filter(
+            (valor) => valor !== null && valor !== undefined && valor !== "",
+          )
+          .map(Number)
+          .filter(Number.isFinite)
+      : [];
+  const niveisNumericos = valoresNumericos(niveis);
+  const vazoesNumericas = valoresNumericos(vazoes);
+  return {
+    nivelAcimaDe100: niveisNumericos.filter(
+      (valor) => valor > 100 && valor <= 110,
+    ).length,
+    nivelAcimaDe110: niveisNumericos.filter((valor) => valor > 110).length,
+    nivelNegativo: niveisNumericos.filter((valor) => valor < 0).length,
+    vazaoNegativa: vazoesNumericas.filter((valor) => valor < 0).length,
+    nivelAusente: Math.max(0, quantidadeSlots - niveisNumericos.length),
+    vazaoAusente: Math.max(0, quantidadeSlots - vazoesNumericas.length),
+  };
+}
+
+function criarLinhaEngenharia({
+  chave,
+  data,
+  reservatorio,
+  horarios,
+  niveis,
+  vazoes,
+  qualidade,
+  temRegistro,
+  quantidadeSlots,
+}) {
+  const linha = document.createElement("tr");
+  const idDetalhes =
+    `engenharia-detalhes-${chave.replace(/[^a-zA-Z0-9_-]/g, "-")}-` +
+    data.replace(/\D/g, "");
+  const celulaId = document.createElement("td");
+  const botaoId = document.createElement("button");
+  botaoId.className = "engineering-id-button";
+  botaoId.type = "button";
+  botaoId.textContent = chave;
+  botaoId.setAttribute("aria-expanded", "false");
+  botaoId.setAttribute("aria-controls", idDetalhes);
+  celulaId.append(botaoId);
+  linha.append(celulaId);
+  appendCelulaEngenharia(linha, data);
+
+  appendCelulaExtremoEngenharia(linha, niveis.minimo, niveis.horarioMinimo);
+  appendCelulaEngenharia(linha, formatarMetrica(niveis.media, ""));
+  appendCelulaExtremoEngenharia(linha, niveis.maximo, niveis.horarioMaximo);
+  appendCelulaExtremoEngenharia(linha, vazoes.minimo, vazoes.horarioMinimo);
+  appendCelulaEngenharia(linha, formatarMetrica(vazoes.media, ""));
+  appendCelulaExtremoEngenharia(linha, vazoes.maximo, vazoes.horarioMaximo);
+  appendCelulaEngenharia(linha, criarSinalizacoesEngenharia(qualidade));
+
+  const linhaDetalhes = document.createElement("tr");
+  linhaDetalhes.className = "engineering-details-row";
+  linhaDetalhes.hidden = true;
+  linhaDetalhes.id = idDetalhes;
+  const celulaDetalhes = document.createElement("td");
+  celulaDetalhes.colSpan = 9;
+  const conteudoDetalhes = document.createElement("div");
+  conteudoDetalhes.className = "engineering-details-content";
+  const identificacao = document.createElement("strong");
+  identificacao.textContent = reservatorio
+    ? `${reservatorio.nome} (${reservatorio.grupo})`
+    : `${chave} — Reservatório sem registro nesta data`;
+  const cobertura = document.createElement("span");
+  cobertura.textContent =
+    `Leituras numéricas — nível: ${niveis.quantidade} de ${quantidadeSlots}; ` +
+    `vazão: ${vazoes.quantidade} de ${quantidadeSlots}`;
+  conteudoDetalhes.append(identificacao, cobertura);
+
+  celulaDetalhes.append(conteudoDetalhes);
+  linhaDetalhes.append(celulaDetalhes);
+  let leiturasCarregadas = false;
+  botaoId.addEventListener("click", () => {
+    const expandido = botaoId.getAttribute("aria-expanded") === "true";
+    if (!expandido && !leiturasCarregadas) {
+      if (temRegistro) {
+        const tabelaLeituras = criarTabelaLeiturasHorarias(
+          horarios,
+          reservatorio.leituras,
+          quantidadeSlots,
+        );
+        tabelaLeituras.classList.add("engineering-expanded-readings");
+        conteudoDetalhes.append(tabelaLeituras);
+      } else {
+        const aviso = document.createElement("p");
+        aviso.className = "engineering-no-data";
+        aviso.textContent = "Não há dados deste reservatório nesta data.";
+        conteudoDetalhes.append(aviso);
+      }
+      leiturasCarregadas = true;
+    }
+    botaoId.setAttribute("aria-expanded", String(!expandido));
+    linhaDetalhes.hidden = expandido;
+  });
+
+  const linhas = document.createDocumentFragment();
+  linhas.append(linha, linhaDetalhes);
+  return linhas;
+}
+
+function appendCelulaExtremoEngenharia(linha, valor, horario) {
+  const celula = document.createElement("td");
+  const extremo = document.createElement("div");
+  extremo.className = "engineering-extreme";
+  const valorElemento = document.createElement("strong");
+  valorElemento.textContent = valor === null ? "Sem dados" : valor.toFixed(1);
+  const horarioElemento = document.createElement("span");
+  horarioElemento.textContent = horario ?? "—";
+  extremo.append(valorElemento, horarioElemento);
+  celula.append(extremo);
+  linha.append(celula);
+}
+
+function criarTabelaLeiturasHorarias(horarios, leituras, quantidadeSlots) {
+  const tabela = document.createElement("table");
+  tabela.className = "hourly-readings-table";
+  const cabecalho = document.createElement("thead");
+  const linhaCabecalho = document.createElement("tr");
+  ["Horário", "Nível (%)", "Vazão (L/s)", "Sinalizações"].forEach((rotulo) => {
+    const celula = document.createElement("th");
+    celula.scope = "col";
+    celula.textContent = rotulo;
+    linhaCabecalho.append(celula);
+  });
+  cabecalho.append(linhaCabecalho);
+  tabela.append(cabecalho);
+
+  const corpo = document.createElement("tbody");
+  for (let indice = 0; indice < quantidadeSlots; indice += 1) {
+    const linha = document.createElement("tr");
+    const nivel = leituras.nivel?.[indice];
+    const vazao = leituras.vazao?.[indice];
+    appendCelulaEngenharia(linha, horarios[indice] ?? `Leitura ${indice + 1}`);
+    appendCelulaEngenharia(linha, formatarLeituraOriginal(nivel));
+    appendCelulaEngenharia(linha, formatarLeituraOriginal(vazao));
+    appendCelulaEngenharia(
+      linha,
+      criarSinalizacoesEngenharia(
+        avaliarQualidadeLeituras([nivel], [vazao], 1),
+        true,
+      ),
+    );
+    corpo.append(linha);
+  }
+  tabela.append(corpo);
+  return tabela;
+}
+
+function criarSinalizacoesEngenharia(qualidade, compacta = false) {
+  const sinalizacoes = [];
+  if (qualidade.nivelAcimaDe100) {
+    sinalizacoes.push(`Nível >100%: ${qualidade.nivelAcimaDe100}`);
+  }
+  if (qualidade.nivelAcimaDe110) {
+    sinalizacoes.push(`Nível >110%: ${qualidade.nivelAcimaDe110}`);
+  }
+  if (qualidade.nivelNegativo) {
+    sinalizacoes.push(`Nível negativo: ${qualidade.nivelNegativo}`);
+  }
+  if (qualidade.vazaoNegativa) {
+    sinalizacoes.push(`Vazão negativa: ${qualidade.vazaoNegativa}`);
+  }
+  if (!compacta && qualidade.nivelAusente) {
+    sinalizacoes.push(`Nível ausente: ${qualidade.nivelAusente}`);
+  }
+  if (!compacta && qualidade.vazaoAusente) {
+    sinalizacoes.push(`Vazão ausente: ${qualidade.vazaoAusente}`);
+  }
+
+  if (!sinalizacoes.length) {
+    const semSinalizacao = document.createElement("span");
+    semSinalizacao.className = "engineering-ok";
+    semSinalizacao.textContent = "—";
+    return semSinalizacao;
+  }
+
+  const lista = document.createElement("ul");
+  lista.className = "engineering-flags";
+  sinalizacoes.forEach((sinalizacao) => {
+    const item = document.createElement("li");
+    item.textContent = sinalizacao;
+    lista.append(item);
+  });
+  return lista;
+}
+
+function appendCelulaEngenharia(linha, conteudo) {
+  const celula = document.createElement("td");
+  if (conteudo instanceof Node) {
+    celula.append(conteudo);
+  } else {
+    celula.textContent = conteudo;
+  }
+  linha.append(celula);
+}
+
+function formatarLeituraOriginal(valor) {
+  if (valor === null || valor === undefined || valor === "") return "—";
+  const numero = Number(valor);
+  return Number.isFinite(numero) ? numero.toFixed(1) : String(valor);
 }
 
 function preencherReservatoriosAnalise(grupoSelecionado, selecoesAnteriores) {

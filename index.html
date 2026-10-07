@@ -100,6 +100,17 @@
       >
         Análises
       </button>
+      <button
+        id="tab-engenharia"
+        class="view-tab"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        aria-controls="painel-engenharia"
+        tabindex="-1"
+      >
+        Engenharia
+      </button>
     </nav>
 
     <!-- Grid onde os cards dos reservatórios serão injetados -->
@@ -224,6 +235,109 @@
           </table>
         </div>
       </article>
+    </section>
+
+    <section
+      class="engineering-view view-panel"
+      id="painel-engenharia"
+      role="tabpanel"
+      aria-labelledby="tab-engenharia"
+      hidden
+    >
+      <div class="analysis-intro">
+        <div>
+          <p class="analysis-eyebrow">DADOS E RASTREABILIDADE</p>
+          <h2>Visão de engenharia</h2>
+          <p class="analysis-description">
+            Consulte estatísticas diárias e expanda cada registro para ver as
+            leituras horárias originais.
+          </p>
+        </div>
+      </div>
+
+      <div class="analysis-filters engineering-filters">
+        <div class="control-group">
+          <label for="engenharia-inicio">Data inicial</label>
+          <select id="engenharia-inicio"></select>
+        </div>
+        <div class="control-group">
+          <label for="engenharia-fim">Data final</label>
+          <select id="engenharia-fim"></select>
+        </div>
+        <div class="control-group">
+          <label for="engenharia-grupo">Grupo</label>
+          <select id="engenharia-grupo"></select>
+        </div>
+        <div class="control-group analysis-reservoir-filter">
+          <label for="engenharia-reservatorios">Reservatórios</label>
+          <select
+            id="engenharia-reservatorios"
+            multiple
+            size="5"
+            aria-describedby="dica-selecao-engenharia"
+          ></select>
+          <span class="filter-hint" id="dica-selecao-engenharia">
+            Use Ctrl (ou ⌘) + clique para selecionar vários.
+          </span>
+        </div>
+      </div>
+
+      <p
+        class="engineering-note"
+        id="engenharia-mensagem"
+        role="status"
+        aria-live="polite"
+      ></p>
+
+      <div class="analysis-summary" id="engenharia-resumo"></div>
+
+      <div class="analysis-charts engineering-charts">
+        <article class="analysis-card">
+          <div class="analysis-card-heading">
+            <div>
+              <h3>Nível diário</h3>
+              <p>Mínima, média e máxima por reservatório, em %.</p>
+            </div>
+          </div>
+          <div class="analysis-chart-box">
+            <canvas id="grafico-engenharia-nivel"></canvas>
+          </div>
+        </article>
+        <article class="analysis-card">
+          <div class="analysis-card-heading">
+            <div>
+              <h3>Vazão diária</h3>
+              <p>Mínima, média e máxima por reservatório, em L/s.</p>
+            </div>
+          </div>
+          <div class="analysis-chart-box">
+            <canvas id="grafico-engenharia-vazao"></canvas>
+          </div>
+        </article>
+      </div>
+
+      <div class="engineering-table-wrap">
+        <table class="comparison-table engineering-table">
+          <thead>
+            <tr>
+              <th scope="col" rowspan="2">ID</th>
+              <th scope="col" rowspan="2">Data</th>
+              <th scope="colgroup" colspan="3">Nível (%)</th>
+              <th scope="colgroup" colspan="3">Vazão (L/s)</th>
+              <th scope="col" rowspan="2">Sinalizações</th>
+            </tr>
+            <tr>
+              <th scope="col">Mínima · horário</th>
+              <th scope="col">Média</th>
+              <th scope="col">Máxima · horário</th>
+              <th scope="col">Mínima · horário</th>
+              <th scope="col">Média</th>
+              <th scope="col">Máxima · horário</th>
+            </tr>
+          </thead>
+          <tbody id="engenharia-registros"></tbody>
+        </table>
+      </div>
     </section>
 
     <!-- Scripts JavaScript -->

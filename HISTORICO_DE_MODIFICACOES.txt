@@ -1,0 +1,66 @@
+HISTORICO DE MODIFICACOES - MONITORAMENTO DOS RESERVATORIOS
+
+1. PAINEL OPERACIONAL
+
+- Implementado dashboard de monitoramento com cards dos reservatorios, status,
+  indicadores de nivel e vazao e graficos de leituras do dia.
+- Adicionados filtros de data e um unico seletor de grupo/reservatorio.
+- Cards podem ser abertos por clique ou teclado; a selecao filtra o
+  reservatorio e mostra seu grafico.
+- Na visao geral, os graficos dos cards ficam ocultos. Ao filtrar por grupo ou
+  reservatorio, os graficos correspondentes aparecem.
+- Ao filtrar por grupo ou reservatorio, o topo do cabecalho e ocultado.
+  Escape retorna para todos os reservatorios.
+
+2. TEMAS E EXPERIENCIA
+
+- Adicionados temas claro e escuro, com preferencia salva no navegador.
+- Botao de tema usa icones de sol/lua e mantem descricao acessivel.
+- Melhorias de hierarquia visual do cabecalho, estados de foco e layout mobile.
+- Cores dos indicadores de status ajustadas para melhor contraste no tema claro.
+
+3. VISAO ANALITICA
+
+- Criada aba separada para analises historicas.
+- Adicionados filtros de periodo, grupo e selecao multipla de reservatorios.
+- Adicionados graficos de nivel medio diario e vazao media diaria.
+- Adicionado grafico de faixa diaria de vazao, com minima e maxima por dia e
+  por reservatorio.
+- Tooltips do grafico de faixa de vazao informam o horario de registro da
+  minima ou maxima diaria.
+- Adicionada tabela comparativa com medias, extremos, variacao e cobertura de
+  dados.
+- Medias diarias usam leituras numericas disponiveis; dias sem leitura ficam
+  sem valor, em vez de serem interpretados como zero.
+
+4. TRATAMENTO DE LEITURAS E ALERTAS
+
+- Leituras de nivel entre 0% e 110% sao aceitas. Leituras acima de 100% ate
+  110% entram nos calculos e sao contabilizadas no quadro de alertas.
+- Leituras de nivel acima de 110% ou negativas sao ignoradas nos calculos e
+  contabilizadas no quadro de alertas.
+- Leituras de vazao negativas sao preservadas nos calculos de media, minima e
+  maxima e contabilizadas no quadro de alertas.
+- Alertas apresentam contagens para o periodo e reservatorios selecionados.
+- Criterios e apresentacao dos alertas ficam sujeitos a refinamento futuro.
+
+5. DOCUMENTACAO
+
+- Criado MANUAL_DE_INSTRUCOES.txt com orientacoes de uso do painel,
+  interpretacao das analises, regras de leitura e atualizacao dos dados.
+- Este arquivo registra as funcionalidades e mudancas implementadas no projeto.
+
+6. VISAO DE ENGENHARIA
+
+- Adicionada uma terceira aba com filtros proprios de periodo, grupo e
+  selecao multipla de reservatorios.
+- Criada tabela diaria estruturada com minimo, media, maximo, horarios dos
+  extremos em colunas separadas e cobertura de leituras para nivel e vazao.
+- Tabela compactada com ID e data em colunas proprias; nome, grupo, cobertura
+  e leituras horarias sao exibidos ao expandir o ID.
+- Adicionados graficos diarios de nivel e vazao, cada um com series de
+  minima, media e maxima por reservatorio.
+- Incluida consulta expansivel das leituras horarias originais por data.
+- Leituras numericas fora das faixas de referencia permanecem visiveis e sao
+  sinalizadas para revisao; esta visao nao aplica novos limites operacionais.
+- Incluidos resumos de cobertura, contagens de sinalizacoes e dias sem registro.

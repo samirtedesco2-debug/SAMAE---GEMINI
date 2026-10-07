@@ -1,0 +1,121 @@
+MANUAL DE INSTRUCOES - MONITORAMENTO DOS RESERVATORIOS
+
+1. SOBRE O PAINEL
+
+O projeto apresenta os dados diarios de monitoramento dos reservatorios do
+SAMAE em tres areas:
+
+- Visao operacional: consulta dos indicadores mais recentes por data, grupo e
+  reservatorio.
+- Analises: comparacao do historico, tendencias e resumo de leituras no periodo.
+- Engenharia: dados estruturados por dia, estatisticas e consulta das leituras
+  horarias originais.
+
+Os dados do painel sao preparados a partir das planilhas de monitoramento e
+carregados pelo navegador a partir do arquivo dados.js.
+
+2. VISAO OPERACIONAL
+
+1. Use o seletor Grupo / Reservatorio no cabecalho.
+2. Escolha "Todos os grupos e reservatorios" para ver todos os cards.
+3. Escolha "Grupo: ..." para filtrar os cards de um grupo.
+4. Escolha um reservatorio para ver somente aquele reservatorio e seu grafico.
+5. Use o seletor Data para consultar outro dia disponivel.
+6. Clique em um card para abrir aquele reservatorio individualmente.
+7. Quando um grupo ou reservatorio estiver filtrado, pressione Esc para voltar
+   a todos os reservatorios.
+8. O botao de sol/lua alterna entre os temas claro e escuro. A preferencia fica
+   salva neste navegador.
+
+Na visao geral, os graficos dos cards ficam escondidos para reduzir a
+informacao visual. Eles aparecem ao escolher um grupo ou reservatorio.
+
+3. ABA ANALISES
+
+1. Abra a aba "Analises".
+2. Escolha a data inicial e a data final. A data inicial precisa ser anterior
+   ou igual a data final.
+3. Opcionalmente, filtre a lista pelo grupo.
+4. Selecione os reservatorios que deseja comparar. Use Ctrl+clique no Windows
+   ou Command+clique no macOS para selecionar varios itens.
+5. Os graficos e a tabela sao atualizados ao alterar qualquer filtro.
+
+Se nenhum reservatorio estiver selecionado, o painel informa que e preciso
+selecionar ao menos um. Datas fora de ordem tambem geram uma mensagem e nao
+produzem resultados.
+
+4. COMO LER AS ANALISES
+
+- Nivel medio diario: media das leituras validas de nivel registradas naquele
+  dia, em percentual.
+- Vazao media diaria: media de todas as leituras numericas de vazao do dia, em
+  litros por segundo (L/s).
+- Faixa diaria de vazao: mostra, para cada reservatorio e dia, a menor leitura
+  e a maior leitura de vazao. A linha tracejada representa a minima; a linha
+  continua representa a maxima. As duas linhas de um reservatorio usam a mesma
+  cor. Ao apontar para um ponto do grafico, o balao mostra o horario em que a
+  minima ou maxima daquele dia foi registrada.
+- Comparacao no periodo: apresenta a media das medias diarias de nivel, os
+  extremos diarios de nivel, a diferenca entre a primeira e a ultima media
+  diaria de nivel, a media das medias diarias de vazao e a quantidade de dias
+  com pelo menos uma leitura de nivel ou vazao.
+- Dias com dados no resumo: quantidade de dias do periodo em que ao menos um
+  dos reservatorios selecionados tem leitura valida de nivel ou vazao.
+
+Dias sem leituras permanecem sem ponto no grafico. Eles nao sao convertidos
+para zero.
+
+5. ALERTAS SOBRE AS LEITURAS
+
+O quadro de alerta se refere aos reservatorios e ao periodo atualmente
+selecionados:
+
+- Nivel entre 0% e 100%: incluido nos calculos.
+- Nivel acima de 100% e ate 110%: incluido nos calculos e contado no alerta.
+- Nivel acima de 110%: excluido dos calculos e contado no alerta.
+- Nivel negativo: excluido dos calculos e contado no alerta.
+- Vazao negativa: mantida nos calculos, inclusive para medias, minimas e
+  maximas; o numero de leituras negativas e mostrado no alerta.
+- Valores ausentes ou nao numericos nao formam uma leitura e nao sao usados.
+
+Esses avisos sao informativos. Os criterios de alerta operacional ainda podem
+ser refinados sem alterar a regra descrita acima.
+
+6. ABA ENGENHARIA
+
+1. Abra a aba "Engenharia".
+2. Escolha o periodo e, se desejar, filtre por grupo.
+3. Selecione um ou mais reservatorios. Ao abrir a aba, ate tres reservatorios
+   sao selecionados inicialmente para facilitar a leitura.
+4. Os graficos de nivel e vazao exibem as series diarias de minimo, media e
+   maximo. A cor identifica o reservatorio e o estilo de linha identifica a
+   estatistica; use o balao para consultar os valores de cada data.
+5. Cada linha da tabela apresenta o ID do reservatorio e a data. Nivel e vazao
+   ficam em grupos de colunas proprios, com minima, media e maxima separadas;
+   o horario aparece junto dos valores minimo e maximo. As sinalizacoes ficam
+   visiveis na linha.
+6. Clique no ID do reservatorio para expandir os detalhes. O nome completo,
+   grupo, cobertura e leituras horarias aparecem nessa area. Valores ausentes
+   aparecem como traco e nao sao convertidos em zero.
+7. Nesta visao os valores numericos originais nao sao removidos dos resumos:
+   niveis acima de 110%, niveis negativos e vazoes negativas sao preservados e
+   sinalizados para investigacao. As sinalizacoes sao informativas e nao
+   representam limites ou alarmes operacionais.
+8. As contagens de leituras ausentes indicam horarios sem valor numerico para
+   cada variavel. Datas sem registro para o reservatorio tambem sao informadas.
+
+7. ARQUIVOS PRINCIPAIS
+
+- index.html: estrutura das abas, filtros, graficos e tabela.
+- styles.css: aparencia, temas e adaptacao a telas menores.
+- app.js: filtros, calculos, alertas e criacao dos graficos.
+- dados.js: historico disponibilizado ao dashboard.
+- atualizar_dados.py: leitura das planilhas e geracao do dados.js.
+- Monitoramento Diario dos Reservatorios/: planilhas de origem.
+
+8. ATUALIZACAO DOS DADOS
+
+O script atualizar_dados.py percorre as planilhas na pasta de monitoramento e
+atualiza dados.js. Depois da atualizacao, recarregue a pagina no navegador.
+Consulte o ambiente Python do projeto antes de executar o script e confirme
+que as bibliotecas necessarias estao instaladas.
