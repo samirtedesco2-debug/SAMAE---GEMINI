@@ -5,6 +5,15 @@ let instanciasGraficos = {};
 let graficosAnaliticos = {};
 let graficosEngenharia = {};
 let categoriaBoletimAtiva = null;
+let analiseReservatorioAberta = false;
+let graficoAnaliseComMedias = false;
+const TAMANHO_PAGINA_ENGENHARIA = 100;
+const MINIMO_DIAS_HISTORICOS_PARA_ESPERAR_DADO = 4;
+
+const LIMITE_ATENCAO_NIVEL_PERCENTUAL = 60;
+const LIMITE_CRITICO_NIVEL_PERCENTUAL = 50;
+const LIMITE_ATENCAO_VAZAO_PERCENTUAL = 20;
+const LIMITE_CRITICO_VAZAO_PERCENTUAL = 35;
 
 const coresAnaliticas = [
   "#33a2e5",
@@ -87,6 +96,8 @@ function inicializarDashboard() {
   seletorData.value = ultimaDataDoBanco;
 
   const seletorFiltro = document.getElementById("seletor-filtro");
+  const seletorBaseComparacao = document.getElementById("seletor-base-vazao");
+  const seletorEscopo = document.getElementById("seletor-escopo-operacional");
   preencherSeletorFiltro(ultimaDataDoBanco, "TODOS");
   inicializarNavegacao();
   inicializarAnalises();
@@ -110,6 +121,7 @@ function inicializarDashboard() {
       if (!botaoReservatorio) return;
 
       const chave = botaoReservatorio.dataset.detailReservoir;
+      categoriaBoletimAtiva = null;
       seletorFiltro.value = `reservatorio:${chave}`;
       seletorFiltro.dispatchEvent(new Event("change", { bubbles: true }));
       document.getElementById("painel-operacional").scrollIntoView({
@@ -118,8 +130,40 @@ function inicializarDashboard() {
       });
     });
   containerGrid.addEventListener("click", (e) => {
+    const botaoAnalise = e.target.closest("[data-open-reservoir-analysis]");
+    if (botaoAnalise) {
+      e.preventDefault();
+      e.stopPropagation();
+      analiseReservatorioAberta = true;
+      graficoAnaliseComMedias = false;
+      renderizarDashboard();
+      document
+        .getElementById("analise-grafico-reservatorio")
+        .scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
     const card = e.target.closest(".card");
     if (card) selecionarCard(card);
+  });
+  const painelAnaliseReservatorio = document.getElementById(
+    "analise-grafico-reservatorio",
+  );
+  painelAnaliseReservatorio.addEventListener("click", (e) => {
+    if (e.target.closest("[data-close-reservoir-analysis]")) {
+      analiseReservatorioAberta = false;
+      renderizarDashboard();
+      document.querySelector(".card.is-selected")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      return;
+    }
+    const botaoModo = e.target.closest("[data-analysis-chart-mode]");
+    if (botaoModo) {
+      graficoAnaliseComMedias =
+        botaoModo.dataset.analysisChartMode === "averages";
+      renderizarDashboard();
+    }
   });
   containerGrid.addEventListener("keydown", (e) => {
     if (
@@ -140,7 +184,17 @@ function inicializarDashboard() {
     renderizarDashboard();
   });
 
-  seletorFiltro.addEventListener("change", renderizarDashboard);
+  seletorFiltro.addEventListener("change", () => {
+    if (
+      analiseReservatorioAberta &&
+      !seletorFiltro.value.startsWith("reservatorio:")
+    ) {
+      analiseReservatorioAberta = false;
+    }
+    renderizarDashboard();
+  });
+  seletorBaseComparacao.addEventListener("change", renderizarDashboard);
+  seletorEscopo.addEventListener("change", renderizarDashboard);
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && seletorFiltro.value !== "TODOS") {
       e.preventDefault();
@@ -198,12 +252,13 @@ function inicializarAnalises() {
   const seletorInicio = document.getElementById("analise-inicio");
   const seletorFim = document.getElementById("analise-fim");
   const seletorGrupo = document.getElementById("analise-grupo");
+  const seletorReservatorios = document.getElementById("analise-reservatorios");
 
   datas.forEach((data) => {
     seletorInicio.add(new Option(data, data));
     seletorFim.add(new Option(data, data));
   });
-  seletorInicio.value = datas[0];
+  seletorInicio.value = datas[obterIndiceInicioPeriodoRecente(datas)];
   seletorFim.value = datas[datas.length - 1];
 
   seletorGrupo.add(new Option("Todos os grupos", "TODOS"));
@@ -219,16 +274,17 @@ function inicializarAnalises() {
   seletorInicio.addEventListener("change", renderizarAnalises);
   seletorFim.addEventListener("change", renderizarAnalises);
   seletorGrupo.addEventListener("change", () => {
-    const selecoes = Array.from(
-      document.getElementById("analise-reservatorios").selectedOptions,
-      (option) => option.value,
-    );
+    const selecoes = obterReservatoriosSelecionados(seletorReservatorios);
     preencherReservatoriosAnalise(seletorGrupo.value, selecoes);
     renderizarAnalises();
   });
-  document
-    .getElementById("analise-reservatorios")
-    .addEventListener("change", renderizarAnalises);
+  seletorReservatorios.addEventListener("change", () => {
+    atualizarContagemReservatorios(
+      seletorReservatorios,
+      "dica-selecao-reservatorios",
+    );
+    renderizarAnalises();
+  });
 }
 
 function inicializarEngenharia() {
@@ -244,7 +300,7 @@ function inicializarEngenharia() {
     seletorInicio.add(new Option(data, data));
     seletorFim.add(new Option(data, data));
   });
-  seletorInicio.value = datas[0];
+  seletorInicio.value = datas[obterIndiceInicioPeriodoRecente(datas)];
   seletorFim.value = ultimaData;
 
   seletorGrupo.add(new Option("Todos os grupos", "TODOS"));
@@ -257,16 +313,66 @@ function inicializarEngenharia() {
   seletorInicio.addEventListener("change", renderizarEngenharia);
   seletorFim.addEventListener("change", renderizarEngenharia);
   seletorGrupo.addEventListener("change", () => {
-    const selecionados = Array.from(
-      document.getElementById("engenharia-reservatorios").selectedOptions,
-      (option) => option.value,
-    );
+    const selecionador = document.getElementById("engenharia-reservatorios");
+    const selecionados = obterReservatoriosSelecionados(selecionador);
     preencherReservatoriosEngenharia(seletorGrupo.value, selecionados);
     renderizarEngenharia();
   });
-  document
-    .getElementById("engenharia-reservatorios")
-    .addEventListener("change", renderizarEngenharia);
+  const seletorReservatorios = document.getElementById(
+    "engenharia-reservatorios",
+  );
+  seletorReservatorios.addEventListener("change", () => {
+    atualizarContagemReservatorios(
+      seletorReservatorios,
+      "dica-selecao-engenharia",
+    );
+    renderizarEngenharia();
+  });
+}
+
+function obterIndiceInicioPeriodoRecente(datas, dias = 30) {
+  const ultimaDataUTC = converterDataParaUTC(datas[datas.length - 1]);
+  const inicioPeriodoUTC = ultimaDataUTC - (dias - 1) * 86400000;
+  const indice = datas.findIndex(
+    (data) => converterDataParaUTC(data) >= inicioPeriodoUTC,
+  );
+  return indice < 0 ? 0 : indice;
+}
+
+function obterReservatoriosSelecionados(container) {
+  return Array.from(
+    container.querySelectorAll('input[type="checkbox"]:checked'),
+    (checkbox) => checkbox.value,
+  );
+}
+
+function atualizarContagemReservatorios(container, idDica) {
+  const selecionados = obterReservatoriosSelecionados(container).length;
+  const disponiveis = container.querySelectorAll(
+    'input[type="checkbox"]',
+  ).length;
+  document.getElementById(idDica).textContent =
+    `${selecionados} de ${disponiveis} reservatório(s) selecionado(s). ` +
+    "Marque os itens desejados.";
+}
+
+function renderizarListaReservatorios(container, disponiveis, selecionados, idDica) {
+  container.replaceChildren();
+  disponiveis.forEach(([chave, reservatorio], indice) => {
+    const rotulo = document.createElement("label");
+    rotulo.className = "reservoir-checkbox-option";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = chave;
+    checkbox.checked = selecionados.includes(chave);
+    checkbox.id = `${container.id}-opcao-${indice}`;
+    const nome = document.createElement("span");
+    nome.textContent = `${reservatorio.nome} (${reservatorio.grupo})`;
+    rotulo.htmlFor = checkbox.id;
+    rotulo.append(checkbox, nome);
+    container.append(rotulo);
+  });
+  atualizarContagemReservatorios(container, idDica);
 }
 
 function preencherReservatoriosEngenharia(
@@ -288,15 +394,12 @@ function preencherReservatoriosEngenharia(
     ? selecoesValidas
     : disponiveis.slice(0, 3).map(([chave]) => chave);
 
-  seletor.replaceChildren();
-  disponiveis.forEach(([chave, reservatorio]) => {
-    const option = new Option(
-      `${reservatorio.nome} (${reservatorio.grupo})`,
-      chave,
-    );
-    option.selected = chavesSelecionadas.includes(chave);
-    seletor.add(option);
-  });
+  renderizarListaReservatorios(
+    seletor,
+    disponiveis,
+    chavesSelecionadas,
+    "dica-selecao-engenharia",
+  );
 }
 
 function renderizarEngenharia() {
@@ -311,9 +414,18 @@ function renderizarEngenharia() {
   const mensagem = document.getElementById("engenharia-mensagem");
   const resumo = document.getElementById("engenharia-resumo");
   const corpoTabela = document.getElementById("engenharia-registros");
+  const paginacao = document.getElementById("engenharia-paginacao");
+  const registrosVisiveis = document.getElementById(
+    "engenharia-registros-visiveis",
+  );
+  const botaoCarregarMais = document.getElementById(
+    "engenharia-carregar-mais",
+  );
   mensagem.classList.remove("has-alerts");
   resumo.replaceChildren();
   corpoTabela.replaceChildren();
+  paginacao.hidden = true;
+  botaoCarregarMais.onclick = null;
 
   if (inicioIndex < 0 || fimIndex < 0 || inicioIndex > fimIndex) {
     mensagem.classList.add("has-alerts");
@@ -323,9 +435,8 @@ function renderizarEngenharia() {
   }
 
   const datasPeriodo = datas.slice(inicioIndex, fimIndex + 1);
-  const chavesSelecionadas = Array.from(
-    document.getElementById("engenharia-reservatorios").selectedOptions,
-    (option) => option.value,
+  const chavesSelecionadas = obterReservatoriosSelecionados(
+    document.getElementById("engenharia-reservatorios"),
   );
   if (!chavesSelecionadas.length) {
     mensagem.textContent =
@@ -353,6 +464,7 @@ function renderizarEngenharia() {
     color: coresAnaliticas[indice % coresAnaliticas.length],
     leiturasPorData: [],
   }));
+  const registrosTabela = [];
 
   datasPeriodo.forEach((data) => {
     const dadosDoDia = window.bancoDeDados.historico[data];
@@ -391,19 +503,17 @@ function renderizarEngenharia() {
         vazaoMax: vazoes.maximo,
       });
 
-      corpoTabela.append(
-        criarLinhaEngenharia({
-          chave,
-          data,
-          reservatorio: reservatorio ?? catalogo[chave],
-          horarios,
-          niveis,
-          vazoes,
-          qualidade,
-          temRegistro: Boolean(reservatorio),
-          quantidadeSlots,
-        }),
-      );
+      registrosTabela.push({
+        chave,
+        data,
+        reservatorio: reservatorio ?? catalogo[chave],
+        horarios,
+        niveis,
+        vazoes,
+        qualidade,
+        temRegistro: Boolean(reservatorio),
+        quantidadeSlots,
+      });
     });
   });
 
@@ -426,6 +536,31 @@ function renderizarEngenharia() {
     ["Sinalizações para revisão", String(totalSinalizacoes)],
   ]);
   renderizarGraficosEngenharia(datasPeriodo, series);
+  let quantidadeExibida = 0;
+  const carregarProximaPagina = () => {
+    const fimPagina = Math.min(
+      quantidadeExibida + TAMANHO_PAGINA_ENGENHARIA,
+      registrosTabela.length,
+    );
+    const fragmento = document.createDocumentFragment();
+    for (; quantidadeExibida < fimPagina; quantidadeExibida += 1) {
+      fragmento.append(
+        criarLinhaEngenharia(registrosTabela[quantidadeExibida]),
+      );
+    }
+    corpoTabela.append(fragmento);
+    registrosVisiveis.textContent =
+      `Exibindo ${quantidadeExibida} de ${registrosTabela.length} registros.`;
+    botaoCarregarMais.hidden = quantidadeExibida >= registrosTabela.length;
+  };
+  if (registrosTabela.length > TAMANHO_PAGINA_ENGENHARIA) {
+    paginacao.hidden = false;
+    botaoCarregarMais.onclick = carregarProximaPagina;
+    carregarProximaPagina();
+  } else {
+    paginacao.hidden = registrosTabela.length === 0;
+    carregarProximaPagina();
+  }
   mensagem.textContent =
     "Os valores originais são preservados nesta visão. Sinalizações destacam " +
     "leituras para revisão e não representam alarmes ou limites operacionais.";
@@ -796,15 +931,12 @@ function preencherReservatoriosAnalise(grupoSelecionado, selecoesAnteriores) {
     ? selecoesValidas
     : disponiveis.slice(0, 3).map(([chave]) => chave);
 
-  seletor.replaceChildren();
-  disponiveis.forEach(([chave, reservatorio]) => {
-    const option = new Option(
-      `${reservatorio.nome} (${reservatorio.grupo})`,
-      chave,
-    );
-    option.selected = chavesSelecionadas.includes(chave);
-    seletor.add(option);
-  });
+  renderizarListaReservatorios(
+    seletor,
+    disponiveis,
+    chavesSelecionadas,
+    "dica-selecao-reservatorios",
+  );
 }
 
 function renderizarAnalises() {
@@ -835,9 +967,8 @@ function renderizarAnalises() {
   }
 
   const datasPeriodo = datas.slice(indiceInicio, indiceFim + 1);
-  const chavesSelecionadas = Array.from(
-    document.getElementById("analise-reservatorios").selectedOptions,
-    (option) => option.value,
+  const chavesSelecionadas = obterReservatoriosSelecionados(
+    document.getElementById("analise-reservatorios"),
   );
   const ultimaData = datas[datas.length - 1];
   const catalogo = banco.historico[ultimaData].reservatorios;
@@ -901,7 +1032,7 @@ function renderizarAnalises() {
       maximoNivel: niveis.length ? Math.max(...niveis) : null,
       variacaoNivel:
         primeiroNivel !== undefined && ultimoNivel !== undefined
-          ? ultimoNivel - primeiroNivel
+          ? calcularVariacaoPercentual(ultimoNivel, primeiroNivel)
           : null,
       mediaVazao: calcularMediaValida(vazoes),
       alertas,
@@ -1220,8 +1351,8 @@ function preencherTabelaComparativa(corpoTabela, series) {
       formatarMetrica(serie.mediaNivel, "%"),
       `${formatarMetrica(serie.minimoNivel, "%")} / ${formatarMetrica(serie.maximoNivel, "%")}`,
       serie.variacaoNivel === null
-        ? "Sem dados"
-        : `${serie.variacaoNivel > 0 ? "+" : ""}${serie.variacaoNivel.toFixed(1)} p.p.`,
+        ? "Sem comparação"
+        : formatarPercentual(serie.variacaoNivel),
       formatarMetrica(serie.mediaVazao, " L/s"),
       String(serie.diasComDados),
     ].forEach((valor) => {
@@ -1281,6 +1412,25 @@ function renderizarDashboard() {
   }
 
   const containerGrid = document.getElementById("grid-reservatorios");
+  const painelOperacional = document.getElementById("painel-operacional");
+  const resumoOperacional = painelOperacional.querySelector(".operational-brief");
+  const painelAnaliseReservatorio = document.getElementById(
+    "analise-grafico-reservatorio",
+  );
+  if (
+    analiseReservatorioAberta &&
+    !filtroSelecionado.startsWith("reservatorio:")
+  ) {
+    analiseReservatorioAberta = false;
+  }
+  containerGrid.hidden =
+    categoriaBoletimAtiva !== null || analiseReservatorioAberta;
+  resumoOperacional.hidden = analiseReservatorioAberta;
+  painelAnaliseReservatorio.hidden = !analiseReservatorioAberta;
+  containerGrid.classList.toggle(
+    "has-selected-reservoir",
+    filtroSelecionado.startsWith("reservatorio:"),
+  );
   const header = document.querySelector("header");
   header.classList.toggle("has-active-filter", filtroSelecionado !== "TODOS");
   containerGrid.innerHTML = "";
@@ -1301,6 +1451,10 @@ function renderizarDashboard() {
   const dataAnterior = indiceData > 0 ? datas[indiceData - 1] : null;
   const dadosDiaAnterior = dataAnterior ? banco.historico[dataAnterior] : null;
   const reservatoriosDiaAnterior = dadosDiaAnterior?.reservatorios ?? {};
+  const baseComparacao = document.getElementById("seletor-base-vazao").value;
+  const escopoOperacional = document.getElementById(
+    "seletor-escopo-operacional",
+  ).value;
 
   // Lógica de filtragem
   let chavesParaExibir = Object.keys(reservatorios);
@@ -1326,12 +1480,14 @@ function renderizarDashboard() {
     reservatorios,
     reservatoriosDiaAnterior,
     horarios,
+    banco,
+    baseComparacao,
+    escopoOperacional,
   });
 
   // Renderiza os cards
   chavesParaExibir.forEach((chave) => {
     const res = reservatorios[chave];
-    const resAnterior = reservatoriosDiaAnterior[chave];
     const selecionado = filtroSelecionado === `reservatorio:${chave}`;
     const exibirGrafico = !visaoGeral;
     const cardHTML = criarCardHTML(
@@ -1339,14 +1495,38 @@ function renderizarDashboard() {
       chave,
       exibirGrafico,
       selecionado,
-      resAnterior,
-      dataAnterior,
       horarios,
+      banco,
+      dataSelecionada,
+      baseComparacao,
     );
     containerGrid.insertAdjacentHTML("beforeend", cardHTML);
+    if (selecionado) {
+      const painelAlarme = criarPainelInformativoAlarme(
+        res,
+        chave,
+        horarios,
+        banco,
+        dataSelecionada,
+        baseComparacao,
+      );
+      containerGrid.append(painelAlarme);
+    }
 
-    if (exibirGrafico) {
+    if (exibirGrafico && !analiseReservatorioAberta) {
       renderizarGrafico(res.nome, horarios, res.leituras);
+      if (selecionado) {
+        renderizarGrafico(res.nome, horarios, res.leituras, true);
+      }
+    }
+    if (selecionado && analiseReservatorioAberta) {
+      renderizarAnaliseGraficoReservatorio(
+        painelAnaliseReservatorio,
+        res,
+        chave,
+        dataSelecionada,
+        horarios,
+      );
     }
   });
 }
@@ -1358,15 +1538,26 @@ function renderizarBoletimOperacional({
   reservatorios,
   reservatoriosDiaAnterior,
   horarios,
+  banco,
+  baseComparacao,
+  escopoOperacional,
 }) {
   const descricao = document.getElementById("operational-brief-description");
   const resumo = document.getElementById("operational-summary");
   const detalhes = document.getElementById("operational-details");
   const qualidadeDados = document.getElementById("operational-data-quality");
-  const textoComparacao = dataAnterior
-    ? `Comparação com ${dataAnterior}, última data disponível anterior.`
-    : "Não há uma data anterior disponível para comparação.";
-  descricao.textContent = `Dados de ${dataSelecionada}. ${textoComparacao}`;
+  const textoComparacao = [];
+  if (escopoOperacional !== "vazao") {
+    textoComparacao.push(
+      `Nível comparado com a média diária de ${obterRotuloBaseComparacao(baseComparacao)}; atenção abaixo de ${LIMITE_ATENCAO_NIVEL_PERCENTUAL}%, crítico abaixo de ${LIMITE_CRITICO_NIVEL_PERCENTUAL}%.`,
+    );
+  }
+  if (escopoOperacional !== "nivel") {
+    textoComparacao.push(
+      `Vazão mínima/máxima comparada com ${obterRotuloBaseComparacao(baseComparacao)}. Quedas ou aumentos de 20% geram atenção; acima de 35% são críticos.`,
+    );
+  }
+  descricao.textContent = `Dados de ${dataSelecionada}. ${textoComparacao.join(" ")}`;
 
   const chavesAuditoria = new Set([
     ...Object.keys(reservatorios),
@@ -1406,8 +1597,43 @@ function renderizarBoletimOperacional({
       leituras?.nivel?.length ?? 0,
       leituras?.vazao?.length ?? 0,
     );
-    const esperadas = esperadasPorVariavel * 2;
-    const validas = niveis.quantidade + vazoes.quantidade;
+    const nivelAtivo = escopoOperacional !== "vazao";
+    const vazaoAtiva = escopoOperacional !== "nivel";
+    const nivelEsperadoHistoricamente = temLeiturasHistoricasHabituais(
+      banco,
+      chave,
+      "nivel",
+      dataSelecionada,
+    );
+    const vazaoEsperadaHistoricamente = temLeiturasHistoricasHabituais(
+      banco,
+      chave,
+      "vazao",
+      dataSelecionada,
+    );
+    const nivelEsperado = nivelAtivo && nivelEsperadoHistoricamente;
+    const vazaoEsperada = vazaoAtiva && vazaoEsperadaHistoricamente;
+    const ausentesNivel = obterLeiturasAusentes(
+      { nivel: leituras?.nivel },
+      esperadasPorVariavel,
+      horarios,
+      ["nivel"],
+    );
+    const ausentesVazao = obterLeiturasAusentes(
+      { vazao: leituras?.vazao },
+      esperadasPorVariavel,
+      horarios,
+      ["vazao"],
+    );
+    const ausentesSelecionadas = [
+      ...(nivelEsperado ? ausentesNivel : []),
+      ...(vazaoEsperada ? ausentesVazao : []),
+    ];
+    const esperadas =
+      esperadasPorVariavel * (Number(nivelEsperado) + Number(vazaoEsperada));
+    const validas =
+      (nivelEsperado ? niveis.quantidade : 0) +
+      (vazaoEsperada ? vazoes.quantidade : 0);
 
     contagens.leiturasEsperadas += esperadas;
     contagens.leiturasAusentes += esperadas - validas;
@@ -1416,19 +1642,69 @@ function renderizarBoletimOperacional({
       reservatorio: reservatorio ?? reservatoriosDiaAnterior[chave],
       atual: reservatorio,
       anterior: reservatoriosDiaAnterior[chave],
-      ausentes: obterLeiturasAusentes(leituras, esperadasPorVariavel, horarios),
+      ausentes: ausentesSelecionadas,
+      statusNivel: reservatorio
+        ? avaliarStatusNivel(reservatorio.leituras?.nivel)
+        : null,
+      comparacaoNivel: reservatorio
+        ? obterComparacaoNivel(
+            banco,
+            chave,
+            dataSelecionada,
+            baseComparacao,
+            horarios,
+            obterUltimaLeituraNivel(reservatorio.leituras?.nivel),
+          )
+        : null,
+      alertaVazao: reservatorio
+        ? avaliarAlertaVazao(
+            reservatorio.leituras?.vazao,
+            obterReferenciaVazao(
+              banco,
+              chave,
+              dataSelecionada,
+              baseComparacao,
+              horarios,
+            ),
+            horarios,
+          )
+        : null,
     };
     if (!reservatorio) {
+      if (!nivelEsperado && !vazaoEsperada) return;
       contagens.semRegistro += 1;
       contagens.incompletos.push(registro);
       return;
     }
 
-    const status = reservatorio.kpis?.status;
-    if (status === "Normal") contagens.normal.push(registro);
-    if (status === "Atenção") contagens.atencao.push(registro);
-    if (status === "Crítico") contagens.critico.push(registro);
-    if (validas < esperadas || status === "Sem Dados") {
+    const statusNivelAtivo =
+      nivelAtivo &&
+      ["Normal", "Atenção", "Crítico"].includes(registro.statusNivel)
+        ? registro.statusNivel
+        : null;
+    const statusVazaoAtivo =
+      vazaoEsperada &&
+      ["Normal", "Atenção", "Crítico"].includes(registro.alertaVazao?.status)
+        ? registro.alertaVazao.status
+        : null;
+    const vazaoSemComparacao =
+      vazaoEsperada && registro.alertaVazao?.status === "Sem comparação";
+    const nivelSemDados =
+      nivelAtivo && registro.statusNivel === "Sem Dados";
+    const statusAtivos = [statusNivelAtivo, statusVazaoAtivo].filter(Boolean);
+    if (statusAtivos.includes("Crítico")) contagens.critico.push(registro);
+    else if (statusAtivos.includes("Atenção")) contagens.atencao.push(registro);
+    else if (
+      !vazaoSemComparacao &&
+      !nivelSemDados &&
+      statusAtivos.length > 0 &&
+      statusAtivos.every((statusAtivo) => statusAtivo === "Normal")
+    ) {
+      contagens.normal.push(registro);
+    }
+    if (
+      ausentesSelecionadas.length > 0 || nivelSemDados
+    ) {
       contagens.incompletos.push(registro);
     }
   });
@@ -1488,11 +1764,12 @@ function renderizarBoletimOperacional({
     detalhes,
     categorias.find(({ chave }) => chave === categoriaBoletimAtiva) ?? null,
     dataSelecionada,
-    dataAnterior,
     horarios,
+    escopoOperacional,
+    baseComparacao,
   );
 
-  const ausencias = `${contagens.leiturasAusentes} de ${contagens.leiturasEsperadas} leituras esperadas ausentes`;
+  const ausencias = `${contagens.leiturasAusentes} de ${contagens.leiturasEsperadas} leituras selecionadas esperadas ausentes`;
   const registrosAusentes = contagens.semRegistro
     ? ` ${contagens.semRegistro} reservatório(s) sem registro em ${dataSelecionada}.`
     : "";
@@ -1503,9 +1780,14 @@ function renderizarBoletimOperacional({
   );
 }
 
-function obterLeiturasAusentes(leituras, quantidadeSlots, horarios) {
+function obterLeiturasAusentes(
+  leituras,
+  quantidadeSlots,
+  horarios,
+  tipos = ["nivel", "vazao"],
+) {
   const ausentes = [];
-  ["nivel", "vazao"].forEach((tipo) => {
+  tipos.forEach((tipo) => {
     for (let indice = 0; indice < quantidadeSlots; indice += 1) {
       const valor = leituras?.[tipo]?.[indice];
       if (
@@ -1525,12 +1807,246 @@ function obterLeiturasAusentes(leituras, quantidadeSlots, horarios) {
   return ausentes;
 }
 
+function obterRotuloBaseComparacao(base) {
+  const rotulos = {
+    "7d-calendar": "últimos 7 dias corridos",
+    "30d-calendar": "últimos 30 dias corridos",
+    "same-weekday-4": "mesmo dia da semana nas últimas 4 semanas",
+    global: "histórico global",
+  };
+  return rotulos[base] ?? rotulos["7d-calendar"];
+}
+
+function obterIdentificacaoReservatorio(chave) {
+  return chave.match(/\b(?:R\d{1,3}(?:-[A-Z])?|ES\d{2})\b/i)?.[0] ?? chave;
+}
+
+function obterRotuloEscopo(escopo) {
+  if (escopo === "nivel") return "nível";
+  if (escopo === "vazao") return "vazão";
+  return "nível e vazão";
+}
+
+function converterDataParaUTC(data) {
+  const [dia, mes, ano] = data.split("/").map(Number);
+  return Date.UTC(ano, mes - 1, dia);
+}
+
+function obterDatasBaseComparacao(banco, dataSelecionada, base) {
+  const datas = banco.datasDisponiveis;
+  const indiceData = datas.indexOf(dataSelecionada);
+  if (indiceData <= 0) return [];
+
+  const dataAtualUTC = converterDataParaUTC(dataSelecionada);
+  const diaSemanaAtual = new Date(dataAtualUTC).getUTCDay();
+  return datas.slice(0, indiceData).filter((data) => {
+    if (base === "global") return true;
+
+    const diferencaDias =
+      (dataAtualUTC - converterDataParaUTC(data)) / 86400000;
+    if (base === "7d-calendar") return diferencaDias <= 7;
+    if (base === "30d-calendar") return diferencaDias <= 30;
+    if (base === "same-weekday-4") {
+      return (
+        diferencaDias <= 28 &&
+        new Date(converterDataParaUTC(data)).getUTCDay() === diaSemanaAtual
+      );
+    }
+    return false;
+  });
+}
+
+function temLeiturasHistoricasHabituais(
+  banco,
+  chaveReservatorio,
+  tipo,
+  dataSelecionada,
+) {
+  const indiceData = banco.datasDisponiveis.indexOf(dataSelecionada);
+  if (indiceData < 0) return false;
+
+  const datasHistoricas = banco.datasDisponiveis.slice(0, indiceData + 1);
+  const diasComLeitura = datasHistoricas.filter((data) => {
+    const valores =
+      banco.historico[data]?.reservatorios?.[chaveReservatorio]?.leituras?.[
+        tipo
+      ];
+    return resumirLeiturasEstruturadas(valores, banco.historico[data]?.horarios)
+      .quantidade > 0;
+  }).length;
+
+  return (
+    diasComLeitura >= MINIMO_DIAS_HISTORICOS_PARA_ESPERAR_DADO &&
+    diasComLeitura / datasHistoricas.length >= 0.5
+  );
+}
+
+function obterComparacaoNivel(
+  banco,
+  chaveReservatorio,
+  dataSelecionada,
+  base,
+  horarios,
+  nivelAtual,
+) {
+  const resumos = obterDatasBaseComparacao(banco, dataSelecionada, base)
+    .map((data) => {
+      const reservatorio =
+        banco.historico[data]?.reservatorios?.[chaveReservatorio];
+      if (!reservatorio) return null;
+      const resumo = resumirLeiturasEstruturadas(
+        filtrarLeiturasNivelValidas(reservatorio.leituras?.nivel),
+        banco.historico[data]?.horarios ?? horarios,
+      );
+      return resumo.media === null ? null : { data, media: resumo.media };
+    })
+    .filter(Boolean);
+  const medias = resumos.map(({ media }) => media);
+  const referencia =
+    medias.length >= 2
+      ? medias.reduce((soma, valor) => soma + valor, 0) / medias.length
+      : null;
+
+  return {
+    nivelAtual,
+    referencia,
+    variacao:
+      nivelAtual !== null && referencia !== null && referencia !== 0
+        ? calcularVariacaoPercentual(nivelAtual, referencia)
+        : null,
+    quantidade: medias.length,
+    datas: resumos.map(({ data }) => data),
+  };
+}
+
+function obterReferenciaVazao(
+  banco,
+  chaveReservatorio,
+  dataSelecionada,
+  base,
+  horarios,
+) {
+  const resumosDiarios = obterDatasBaseComparacao(
+    banco,
+    dataSelecionada,
+    base,
+  )
+    .map((data) => {
+      const reservatorio =
+        banco.historico[data]?.reservatorios?.[chaveReservatorio];
+      if (!reservatorio) return null;
+      const resumo = resumirLeiturasEstruturadas(
+        filtrarLeiturasVazaoValidas(reservatorio.leituras?.vazao),
+        banco.historico[data]?.horarios ?? horarios,
+      );
+      return resumo.quantidade ? { data, ...resumo } : null;
+    })
+    .filter(Boolean);
+
+  const obterMediaComMinimo = (campo) => {
+    const valores = resumosDiarios
+      .map((resumo) => resumo[campo])
+      .filter((valor) => valor !== null);
+    return {
+      valor:
+        valores.length >= 2
+          ? valores.reduce((soma, valor) => soma + valor, 0) / valores.length
+          : null,
+      quantidade: valores.length,
+    };
+  };
+  const media = obterMediaComMinimo("media");
+  const minimo = obterMediaComMinimo("minimo");
+  const maximo = obterMediaComMinimo("maximo");
+
+  return {
+    media: media.valor,
+    minimo: minimo.valor,
+    maximo: maximo.valor,
+    quantidade: resumosDiarios.length,
+    datas: resumosDiarios.map(({ data }) => data),
+    quantidades: {
+      media: media.quantidade,
+      minimo: minimo.quantidade,
+      maximo: maximo.quantidade,
+    },
+  };
+}
+
+function avaliarAlertaVazao(leiturasAtuais, referencia, horarios) {
+  const atual = resumirLeiturasEstruturadas(
+    filtrarLeiturasVazaoValidas(leiturasAtuais),
+    horarios,
+  );
+  const indicadores = [
+    {
+      rotulo: "Média",
+      valorAtual: atual.media,
+      valorAnterior: referencia?.media ?? null,
+      quantidadeReferencia: referencia?.quantidades.media ?? 0,
+      classificaAlerta: false,
+    },
+    {
+      rotulo: "Mínima",
+      valorAtual: atual.minimo,
+      valorAnterior: referencia?.minimo ?? null,
+      quantidadeReferencia: referencia?.quantidades.minimo ?? 0,
+      classificaAlerta: true,
+    },
+    {
+      rotulo: "Máxima",
+      valorAtual: atual.maximo,
+      valorAnterior: referencia?.maximo ?? null,
+      quantidadeReferencia: referencia?.quantidades.maximo ?? 0,
+      classificaAlerta: true,
+    },
+  ].map((indicador) => {
+    const variacao =
+      indicador.valorAtual !== null &&
+      indicador.valorAnterior !== null &&
+      indicador.valorAnterior > 0
+        ? ((indicador.valorAtual - indicador.valorAnterior) /
+            Math.abs(indicador.valorAnterior)) *
+          100
+        : null;
+    const magnitude = variacao === null ? null : Math.abs(variacao);
+    const direcao =
+      variacao === null
+        ? null
+        : variacao < 0
+          ? "baixa"
+          : variacao > 0
+            ? "alta"
+            : "estável";
+    const status =
+      !indicador.classificaAlerta
+        ? "Informativo"
+        : magnitude === null
+        ? "Sem comparação"
+        : magnitude > LIMITE_CRITICO_VAZAO_PERCENTUAL + 1e-9
+          ? "Crítico"
+          : magnitude >= LIMITE_ATENCAO_VAZAO_PERCENTUAL - 1e-9
+            ? "Atenção"
+            : "Normal";
+    return { ...indicador, variacao, direcao, status };
+  });
+  const indicadoresClassificaveis = indicadores.filter(
+    (indicador) => indicador.classificaAlerta,
+  );
+  const status = ["Crítico", "Atenção", "Normal"].find((nivel) =>
+    indicadoresClassificaveis.some((indicador) => indicador.status === nivel),
+  ) ?? "Sem comparação";
+
+  return { status, indicadores, referencia };
+}
+
 function renderizarDetalhesBoletim(
   container,
   categoria,
   dataSelecionada,
-  dataAnterior,
   horarios,
+  escopoOperacional,
+  baseComparacao,
 ) {
   container.replaceChildren();
   container.hidden = !categoria;
@@ -1543,7 +2059,8 @@ function renderizarDetalhesBoletim(
   const fechar = document.createElement("button");
   fechar.type = "button";
   fechar.className = "operational-details-close";
-  fechar.textContent = "Fechar";
+  fechar.textContent = "Fechar boletim";
+  fechar.setAttribute("aria-label", "Fechar detalhes do boletim e voltar ao resumo");
   fechar.addEventListener("click", () => {
     categoriaBoletimAtiva = null;
     renderizarDashboard();
@@ -1554,8 +2071,8 @@ function renderizarDetalhesBoletim(
   descricao.className = "operational-details-description";
   descricao.textContent =
     categoria.chave === "incompletos"
-      ? `Leituras ausentes em ${dataSelecionada}. Reservatórios sem registro também aparecem aqui.`
-      : `Reservatórios classificados como ${categoria.rotulo.toLowerCase()} em ${dataSelecionada}.`;
+      ? `Leituras de ${obterRotuloEscopo(escopoOperacional)} ausentes em ${dataSelecionada}. Reservatórios sem registro também aparecem aqui.`
+      : `Reservatórios classificados como ${categoria.rotulo.toLowerCase()} em ${dataSelecionada}, considerando ${obterRotuloEscopo(escopoOperacional)}.`;
 
   const lista = document.createElement("div");
   lista.className = "operational-details-list";
@@ -1573,46 +2090,182 @@ function renderizarDetalhesBoletim(
     const topo = document.createElement("div");
     topo.className = "operational-detail-heading";
     const nome = document.createElement("h4");
-    nome.textContent = `${registro.reservatorio?.nome ?? registro.chave} (${registro.reservatorio?.grupo ?? "Grupo não informado"})`;
-    const status = document.createElement("span");
-    status.className = `badge-status ${obterClasseStatus(registro.atual?.kpis?.status)}`;
-    status.textContent = registro.atual?.kpis?.status ?? "Sem registro";
-    topo.append(nome, status);
-
-    const metricas = document.createElement("p");
-    metricas.className = "operational-detail-metrics";
-    if (registro.atual) {
-      const nivelAnterior = obterUltimaLeitura(
-        registro.anterior?.leituras?.nivel,
+    nome.textContent = obterIdentificacaoReservatorio(registro.chave);
+    topo.append(nome);
+    let statusNivel;
+    if (escopoOperacional !== "vazao") {
+      statusNivel = document.createElement("span");
+      statusNivel.className = `badge-status ${obterClasseStatus(registro.statusNivel)}`;
+      statusNivel.textContent = `Nível: ${registro.statusNivel ?? "Sem registro"}`;
+    }
+    let statusVazao;
+    if (escopoOperacional !== "nivel") {
+      statusVazao = document.createElement("span");
+      const vazoesAtuais = resumirLeiturasEstruturadas(
+        registro.atual?.leituras?.vazao,
+        horarios,
       );
-      const nivelAtual = obterUltimaLeitura(registro.atual.leituras?.nivel);
-      const variacaoNivel =
-        dataAnterior && nivelAtual !== null && nivelAnterior !== null
-          ? ` · ${formatarVariacao(nivelAtual, nivelAnterior, " p.p.", "Variação do nível")}`
-          : "";
-      const nivelNumerico = obterUltimaLeitura(registro.atual.leituras?.nivel);
+      const vazaoIndisponivel =
+        !registro.atual || vazoesAtuais.quantidade === 0;
+      const vazaoSemComparacao =
+        registro.alertaVazao?.status === "Sem comparação";
+      statusVazao.className = `badge-status ${obterClasseStatus(
+        vazaoIndisponivel
+          ? "Sem comparação"
+          : registro.alertaVazao?.status,
+      )}`;
+      if (vazaoIndisponivel || vazaoSemComparacao) {
+        statusVazao.classList.add("operational-detail-status-unavailable");
+      }
+      statusVazao.textContent = vazaoIndisponivel
+        ? "Vazão: N/A"
+        : `Vazão: ${registro.alertaVazao?.status ?? "Sem comparação"}`;
+    }
+    if (statusNivel) {
+      const statusReservatorio = document.createElement("div");
+      statusReservatorio.className = "card-statuses";
+      statusReservatorio.append(statusNivel);
+      topo.append(statusReservatorio);
+    }
+    if (statusVazao) topo.append(statusVazao);
+
+    if (registro.atual) {
+      const comparacaoNivel = registro.comparacaoNivel;
+      const variacaoNivel = formatarVariacaoNivel(comparacaoNivel);
+      const niveisAtuais = resumirLeiturasEstruturadas(
+        filtrarLeiturasNivelValidas(registro.atual.leituras?.nivel),
+        horarios,
+      );
+      const nivelNumerico = obterUltimaLeituraNivel(
+        registro.atual.leituras?.nivel,
+      );
+      const nivelAtualFormatado =
+        nivelNumerico === null ? "N/A" : `${nivelNumerico.toFixed(1)}%`;
       const explicacaoStatus =
-        registro.atual.kpis?.status === "Crítico"
-          ? `Classificação crítica: nível abaixo de 40% (${registro.atual.kpis?.nivelAtual ?? "N/A"}).`
-          : registro.atual.kpis?.status === "Atenção"
-            ? `Classificação de atenção: nível abaixo de 60% (${registro.atual.kpis?.nivelAtual ?? "N/A"}).`
-            : registro.atual.kpis?.status === "Sem Dados"
+        registro.statusNivel === "Crítico"
+          ? `Classificação crítica: nível abaixo de ${LIMITE_CRITICO_NIVEL_PERCENTUAL}% (${nivelAtualFormatado}).`
+          : registro.statusNivel === "Atenção"
+            ? `Classificação de atenção: nível abaixo de ${LIMITE_ATENCAO_NIVEL_PERCENTUAL}% (${nivelAtualFormatado}).`
+            : registro.statusNivel === "Sem Dados"
               ? "Não há leituras válidas de nível nesta madrugada; incluído em Incompletos."
               : nivelNumerico === null
                 ? "Não há leitura de nível válida para classificar o reservatório."
                 : "";
-      metricas.textContent = `Nível atual: ${registro.atual.kpis?.nivelAtual ?? "N/A"} · Vazão atual: ${registro.atual.kpis?.vazaoAtual ?? "N/A"}${variacaoNivel}`;
+
+      card.append(topo);
+
+      const secaoNivel = document.createElement("section");
+      secaoNivel.className = "operational-detail-section";
+      const tituloNivel = document.createElement("h5");
+      tituloNivel.textContent = "Nível do reservatório";
+      const gradeNivel = document.createElement("div");
+      gradeNivel.className = "operational-detail-metric-grid";
+      gradeNivel.append(
+        criarCelulaDetalhe("Nível atual", nivelAtualFormatado),
+        criarCelulaDetalhe(
+          "Mínimo / máximo",
+          `${formatarMetrica(niveisAtuais.minimo, "%")} / ${formatarMetrica(niveisAtuais.maximo, "%")}`,
+        ),
+        criarCelulaDetalhe(
+          "Variação (%)",
+          variacaoNivel,
+        ),
+      );
+      const datasReferenciaNivel =
+        comparacaoNivel?.datas.length > 0
+          ? ` Datas usadas: ${
+              comparacaoNivel.datas.length <= 4
+                ? comparacaoNivel.datas.join(", ")
+                : `${comparacaoNivel.datas[0]} a ${comparacaoNivel.datas[comparacaoNivel.datas.length - 1]}`
+            }.`
+          : "";
+      const descricaoReferenciaNivel = document.createElement("p");
+      descricaoReferenciaNivel.className = "operational-detail-reason";
+      descricaoReferenciaNivel.textContent = `Base: ${obterRotuloBaseComparacao(baseComparacao)} · média de ${comparacaoNivel?.quantidade ?? 0} dia(s) válidos. Referência diária média: ${formatarMetrica(comparacaoNivel?.referencia ?? null, "%")}.${datasReferenciaNivel}`;
+      secaoNivel.append(tituloNivel, gradeNivel);
+      secaoNivel.append(descricaoReferenciaNivel);
       if (explicacaoStatus) {
         const explicacao = document.createElement("p");
         explicacao.className = "operational-detail-reason";
         explicacao.textContent = explicacaoStatus;
-        card.append(topo, metricas, explicacao);
-      } else {
-        card.append(topo, metricas);
+        secaoNivel.append(explicacao);
+      }
+      if (escopoOperacional !== "vazao") card.append(secaoNivel);
+
+      if (registro.alertaVazao && escopoOperacional !== "nivel") {
+        const secaoVazao = document.createElement("section");
+        secaoVazao.className = "operational-detail-section";
+        const cabecalhoVazao = document.createElement("div");
+        cabecalhoVazao.className = "operational-detail-flow-heading";
+        const tituloVazao = document.createElement("h5");
+        tituloVazao.textContent = "Vazão";
+        const statusIndicadores = document.createElement("span");
+        statusIndicadores.className = `badge-status ${obterClasseStatus(registro.alertaVazao.status)}`;
+        statusIndicadores.textContent = registro.alertaVazao.status;
+        cabecalhoVazao.append(tituloVazao, statusIndicadores);
+
+        const referencia = registro.alertaVazao.referencia;
+        const datasReferencia =
+          referencia?.datas.length > 0
+            ? ` Datas usadas: ${
+                referencia.datas.length <= 4
+                  ? referencia.datas.join(", ")
+                  : `${referencia.datas[0]} a ${referencia.datas[referencia.datas.length - 1]}`
+              }.`
+            : "";
+        const descricaoBase = document.createElement("p");
+        descricaoBase.className = "operational-detail-reason";
+        descricaoBase.textContent = `Base: ${obterRotuloBaseComparacao(baseComparacao)} · ${referencia?.quantidade ?? 0} dia(s) válidos.${datasReferencia} Para mínima e máxima, queda ou aumento de ${LIMITE_ATENCAO_VAZAO_PERCENTUAL}% gera atenção; acima de ${LIMITE_CRITICO_VAZAO_PERCENTUAL}% é crítico. Média exibida apenas como informação, sem gerar alerta.`;
+        const gradeVazao = document.createElement("div");
+        gradeVazao.className = "operational-flow-indicators";
+        registro.alertaVazao.indicadores.forEach((indicador) => {
+          const item = document.createElement("div");
+          item.className = "operational-flow-indicator";
+          const nomeIndicador = document.createElement("strong");
+          nomeIndicador.textContent = indicador.rotulo;
+          const valoresIndicador = document.createElement("span");
+          valoresIndicador.textContent = `Atual ${formatarValorVazao(indicador.valorAtual)} L/s · Ref. ${formatarValorVazao(indicador.valorAnterior)} L/s`;
+          const variacaoIndicador = document.createElement("span");
+          variacaoIndicador.textContent =
+            indicador.variacao === null && indicador.classificaAlerta
+              ? indicador.valorAnterior === 0
+                ? `Referência histórica zero (${indicador.quantidadeReferencia} dias); variação percentual não calculável`
+                : `Sem base suficiente (${indicador.quantidadeReferencia} dias válidos)`
+              : indicador.variacao === null
+                ? "Sem comparação disponível"
+              : !indicador.classificaAlerta
+                ? `${formatarPercentual(indicador.variacao)} — informativo, não classifica alerta`
+              : `${formatarPercentual(indicador.variacao)} — ${
+                  indicador.direcao === "baixa"
+                    ? "vazão baixa"
+                    : indicador.direcao === "alta"
+                      ? "vazão alta"
+                      : "sem variação"
+                }`;
+          const statusIndicador = document.createElement("span");
+          statusIndicador.className = indicador.classificaAlerta
+            ? `badge-status ${obterClasseStatus(indicador.status)}`
+            : "flow-indicator-note";
+          statusIndicador.textContent = indicador.classificaAlerta
+            ? indicador.status
+            : "Informativo";
+          item.append(
+            nomeIndicador,
+            valoresIndicador,
+            variacaoIndicador,
+            statusIndicador,
+          );
+          gradeVazao.append(item);
+        });
+        secaoVazao.append(cabecalhoVazao, descricaoBase, gradeVazao);
+        card.append(secaoVazao);
       }
     } else {
-      metricas.textContent = `Sem registro em ${dataSelecionada}. Último registro disponível: ${dataAnterior ?? "não disponível"}.`;
-      card.append(topo, metricas);
+      card.append(topo);
+      const semRegistro = document.createElement("p");
+      semRegistro.className = "operational-detail-missing";
+      semRegistro.textContent = `Sem registro em ${dataSelecionada}. Último registro disponível: ${dataAnterior ?? "não disponível"}.`;
+      card.append(semRegistro);
     }
 
     if (registro.ausentes.length) {
@@ -1648,7 +2301,19 @@ function obterClasseStatus(status) {
   if (status === "Atenção") return "status-atencao";
   if (status === "Crítico") return "status-critico";
   if (status === "Sem Dados") return "status-sem-dados";
+  if (status === "Sem comparação") return "status-sem-comparacao";
   return "status-normal";
+}
+
+function criarCelulaDetalhe(rotulo, valor) {
+  const celula = document.createElement("div");
+  celula.className = "operational-detail-metric";
+  const label = document.createElement("span");
+  label.textContent = rotulo;
+  const valorElemento = document.createElement("strong");
+  valorElemento.textContent = valor;
+  celula.append(label, valorElemento);
+  return celula;
 }
 
 function selecionarCard(card) {
@@ -1658,42 +2323,255 @@ function selecionarCard(card) {
   seletorFiltro.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+function criarPainelInformativoAlarme(
+  reservatorio,
+  chave,
+  horarios,
+  banco,
+  dataSelecionada,
+  baseComparacao,
+) {
+  const painel = document.createElement("aside");
+  painel.className = "reservoir-alarm-info";
+  painel.setAttribute("aria-labelledby", "reservoir-alarm-info-title");
+
+  const titulo = document.createElement("h3");
+  titulo.id = "reservoir-alarm-info-title";
+  titulo.textContent = "Informativo do alarme";
+  const fechar = document.createElement("button");
+  fechar.type = "button";
+  fechar.className = "reservoir-alarm-info-close";
+  fechar.textContent = "Fechar";
+  fechar.addEventListener("click", () => {
+    const seletorFiltro = document.getElementById("seletor-filtro");
+    seletorFiltro.value = "TODOS";
+    seletorFiltro.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  const cabecalho = document.createElement("div");
+  cabecalho.className = "reservoir-alarm-info-heading";
+  cabecalho.append(titulo, fechar);
+  const identificacao = document.createElement("p");
+  identificacao.className = "reservoir-alarm-info-id";
+  identificacao.textContent = `${obterIdentificacaoReservatorio(chave)} · ${dataSelecionada}`;
+  painel.append(cabecalho, identificacao);
+
+  const nivel = obterUltimaLeituraNivel(reservatorio.leituras?.nivel);
+  const statusNivel = avaliarStatusNivel(reservatorio.leituras?.nivel);
+  const nivelSecao = document.createElement("section");
+  nivelSecao.className = "reservoir-alarm-info-section";
+  const nivelTitulo = document.createElement("h4");
+  nivelTitulo.textContent = "Nível";
+  const nivelStatus = document.createElement("span");
+  nivelStatus.className = `badge-status ${obterClasseStatus(statusNivel)}`;
+  nivelStatus.textContent = statusNivel;
+  const nivelDetalhe = document.createElement("p");
+  nivelDetalhe.textContent =
+    nivel === null
+      ? "Sem leitura de nível válida para avaliar o alarme."
+      : `Última leitura: ${nivel.toFixed(1)}%. ${
+          statusNivel === "Crítico"
+            ? `Crítico: abaixo de ${LIMITE_CRITICO_NIVEL_PERCENTUAL}%.`
+            : statusNivel === "Atenção"
+              ? `Atenção: abaixo de ${LIMITE_ATENCAO_NIVEL_PERCENTUAL}%.`
+              : `Normal: igual ou acima de ${LIMITE_ATENCAO_NIVEL_PERCENTUAL}%.`
+        }`;
+  nivelSecao.append(nivelTitulo, nivelStatus, nivelDetalhe);
+  painel.append(nivelSecao);
+
+  const referencia = obterReferenciaVazao(
+    banco,
+    chave,
+    dataSelecionada,
+    baseComparacao,
+    horarios,
+  );
+  const alertaVazao = avaliarAlertaVazao(
+    reservatorio.leituras?.vazao,
+    referencia,
+    horarios,
+  );
+  const vazaoSecao = document.createElement("section");
+  vazaoSecao.className = "reservoir-alarm-info-section";
+  const vazaoTitulo = document.createElement("h4");
+  vazaoTitulo.textContent = "Vazão";
+  const vazaoStatus = document.createElement("span");
+  vazaoStatus.className = `badge-status ${obterClasseStatus(alertaVazao.status)}`;
+  vazaoStatus.textContent = alertaVazao.status;
+  const vazaoRegra = document.createElement("p");
+  vazaoRegra.textContent =
+    `Comparação: ${obterRotuloBaseComparacao(baseComparacao)} ` +
+    `(${referencia.quantidade} dia(s) válidos). Queda ou aumento de ` +
+    `${LIMITE_ATENCAO_VAZAO_PERCENTUAL}% a ${LIMITE_CRITICO_VAZAO_PERCENTUAL}% ` +
+    `gera atenção; acima de ${LIMITE_CRITICO_VAZAO_PERCENTUAL}% é crítico. ` +
+    "A vazão média é informativa.";
+  const indicadores = document.createElement("div");
+  indicadores.className = "reservoir-alarm-indicators";
+
+  alertaVazao.indicadores
+    .filter((indicador) => indicador.classificaAlerta)
+    .forEach((indicador) => {
+      const item = document.createElement("div");
+      item.className = "reservoir-alarm-indicator";
+      const nome = document.createElement("strong");
+      nome.textContent = indicador.rotulo;
+      const valor = document.createElement("span");
+      valor.textContent =
+        `Atual ${formatarValorVazao(indicador.valorAtual)} L/s · ` +
+        `Referência ${formatarValorVazao(indicador.valorAnterior)} L/s`;
+      const variacao = document.createElement("span");
+      variacao.textContent =
+        indicador.variacao === null
+          ? indicador.valorAnterior === 0
+            ? "Referência histórica zero; variação não calculável."
+            : `Sem base suficiente (${indicador.quantidadeReferencia} dia(s) válidos).`
+          : `${formatarPercentual(indicador.variacao)} · ${
+              indicador.direcao === "baixa"
+                ? "vazão baixa"
+                : indicador.direcao === "alta"
+                  ? "vazão alta"
+                  : "sem variação"
+            }`;
+      const status = document.createElement("span");
+      status.className = `badge-status ${obterClasseStatus(indicador.status)}`;
+      status.textContent = indicador.status;
+      item.append(nome, valor, variacao, status);
+      indicadores.append(item);
+    });
+
+  vazaoSecao.append(vazaoTitulo, vazaoStatus, vazaoRegra, indicadores);
+  painel.append(vazaoSecao);
+
+  const vazaoHistorica = obterExtremosHistoricosVazao(banco, chave);
+  const historicoSecao = document.createElement("section");
+  historicoSecao.className =
+    "reservoir-alarm-info-section reservoir-alarm-history";
+  const historicoTitulo = document.createElement("h4");
+  historicoTitulo.textContent = "Extremos históricos da vazão";
+  const extremosHistoricos = document.createElement("div");
+  extremosHistoricos.className = "historical-flow-extremes";
+  extremosHistoricos.setAttribute(
+    "aria-label",
+    "Extremos históricos de vazão",
+  );
+  [
+    {
+      rotulo: "Mín. hist.",
+      valor: vazaoHistorica.minimo,
+      data: vazaoHistorica.dataMinimo,
+    },
+    {
+      rotulo: "Máx. hist.",
+      valor: vazaoHistorica.maximo,
+      data: vazaoHistorica.dataMaximo,
+    },
+  ].forEach((extremo) => {
+    const item = document.createElement("span");
+    const rotulo = document.createElement("strong");
+    rotulo.textContent = extremo.rotulo;
+    const valor = document.createElement("span");
+    valor.textContent = `${formatarValorVazao(extremo.valor)} L/s`;
+    const data = document.createElement("small");
+    data.textContent = extremo.data ?? "—";
+    item.append(rotulo, valor, data);
+    extremosHistoricos.append(item);
+  });
+  historicoSecao.append(historicoTitulo, extremosHistoricos);
+  painel.append(historicoSecao);
+
+  return painel;
+}
+
 function criarCardHTML(
   res,
   chave,
   exibirGraficos,
   selecionado,
-  resAnterior,
-  dataAnterior,
   horarios,
+  banco,
+  dataSelecionada,
+  baseComparacao,
 ) {
-  const kpis = res.kpis;
+  const niveis = resumirLeiturasEstruturadas(
+    filtrarLeiturasNivelValidas(res.leituras?.nivel),
+    horarios,
+  );
+  const nivelAtual = obterUltimaLeituraNivel(res.leituras?.nivel);
+  const statusNivel = avaliarStatusNivel(res.leituras?.nivel);
   let statusClass = "status-normal";
-  if (kpis.status === "Atenção") statusClass = "status-atencao";
-  if (kpis.status === "Crítico") statusClass = "status-critico";
-  if (kpis.status === "Sem Dados") statusClass = "status-sem-dados";
-
-  const niveis = resumirLeiturasEstruturadas(res.leituras?.nivel, horarios);
+  if (statusNivel === "Atenção") statusClass = "status-atencao";
+  if (statusNivel === "Crítico") statusClass = "status-critico";
+  if (statusNivel === "Sem Dados") statusClass = "status-sem-dados";
   const vazoes = resumirLeiturasEstruturadas(res.leituras?.vazao, horarios);
-  const comparacaoHTML = dataAnterior
-    ? `<div class="card-comparison">
-        <span class="card-comparison-label">Variação vs. ${dataAnterior}</span>
-        <span>${formatarVariacao(
-          obterUltimaLeitura(res.leituras?.nivel),
-          obterUltimaLeitura(resAnterior?.leituras?.nivel),
-          " p.p.",
-          "Nível",
-        )}</span>
-        <span>${formatarVariacao(
-          obterUltimaLeitura(res.leituras?.vazao),
-          obterUltimaLeitura(resAnterior?.leituras?.vazao),
-          " L/s",
-          "Vazão",
-        )}</span>
-      </div>`
-    : `<div class="card-comparison">
-        <span class="card-comparison-label">Sem data anterior para comparação</span>
+  const alertaVazao = avaliarAlertaVazao(
+    res.leituras?.vazao,
+    obterReferenciaVazao(
+      banco,
+      chave,
+      dataSelecionada,
+      baseComparacao,
+      horarios,
+    ),
+    horarios,
+  );
+  const vazaoSemComparacao = alertaVazao.status === "Sem comparação";
+  const comparacaoNivel = obterComparacaoNivel(
+    banco,
+    chave,
+    dataSelecionada,
+    baseComparacao,
+    horarios,
+    obterUltimaLeituraNivel(res.leituras?.nivel),
+  );
+  const comparacoesVazao = alertaVazao.indicadores
+    .filter((indicador) => indicador.classificaAlerta)
+    .map((indicador) => {
+      const direcao =
+        indicador.direcao === "baixa"
+          ? "↓ Baixa"
+          : indicador.direcao === "alta"
+            ? "↑ Alta"
+            : indicador.direcao === "estável"
+              ? "Estável"
+              : "Sem comparação";
+      const variacao =
+        indicador.variacao === null
+          ? indicador.valorAnterior === 0
+            ? "Ref. zero"
+            : "Sem base"
+          : formatarPercentual(indicador.variacao);
+
+      return `<div class="card-comparison-metric ${obterClasseStatus(indicador.status)}">
+        <span class="card-comparison-label">Vazão ${indicador.rotulo.toLowerCase()}</span>
+        <strong>${variacao}</strong>
+        <span class="card-comparison-status">${direcao} · ${indicador.status}</span>
       </div>`;
+    })
+    .join("");
+  const variacaoNivel =
+    comparacaoNivel.variacao === null
+      ? "Sem comparação"
+      : formatarPercentual(comparacaoNivel.variacao);
+  const direcaoNivel =
+    comparacaoNivel.variacao === null
+      ? "Sem base"
+      : comparacaoNivel.variacao < 0
+        ? "↓ Baixou"
+        : comparacaoNivel.variacao > 0
+          ? "↑ Subiu"
+          : "Estável";
+  const comparacaoHTML = `<div class="card-comparison">
+      <div class="card-comparison-heading">
+        <span>Comparação</span>
+      </div>
+      <div class="card-comparison-grid">
+        <div class="card-comparison-metric ${obterClasseStatus(statusNivel)}">
+          <span class="card-comparison-label">Nível</span>
+          <strong>${variacaoNivel}</strong>
+          <span class="card-comparison-status">${direcaoNivel} · ${statusNivel}</span>
+        </div>
+        ${comparacoesVazao}
+      </div>
+    </div>`;
   const quantidadeSlots = Math.max(
     horarios.length,
     res.leituras?.nivel?.length ?? 0,
@@ -1709,7 +2587,99 @@ function criarCardHTML(
     }
   </div>`;
   const idCanvas = `chart-${res.nome.replace(/[^a-zA-Z0-9]/g, "_")}`;
-  const graficoHTML = exibirGraficos
+  const nivelMedio = formatarMetrica(niveis.media, "%");
+  const vazaoMedia = formatarMetrica(vazoes.media, " L/s");
+  const classeRoscaNivel =
+    statusNivel === "Normal"
+      ? "status-normal"
+      : statusNivel === "Atenção"
+        ? "status-atencao"
+        : statusNivel === "Crítico"
+          ? "status-critico"
+          : "status-sem-dados";
+  const indicadorNivelHTML = selecionado
+    ? `<div
+      class="kpi-box kpi-level-gauge"
+      role="meter"
+      aria-label="Nível atual"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      ${nivelAtual === null ? "" : `aria-valuenow="${Math.min(nivelAtual, 100)}"`}
+    >
+      <span
+        class="level-gauge ${classeRoscaNivel}"
+        style="--nivel-atual: ${Math.min(Math.max(nivelAtual ?? 0, 0), 100)}%"
+      >
+        <span class="level-gauge-content">
+          <strong>${nivelAtual === null ? "N/A" : `${nivelAtual.toFixed(1)}%`}</strong>
+          <small>Nível atual</small>
+        </span>
+      </span>
+    </div>`
+    : `<div class="kpi-box">
+      <span class="kpi-label">Nível Atual</span>
+      <span class="kpi-value">${
+        nivelAtual === null ? "N/A" : `${nivelAtual.toFixed(1)}%`
+      }</span>
+    </div>`;
+  const kpiHTML = selecionado
+    ? `<div class="kpi-container kpi-container-selected">
+      <div class="kpi-box kpi-level-range">
+        <span class="kpi-label">Nível Mín/Máx</span>
+        <span class="kpi-value">${formatarMetrica(niveis.minimo, "%")} / ${formatarMetrica(niveis.maximo, "%")}</span>
+        <span class="kpi-detail">Mín. ${niveis.horarioMinimo ?? "--"} · Máx. ${niveis.horarioMaximo ?? "--"}</span>
+      </div>
+      <div class="kpi-box kpi-level-average">
+        <span class="kpi-label">Nível médio</span>
+        <span class="kpi-value">${nivelMedio}</span>
+        <span class="kpi-detail">Média das leituras da madrugada</span>
+      </div>
+      ${indicadorNivelHTML}
+      <div class="kpi-box kpi-flow-range">
+        <span class="kpi-label">Vazão Mín/Máx (dia)</span>
+        <span class="kpi-value">${formatarMetrica(vazoes.minimo, " L/s")} / ${formatarMetrica(vazoes.maximo, " L/s")}</span>
+        <span class="kpi-detail">Mín. ${vazoes.horarioMinimo ?? "--"} · Máx. ${vazoes.horarioMaximo ?? "--"}</span>
+      </div>
+      <div class="kpi-box kpi-flow-average">
+        <span class="kpi-label">Vazão média</span>
+        <span class="kpi-value">${vazaoMedia}</span>
+        <span class="kpi-detail">Média das leituras da madrugada</span>
+      </div>
+    </div>`
+    : `<div class="kpi-container">
+      ${indicadorNivelHTML}
+      <div class="kpi-box">
+        <span class="kpi-label">Nível Mín/Máx</span>
+        <span class="kpi-value">${formatarMetrica(niveis.minimo, "%")} / ${formatarMetrica(niveis.maximo, "%")}</span>
+        <span class="kpi-detail">Mín. ${niveis.horarioMinimo ?? "--"} · Máx. ${niveis.horarioMaximo ?? "--"}</span>
+      </div>
+      <div class="kpi-box">
+        <span class="kpi-label">Vazão Mín/Máx (dia)</span>
+        <span class="kpi-value">${formatarMetrica(vazoes.minimo, " L/s")} / ${formatarMetrica(vazoes.maximo, " L/s")}</span>
+        <span class="kpi-detail">Mín. ${vazoes.horarioMinimo ?? "--"} · Máx. ${vazoes.horarioMaximo ?? "--"}</span>
+      </div>
+      <div class="kpi-box">
+        <span class="kpi-label">Vazão Média</span>
+        <span class="kpi-value">${vazaoMedia}</span>
+      </div>
+    </div>`;
+  const graficoHTML = analiseReservatorioAberta
+    ? ""
+    : selecionado
+    ? `<button class="reservoir-analysis-open" type="button" data-open-reservoir-analysis>
+      <span aria-hidden="true">↗</span> Abrir análise detalhada
+      </button>
+      <div class="reservoir-charts">
+      <section class="reservoir-chart-panel">
+        <h3>Leituras da madrugada</h3>
+        <div class="chart-box"><canvas id="${idCanvas}" role="img" aria-label="Leituras horárias de nível e vazão"></canvas></div>
+      </section>
+      <section class="reservoir-chart-panel">
+        <h3>Leituras + médias da madrugada</h3>
+        <div class="chart-box"><canvas id="${idCanvas}-medias" role="img" aria-label="Leituras horárias de nível e vazão com médias da madrugada"></canvas></div>
+      </section>
+    </div>`
+    : exibirGraficos
     ? `<div class="chart-box"><canvas id="${idCanvas}"></canvas></div>`
     : "";
 
@@ -1723,34 +2693,22 @@ function criarCardHTML(
       aria-label="Selecionar KPIs de ${res.nome}, grupo ${res.grupo}"
     >
       <div class="card-header">
-        <span class="card-title">${res.nome} (${res.grupo})</span>
-        <span class="badge-status ${statusClass}">${kpis.status}</span>
+        <span class="card-title">${obterIdentificacaoReservatorio(chave)}</span>
+        <span class="card-statuses">
+          <span class="badge-status ${statusClass}">Nível: ${statusNivel}</span>
+          <span class="badge-status ${obterClasseStatus(alertaVazao.status)}${
+            vazaoSemComparacao ? " card-flow-unavailable" : ""
+          }"${
+            vazaoSemComparacao
+              ? ' aria-label="Vazão: N/A, sem comparação" title="Vazão: sem comparação disponível"'
+              : ""
+          }>
+            ${vazaoSemComparacao ? "Vazão: N/A" : `Vazão: ${alertaVazao.status}`}
+          </span>
+        </span>
       </div>
 
-      <div class="kpi-container">
-        <div class="kpi-box">
-          <span class="kpi-label">Nível Atual</span>
-          <span class="kpi-value">${kpis.nivelAtual}</span>
-        </div>
-        <div class="kpi-box">
-          <span class="kpi-label">Nível Mín/Máx</span>
-          <span class="kpi-value">${kpis.nivelMin} / ${kpis.nivelMax}</span>
-          <span class="kpi-detail">Mín. ${niveis.horarioMinimo ?? "--"} · Máx. ${
-            niveis.horarioMaximo ?? "--"
-          }</span>
-        </div>
-        <div class="kpi-box">
-          <span class="kpi-label">Vazão Mín/Máx</span>
-          <span class="kpi-value">${kpis.vazaoMin} / ${kpis.vazaoMax}</span>
-          <span class="kpi-detail">Mín. ${vazoes.horarioMinimo ?? "--"} · Máx. ${
-            vazoes.horarioMaximo ?? "--"
-          }</span>
-        </div>
-        <div class="kpi-box">
-          <span class="kpi-label">Vazão Média</span>
-          <span class="kpi-value">${kpis.vazaoMedia}</span>
-        </div>
-      </div>
+      ${kpiHTML}
 
       ${comparacaoHTML}
       ${qualidadeHTML}
@@ -1771,51 +2729,402 @@ function obterUltimaLeitura(valores) {
   return null;
 }
 
-function formatarVariacao(atual, anterior, unidade, rotulo) {
-  if (atual === null || anterior === null) {
-    return rotulo ? `${rotulo}: sem comparação` : "Sem comparação";
-  }
-  const diferenca = atual - anterior;
-  const sinal = diferenca > 0 ? "+" : "";
-  const valor = new Intl.NumberFormat("pt-BR", {
-    maximumFractionDigits: 1,
-    minimumFractionDigits: 1,
-  }).format(diferenca);
-  return `${rotulo ? `${rotulo}: ` : ""}${sinal}${valor}${unidade}`;
+function filtrarLeiturasNivelValidas(valores) {
+  if (!Array.isArray(valores)) return [];
+  return valores.map((valor) => {
+    if (valor === null || valor === undefined || valor === "") return null;
+    const numero = Number(valor);
+    return Number.isFinite(numero) && numero >= 0 && numero <= 110
+      ? numero
+      : null;
+  });
 }
 
-function renderizarGrafico(nomeReservatorio, horarios, leituras) {
-  const idCanvas = `chart-${nomeReservatorio.replace(/[^a-zA-Z0-9]/g, "_")}`;
+function filtrarLeiturasVazaoValidas(valores) {
+  if (!Array.isArray(valores)) return [];
+  return valores.map((valor) => {
+    if (valor === null || valor === undefined || valor === "") return null;
+    const numero = Number(valor);
+    return Number.isFinite(numero) && numero >= 0 ? numero : null;
+  });
+}
+
+function obterExtremosHistoricosVazao(banco, chaveReservatorio) {
+  let minimo = null;
+  let maximo = null;
+  let dataMinimo = null;
+  let dataMaximo = null;
+
+  banco.datasDisponiveis.forEach((data) => {
+    const leituras =
+      banco.historico[data]?.reservatorios?.[chaveReservatorio]?.leituras
+        ?.vazao;
+    const valores = filtrarLeiturasVazaoValidas(leituras).filter(
+      (valor) => valor !== null,
+    );
+    if (!valores.length) return;
+
+    const minimoDiario = Math.min(...valores);
+    const maximoDiario = Math.max(...valores);
+    if (minimo === null || minimoDiario < minimo) {
+      minimo = minimoDiario;
+      dataMinimo = data;
+    }
+    if (maximo === null || maximoDiario > maximo) {
+      maximo = maximoDiario;
+      dataMaximo = data;
+    }
+  });
+
+  return { minimo, maximo, dataMinimo, dataMaximo };
+}
+
+function obterUltimaLeituraNivel(valores) {
+  return obterUltimaLeitura(filtrarLeiturasNivelValidas(valores));
+}
+
+function avaliarStatusNivel(valores) {
+  const nivelAtual = obterUltimaLeituraNivel(valores);
+  if (nivelAtual === null) return "Sem Dados";
+  if (nivelAtual < LIMITE_CRITICO_NIVEL_PERCENTUAL) return "Crítico";
+  if (nivelAtual < LIMITE_ATENCAO_NIVEL_PERCENTUAL) return "Atenção";
+  return "Normal";
+}
+
+function calcularVariacaoPercentual(atual, anterior) {
+  return anterior === 0 ? null : ((atual - anterior) / anterior) * 100;
+}
+
+function formatarVariacaoNivel(comparacao) {
+  if (comparacao.quantidade < 2) {
+    return `sem base suficiente (${comparacao.quantidade} dia(s) válido(s))`;
+  }
+  if (comparacao.variacao === null) {
+    return "sem comparação disponível";
+  }
+  return formatarPercentual(comparacao.variacao);
+}
+
+function formatarPercentual(valor) {
+  const sinal = valor > 0 ? "+" : "";
+  return `${sinal}${new Intl.NumberFormat("pt-BR", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 1,
+  }).format(valor)}%`;
+}
+
+function formatarValorVazao(valor) {
+  return valor === null
+    ? "N/A"
+    : new Intl.NumberFormat("pt-BR", {
+        maximumFractionDigits: 1,
+        minimumFractionDigits: 1,
+      }).format(valor);
+}
+
+function renderizarAnaliseGraficoReservatorio(
+  painel,
+  reservatorio,
+  chave,
+  data,
+  horarios,
+) {
+  painel.replaceChildren();
+  const nivelAtual = obterUltimaLeituraNivel(reservatorio.leituras?.nivel);
+  const niveis = resumirLeiturasEstruturadas(
+    filtrarLeiturasNivelValidas(reservatorio.leituras?.nivel),
+    horarios,
+  );
+  const vazoes = resumirLeiturasEstruturadas(
+    filtrarLeiturasVazaoValidas(reservatorio.leituras?.vazao),
+    horarios,
+  );
+
+  const cabecalho = document.createElement("div");
+  cabecalho.className = "reservoir-analysis-heading";
+  const tituloBloco = document.createElement("div");
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "analysis-eyebrow";
+  eyebrow.textContent = "ANÁLISE OPERACIONAL";
+  const titulo = document.createElement("h2");
+  titulo.id = "reservoir-analysis-title";
+  titulo.textContent = `Análise do reservatório ${obterIdentificacaoReservatorio(chave)}`;
+  const contexto = document.createElement("p");
+  contexto.className = "analysis-description";
+  contexto.textContent = `${data} · ${horarios.length} horário(s) previstos · ` +
+    `Nível médio: ${formatarMetrica(niveis.media, "%")} · ` +
+    `Vazão média: ${formatarMetrica(vazoes.media, " L/s")}`;
+  tituloBloco.append(eyebrow, titulo, contexto);
+
+  const voltar = document.createElement("button");
+  voltar.type = "button";
+  voltar.className = "reservoir-analysis-back";
+  voltar.dataset.closeReservoirAnalysis = "";
+  voltar.textContent = "Voltar ao reservatório";
+  cabecalho.append(tituloBloco, voltar);
+
+  const graficoCard = document.createElement("section");
+  graficoCard.className = "reservoir-analysis-card";
+  const graficoCabecalho = document.createElement("div");
+  graficoCabecalho.className = "reservoir-analysis-chart-heading";
+  const graficoTitulo = document.createElement("h3");
+  graficoTitulo.textContent = "Leituras da madrugada";
+  const modosGrafico = document.createElement("div");
+  modosGrafico.className = "reservoir-analysis-chart-modes";
+  modosGrafico.setAttribute("role", "group");
+  modosGrafico.setAttribute("aria-label", "Modo de visualização do gráfico");
+  [
+    { modo: "readings", rotulo: "Leituras" },
+    { modo: "averages", rotulo: "Com médias" },
+  ].forEach(({ modo, rotulo }) => {
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "reservoir-analysis-mode";
+    botao.dataset.analysisChartMode = modo;
+    botao.textContent = rotulo;
+    botao.setAttribute(
+      "aria-pressed",
+      String(graficoAnaliseComMedias === (modo === "averages")),
+    );
+    modosGrafico.append(botao);
+  });
+  graficoCabecalho.append(graficoTitulo, modosGrafico);
+  const grafico = document.createElement("div");
+  grafico.className = "reservoir-analysis-chart";
+  const canvas = document.createElement("canvas");
+  const sufixoGrafico = graficoAnaliseComMedias ? "-medias" : "";
+  canvas.id =
+    `chart-${reservatorio.nome.replace(/[^a-zA-Z0-9]/g, "_")}${sufixoGrafico}`;
+  canvas.setAttribute("role", "img");
+  canvas.setAttribute(
+    "aria-label",
+    `Leituras horárias de nível e vazão de ${obterIdentificacaoReservatorio(chave)}`,
+  );
+  grafico.append(canvas);
+  graficoCard.append(graficoCabecalho, grafico);
+
+  const matrizCard = document.createElement("section");
+  matrizCard.className = "reservoir-analysis-card";
+  const matrizTitulo = document.createElement("h3");
+  matrizTitulo.textContent = "Matriz analítica por horário";
+  const observacao = document.createElement("p");
+  observacao.className = "reservoir-analysis-note";
+  observacao.textContent =
+    "As diferenças são comparadas às médias válidas desta madrugada. " +
+    "Os alertas de vazão são avaliados pelos extremos diários frente ao histórico.";
+  const tabelaWrap = document.createElement("div");
+  tabelaWrap.className = "reservoir-analysis-table-wrap";
+  const tabela = document.createElement("table");
+  tabela.className = "reservoir-analysis-table";
+  const cabecalhoTabela = document.createElement("thead");
+  const linhaCabecalho = document.createElement("tr");
+  [
+    "Horário",
+    "Nível",
+    "Dif. média",
+    "Status nível",
+    "Vazão",
+    "Dif. média",
+    "Qualidade vazão",
+  ].forEach((rotulo) => {
+    const celula = document.createElement("th");
+    celula.scope = "col";
+    celula.textContent = rotulo;
+    linhaCabecalho.append(celula);
+  });
+  cabecalhoTabela.append(linhaCabecalho);
+  const corpoTabela = document.createElement("tbody");
+  const leiturasNivel = reservatorio.leituras?.nivel ?? [];
+  const leiturasVazao = reservatorio.leituras?.vazao ?? [];
+  const quantidadeLinhas = Math.max(
+    horarios.length,
+    leiturasNivel.length,
+    leiturasVazao.length,
+  );
+
+  for (let indice = 0; indice < quantidadeLinhas; indice += 1) {
+    const linha = document.createElement("tr");
+    const leituraNivel = obterLeituraAnalitica(leiturasNivel[indice]);
+    const leituraVazao = obterLeituraAnalitica(leiturasVazao[indice]);
+    const statusNivel =
+      leituraNivel.valor === null
+        ? leituraNivel.estado
+        : leituraNivel.valor < 0 || leituraNivel.valor > 110
+          ? "Inválido"
+          : leituraNivel.valor < LIMITE_CRITICO_NIVEL_PERCENTUAL
+            ? "Crítico"
+            : leituraNivel.valor < LIMITE_ATENCAO_NIVEL_PERCENTUAL
+              ? "Atenção"
+              : "Normal";
+    const statusVazao =
+      leituraVazao.valor === null
+        ? leituraVazao.estado
+        : leituraVazao.valor < 0
+          ? "Inválida"
+          : "Válida";
+    if (statusNivel === "Crítico") linha.className = "is-critical";
+    else if (statusNivel === "Atenção") linha.className = "is-attention";
+    else if (statusNivel === "Inválido" || statusVazao === "Inválida") {
+      linha.className = "has-invalid-reading";
+    }
+
+    const diferencaNivel =
+      leituraNivel.valor === null ||
+      leituraNivel.valor < 0 ||
+      leituraNivel.valor > 110 ||
+      niveis.media === null
+        ? "—"
+        : formatarDiferencaNivel(leituraNivel.valor - niveis.media);
+    const variacaoVazao =
+      leituraVazao.valor === null ||
+      leituraVazao.valor < 0 ||
+      vazoes.media === null
+        ? "—"
+        : formatarVariacaoAnalitica(
+            calcularVariacaoPercentual(leituraVazao.valor, vazoes.media),
+          );
+
+    [
+      horarios[indice] ?? `Leitura ${indice + 1}`,
+      formatarLeituraAnalitica(leituraNivel.valor, "%"),
+      diferencaNivel,
+      statusNivel,
+      formatarLeituraAnalitica(leituraVazao.valor, " L/s"),
+      variacaoVazao,
+      statusVazao,
+    ].forEach((valor) => {
+      const celula = document.createElement("td");
+      celula.textContent = valor;
+      linha.append(celula);
+    });
+    corpoTabela.append(linha);
+  }
+
+  tabela.append(cabecalhoTabela, corpoTabela);
+  tabelaWrap.append(tabela);
+  matrizCard.append(matrizTitulo, observacao, tabelaWrap);
+  painel.append(cabecalho, graficoCard, matrizCard);
+  renderizarGrafico(
+    reservatorio.nome,
+    horarios,
+    reservatorio.leituras,
+    graficoAnaliseComMedias,
+  );
+}
+
+function obterLeituraAnalitica(valor) {
+  if (valor === null || valor === undefined || valor === "") {
+    return { valor: null, estado: "Ausente" };
+  }
+  const numero = Number(valor);
+  return Number.isFinite(numero)
+    ? { valor: numero, estado: "Inválido" }
+    : { valor: null, estado: "Inválido" };
+}
+
+function formatarLeituraAnalitica(valor, unidade) {
+  if (valor === null) return "—";
+  return `${new Intl.NumberFormat("pt-BR", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 1,
+  }).format(valor)}${unidade}`;
+}
+
+function formatarDiferencaNivel(diferenca) {
+  const sinal = diferenca > 0 ? "+" : "";
+  return `${sinal}${new Intl.NumberFormat("pt-BR", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 1,
+  }).format(diferenca)} p.p.`;
+}
+
+function formatarVariacaoAnalitica(variacao) {
+  return variacao === null ? "—" : formatarPercentual(variacao);
+}
+
+function renderizarGrafico(
+  nomeReservatorio,
+  horarios,
+  leituras,
+  incluirMedias = false,
+) {
+  const sufixo = incluirMedias ? "-medias" : "";
+  const idCanvas =
+    `chart-${nomeReservatorio.replace(/[^a-zA-Z0-9]/g, "_")}${sufixo}`;
   const ctx = document.getElementById(idCanvas);
 
   if (!ctx) return;
+
+  const datasets = [
+    {
+      label: "Nível (%)",
+      data: leituras.nivel,
+      borderColor: "#33a2e5",
+      backgroundColor: "rgba(51, 162, 229, 0.1)",
+      borderWidth: 2,
+      fill: true,
+      yAxisID: "yNivel",
+      tension: 0.3,
+    },
+    {
+      label: "Vazão (L/s)",
+      data: leituras.vazao,
+      borderColor: "#ff780a",
+      backgroundColor: "transparent",
+      borderWidth: 2,
+      borderDash: [4, 4],
+      yAxisID: "yVazao",
+      tension: 0.3,
+    },
+  ];
+  if (incluirMedias) {
+    const mediaNivel = calcularMediaValida(
+      filtrarLeiturasNivelValidas(leituras.nivel),
+    );
+    const mediaVazao = calcularMediaValida(
+      filtrarLeiturasVazaoValidas(leituras.vazao),
+    );
+    if (mediaNivel !== null) {
+      datasets.push(
+        {
+          label: `Nível médio (${formatarMetrica(mediaNivel, "%")})`,
+          data: horarios.map(() => mediaNivel),
+          borderColor: "#8dd7fa",
+          backgroundColor: "transparent",
+          borderWidth: 2,
+          borderDash: [6, 5],
+          pointRadius: 0,
+          pointHoverRadius: 3,
+          fill: false,
+          yAxisID: "yNivel",
+          tension: 0,
+        },
+      );
+    }
+    if (mediaVazao !== null) {
+      datasets.push(
+        {
+          label: `Vazão média (${formatarMetrica(mediaVazao, " L/s")})`,
+          data: horarios.map(() => mediaVazao),
+          borderColor: "#ffc28b",
+          backgroundColor: "transparent",
+          borderWidth: 2,
+          borderDash: [6, 5],
+          pointRadius: 0,
+          pointHoverRadius: 3,
+          fill: false,
+          yAxisID: "yVazao",
+          tension: 0,
+        },
+      );
+    }
+  }
 
   const chart = new Chart(ctx, {
     type: "line",
     data: {
       labels: horarios,
-      datasets: [
-        {
-          label: "Nível (%)",
-          data: leituras.nivel,
-          borderColor: "#33a2e5",
-          backgroundColor: "rgba(51, 162, 229, 0.1)",
-          borderWidth: 2,
-          fill: true,
-          yAxisID: "yNivel",
-          tension: 0.3,
-        },
-        {
-          label: "Vazão (L/s)",
-          data: leituras.vazao,
-          borderColor: "#ff780a",
-          backgroundColor: "transparent",
-          borderWidth: 2,
-          borderDash: [4, 4],
-          yAxisID: "yVazao",
-          tension: 0.3,
-        },
-      ],
+      datasets,
     },
     options: {
       responsive: true,
@@ -1862,7 +3171,7 @@ function renderizarGrafico(nomeReservatorio, horarios, leituras) {
     },
   });
 
-  instanciasGraficos[nomeReservatorio] = chart;
+  instanciasGraficos[`${nomeReservatorio}${sufixo}`] = chart;
 }
 
 function obterVariavelCSS(nome) {

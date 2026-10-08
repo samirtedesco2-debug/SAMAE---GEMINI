@@ -72,7 +72,7 @@
           <select id="seletor-data"></select>
         </div>
         <div class="meta-info">
-          Última Atualização: <span id="lbl-atualizacao">--</span>
+          Última data disponível: <span id="lbl-atualizacao">--</span>
         </div>
       </div>
     </header>
@@ -136,6 +136,27 @@
             ></p>
           </div>
         </div>
+        <div class="operational-filter-controls">
+          <div class="operational-comparison-control">
+            <label for="seletor-escopo-operacional">Indicadores exibidos</label>
+            <select id="seletor-escopo-operacional">
+              <option value="ambos" selected>Nível e vazão</option>
+              <option value="nivel">Somente nível</option>
+              <option value="vazao">Somente vazão</option>
+            </select>
+          </div>
+          <div class="operational-comparison-control">
+            <label for="seletor-base-vazao">Base de comparação</label>
+            <select id="seletor-base-vazao">
+              <option value="7d-calendar">Últimos 7 dias corridos</option>
+              <option value="30d-calendar">Últimos 30 dias corridos</option>
+              <option value="same-weekday-4" selected>
+                Mesmo dia da semana (últimas 4 semanas)
+              </option>
+              <option value="global">Histórico global</option>
+            </select>
+          </div>
+        </div>
         <div
           id="operational-summary"
           class="operational-summary"
@@ -150,6 +171,12 @@
         <p id="operational-data-quality" class="operational-data-quality"></p>
       </section>
       <div class="dashboard-grid" id="grid-reservatorios"></div>
+      <section
+        class="reservoir-analysis-view"
+        id="analise-grafico-reservatorio"
+        aria-labelledby="reservoir-analysis-title"
+        hidden
+      ></section>
     </main>
 
     <section
@@ -164,11 +191,12 @@
           <p class="analysis-eyebrow">HISTÓRICO E COMPARAÇÃO</p>
           <h2>Visão analítica</h2>
           <p class="analysis-description">
-            Compare tendências diárias de nível e vazão no período selecionado.
+            Compare tendências diárias de nível e vazão. O período inicial
+            cobre os últimos 30 dias corridos com dados disponíveis; ajuste as
+            datas para ampliar a consulta até todo o histórico.
           </p>
         </div>
       </div>
-
       <div class="analysis-filters">
         <div class="control-group">
           <label for="analise-inicio">Data inicial</label>
@@ -183,15 +211,15 @@
           <select id="analise-grupo"></select>
         </div>
         <div class="control-group analysis-reservoir-filter">
-          <label for="analise-reservatorios">Reservatórios para comparar</label>
-          <select
+          <span class="control-label">Reservatórios para comparar</span>
+          <div
             id="analise-reservatorios"
-            multiple
-            size="5"
+            class="reservoir-checkbox-list"
+            role="group"
+            aria-label="Reservatórios para comparar"
             aria-describedby="dica-selecao-reservatorios"
-          ></select>
-          <span class="filter-hint" id="dica-selecao-reservatorios">
-            Use Ctrl (ou ⌘) + clique para selecionar vários.
+          ></div>
+          <span class="filter-hint" id="dica-selecao-reservatorios" role="status">
           </span>
         </div>
       </div>
@@ -255,7 +283,7 @@
                 <th scope="col">Reservatório</th>
                 <th scope="col">Nível médio</th>
                 <th scope="col">Mín. / Máx.</th>
-                <th scope="col">Variação</th>
+                <th scope="col">Variação do nível (%)</th>
                 <th scope="col">Vazão média</th>
                 <th scope="col">Dias com dados</th>
               </tr>
@@ -278,8 +306,10 @@
           <p class="analysis-eyebrow">DADOS E RASTREABILIDADE</p>
           <h2>Visão de engenharia</h2>
           <p class="analysis-description">
-            Consulte estatísticas diárias e expanda cada registro para ver as
-            leituras horárias originais.
+            Consulte estatísticas diárias. O período inicial cobre os últimos
+            30 dias corridos com dados disponíveis; ajuste as datas para
+            acessar todo o histórico.
+            Expanda uma linha para carregar as leituras horárias originais.
           </p>
         </div>
       </div>
@@ -298,15 +328,15 @@
           <select id="engenharia-grupo"></select>
         </div>
         <div class="control-group analysis-reservoir-filter">
-          <label for="engenharia-reservatorios">Reservatórios</label>
-          <select
+          <span class="control-label">Reservatórios</span>
+          <div
             id="engenharia-reservatorios"
-            multiple
-            size="5"
+            class="reservoir-checkbox-list"
+            role="group"
+            aria-label="Reservatórios para engenharia"
             aria-describedby="dica-selecao-engenharia"
-          ></select>
-          <span class="filter-hint" id="dica-selecao-engenharia">
-            Use Ctrl (ou ⌘) + clique para selecionar vários.
+          ></div>
+          <span class="filter-hint" id="dica-selecao-engenharia" role="status">
           </span>
         </div>
       </div>
@@ -366,6 +396,12 @@
           </thead>
           <tbody id="engenharia-registros"></tbody>
         </table>
+      </div>
+      <div class="engineering-table-pagination" id="engenharia-paginacao">
+        <span id="engenharia-registros-visiveis" role="status"></span>
+        <button id="engenharia-carregar-mais" type="button">
+          Carregar mais registros
+        </button>
       </div>
     </section>
 

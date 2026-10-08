@@ -1,0 +1,161 @@
+CRITERIOS DE ALARME POR RESERVATORIO
+====================================
+
+Versao: 07/10/2026
+Dados disponiveis ate: 04/10/2026
+Historico consultado: 17/03/2026 a 04/10/2026 (172 datas; 22 reservatorios)
+Data-base da vazao: mesmo dia da semana, nas quatro semanas anteriores
+Datas usadas: 06/09/2026, 13/09/2026, 20/09/2026 e 27/09/2026
+
+CRITERIOS GERAIS
+----------------
+
+Nivel (%), para todos os reservatorios:
+- Atencao: leitura valida abaixo de 60%.
+- Critico: leitura valida abaixo de 50%.
+- Leitura negativa ou acima de 110% e ignorada na classificacao do nivel.
+
+Vazao (L/s), calculada individualmente para cada reservatorio:
+- A referencia da minima e a media das minimas diarias da base selecionada.
+- A referencia da maxima e a media das maximas diarias da mesma base.
+- Atencao: queda ou aumento de 20% ate 35%, inclusive.
+- Critico: queda ou aumento acima de 35%.
+- Vazao media e informativa; nao participa do alarme.
+- Sao necessarios pelo menos dois dias de referencia validos por indicador.
+- Se a referencia for zero, a variacao percentual nao e calculavel; o
+  indicador fica sem comparacao e nao deve ser interpretado como normal.
+
+Na lista abaixo, os limites de baixa/alta sao calculados sobre a referencia:
+- Baixa: Atencao <= 80% da referencia; Critico < 65%.
+- Alta: Atencao >= 120% da referencia; Critico > 135%.
+- Os limites estao arredondados a 0,1 L/s para leitura; a classificacao usa
+  os valores sem arredondamento.
+- Estes valores sao um retrato da data-base acima, nao limites operacionais
+  fixos. Com a atualizacao do historico e a mudanca da data/base, os valores
+  de referencia e seus limites percentuais tambem mudam.
+
+CRITERIOS INDIVIDUAIS NA DATA-BASE
+----------------------------------
+
+R01-A (grupo R1) - R01-A
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima: ref 19,1; baixa A <=15,3 / C <12,4; alta A >=22,9 / C >25,8.
+  Vazao maxima: ref 28,5; baixa A <=22,8 / C <18,5; alta A >=34,2 / C >38,5.
+
+R01-B (grupo R1) - R01-B
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima: ref 15,2; baixa A <=12,2 / C <9,9; alta A >=18,3 / C >20,6.
+  Vazao maxima: ref 19,4; baixa A <=15,5 / C <12,6; alta A >=23,3 / C >26,2.
+
+R02 (grupo R2) - R02
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima: ref 22,2; baixa A <=17,7 / C <14,4; alta A >=26,6 / C >29,9.
+  Vazao maxima: ref 35,5; baixa A <=28,4 / C <23,1; alta A >=42,6 / C >47,9.
+
+R03-B (grupo R3) - R03-B
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima: ref 59,0; baixa A <=47,2 / C <38,4; alta A >=70,8 / C >79,7.
+  Vazao maxima: ref 107,9; baixa A <=86,4 / C <70,2; alta A >=129,5 / C >145,7.
+
+ERAT R303 - Rua Rinaldo Bogo (grupo R3)
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima/maxima: sem dados numericos na base; limites percentuais N/A.
+
+EAT - R314 - Boa Vista, Rua Domingos Rosa (grupo R3)
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima: ref 0,9; baixa A <=0,8 / C <0,6; alta A >=1,1 / C >1,3.
+  Vazao maxima: ref 1,5; baixa A <=1,2 / C <1,0; alta A >=1,8 / C >2,0.
+
+ERAT Figueira (grupo R3)
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima/maxima: sem dados numericos suficientes na base; limites N/A.
+
+EAT R316 - (ERAT Krause) Rua Martim Kochella, Bairro Krause (grupo R3)
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima: ref 9,2; baixa A <=7,3 / C <6,0; alta A >=11,0 / C >12,4.
+  Vazao maxima: ref 12,1; baixa A <=9,7 / C <7,8; alta A >=14,5 / C >16,3.
+
+ERAT R306 - (ERAT Aguas Claras) Rua Aguas Claras (grupo R3)
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima: ref 3,5; baixa A <=2,8 / C <2,2; alta A >=4,1 / C >4,7.
+  Vazao maxima: ref 5,0; baixa A <=4,0 / C <3,2; alta A >=6,0 / C >6,7.
+
+R14 - Reservatorio Caravagio (grupo R3)
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima: ref 1,2; baixa A <=1,0 / C <0,8; alta A >=1,5 / C >1,7.
+  Vazao maxima: ref 1,5; baixa A <=1,2 / C <1,0; alta A >=1,9 / C >2,1.
+
+R04 (grupo R4) - R04
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima: ref 43,9; baixa A <=35,1 / C <28,5; alta A >=52,7 / C >59,3.
+  Vazao maxima: ref 54,2; baixa A <=43,4 / C <35,2; alta A >=65,0 / C >73,2.
+
+EAT R413 - Rua Paulo Voltolini, Bairro Ribeirao Cavalo (grupo R4)
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima: ref 1,1; baixa A <=0,9 / C <0,7; alta A >=1,3 / C >1,5.
+  Vazao maxima: ref 1,9; baixa A <=1,5 / C <1,3; alta A >=2,3 / C >2,6.
+
+R05 (grupo R05) - R05
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima: ref 33,3; baixa A <=26,6 / C <21,6; alta A >=39,9 / C >44,9.
+  Vazao maxima: ref 42,4; baixa A <=33,9 / C <27,6; alta A >=50,9 / C >57,3.
+
+R06 (grupo R06) - R06
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima: ref 12,9; baixa A <=10,3 / C <8,4; alta A >=15,5 / C >17,4.
+  Vazao maxima: ref 19,6; baixa A <=15,7 / C <12,7; alta A >=23,5 / C >26,4.
+
+ETA Sul (grupo ETA Sul) - ETA Sul
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima: ref 63,8; baixa A <=51,1 / C <41,5; alta A >=76,6 / C >86,2.
+  Vazao maxima: ref 86,9; baixa A <=69,5 / C <56,5; alta A >=104,3 / C >117,3.
+
+EAT ES03 - Rua Francisco Hruschka, Bairro Sao Luis (grupo ETA Sul)
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima/maxima: sem dados numericos suficientes na base; limites N/A.
+
+ERAT ES01 - Rua Alvino Flor da Silva, Bairro Jaragua 84 (grupo ETA Sul)
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima/maxima: sem dados numericos na base; limites percentuais N/A.
+
+R08 - Presidio (grupo ETA Sul)
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima: ref 0,2; baixa A <=0,2 / C <0,1; alta A >=0,3 / C >0,3.
+  Vazao maxima: ref 0,4; baixa A <=0,3 / C <0,3; alta A >=0,5 / C >0,5.
+
+ERAT ES02 (Parque de Eventos) - Rua Walter Marquardt, Bairro Barra do Rio Molha (grupo ETA Sul)
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima: ref 9,1; baixa A <=7,3 / C <5,9; alta A >=10,9 / C >12,3.
+  Vazao maxima: ref 12,6; baixa A <=10,0 / C <8,2; alta A >=15,1 / C >16,9.
+
+ERAT ES03 - (ERAT Molha Intermediaria) Rua RI069, Barra do Rio Molha (grupo ETA Sul)
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima: ref 5,1; baixa A <=4,1 / C <3,3; alta A >=6,1 / C >6,9.
+  Vazao maxima: ref 6,6; baixa A <=5,3 / C <4,3; alta A >=7,9 / C >8,9.
+
+ERAT ES04 - (SI Molha) Rua Pedro Chiodini, Bairro Barra do Rio Molha (grupo ETA Sul)
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima: ref 0,2; baixa A <=0,2 / C <0,1; alta A >=0,3 / C >0,3.
+  Vazao maxima: ref 0,4; baixa A <=0,3 / C <0,2; alta A >=0,4 / C >0,5.
+
+R17 - Reservatorio Aldrovandi (grupo ETA Sul)
+  Nivel: Atencao <60%; Critico <50%.
+  Vazao minima: ref 1,2; baixa A <=0,9 / C <0,7; alta A >=1,4 / C >1,6.
+  Vazao maxima: ref 1,3; baixa A <=1,0 / C <0,8; alta A >=1,6 / C >1,8.
+
+PENDENCIAS DE VALIDACAO
+-----------------------
+
+- R303 e ES01 nao possuem leituras numericas de vazao nas 172 datas
+  analisadas.
+- ERAT Figueira teve vazao positiva em apenas 2 das 172 datas; ES03 (Rua
+  Francisco Hruschka) teve vazao positiva em apenas 1 das 172 datas.
+- Para esses quatro pontos, a serie nao fornece referencia percentual
+  utilizavel; o painel mostra "Sem comparacao" e nao os classifica como
+  normais por vazao. Confirmar se a vazao nao e medida ou se ha falha de
+  exportacao antes de ativar alarmes nesses pontos.
+- Referencias inferiores a 1 L/s geram limites percentuais muito pequenos e
+  sensiveis a arredondamentos. Validar especialmente R08 e ERAT ES04 com os
+  operadores, e estabelecer limites minimos em L/s se forem conhecidos.
+- Os limites percentuais detectam desvios historicos; nao substituem limites
+  hidraulicos/operacionais aprovados pela equipe responsavel.
