@@ -7,6 +7,8 @@ let graficosEngenharia = {};
 let categoriaBoletimAtiva = null;
 let analiseReservatorioAberta = false;
 let graficoAnaliseComMedias = false;
+let graficoAnaliseComHistorico = false;
+const seriesAnaliseOcultas = new Set();
 const TAMANHO_PAGINA_ENGENHARIA = 100;
 const MINIMO_DIAS_HISTORICOS_PARA_ESPERAR_DADO = 4;
 
@@ -136,6 +138,8 @@ function inicializarDashboard() {
       e.stopPropagation();
       analiseReservatorioAberta = true;
       graficoAnaliseComMedias = false;
+      graficoAnaliseComHistorico = false;
+      seriesAnaliseOcultas.clear();
       renderizarDashboard();
       document
         .getElementById("analise-grafico-reservatorio")
@@ -163,7 +167,33 @@ function inicializarDashboard() {
       graficoAnaliseComMedias =
         botaoModo.dataset.analysisChartMode === "averages";
       renderizarDashboard();
+      return;
     }
+    const opcaoHistorico = e.target.closest("[data-analysis-history]");
+    if (opcaoHistorico) {
+      graficoAnaliseComHistorico = opcaoHistorico.checked;
+      renderizarDashboard();
+    }
+  });
+  painelAnaliseReservatorio.addEventListener("change", (e) => {
+    const controleSerie = e.target.closest("[data-analysis-series]");
+    if (!controleSerie) return;
+
+    const canvas = painelAnaliseReservatorio.querySelector(
+      ".reservoir-analysis-chart canvas",
+    );
+    const chart = canvas ? Chart.getChart(canvas) : null;
+    const indiceSerie = Number(controleSerie.dataset.analysisSeries);
+    if (!chart || !Number.isInteger(indiceSerie)) return;
+
+    chart.setDatasetVisibility(indiceSerie, controleSerie.checked);
+    const nomeSerie = chart.data.datasets[indiceSerie]?.label;
+    if (nomeSerie) {
+      const chaveSerie = obterChaveSerieAnalise(nomeSerie);
+      if (controleSerie.checked) seriesAnaliseOcultas.delete(chaveSerie);
+      else seriesAnaliseOcultas.add(chaveSerie);
+    }
+    chart.update();
   });
   containerGrid.addEventListener("keydown", (e) => {
     if (
@@ -510,6 +540,7 @@ function renderizarEngenharia() {
         horarios,
         niveis,
         vazoes,
+        estatisticasHistoricas,
         qualidade,
         temRegistro: Boolean(reservatorio),
         quantidadeSlots,
@@ -1999,6 +2030,7 @@ function avaliarAlertaVazao(leiturasAtuais, referencia, horarios) {
       valorAnterior: referencia?.maximo ?? null,
       quantidadeReferencia: referencia?.quantidades.maximo ?? 0,
       classificaAlerta: true,
+      somenteAcimaDaReferencia: true,
     },
   ].map((indicador) => {
     const variacao =
@@ -2022,12 +2054,14 @@ function avaliarAlertaVazao(leiturasAtuais, referencia, horarios) {
       !indicador.classificaAlerta
         ? "Informativo"
         : magnitude === null
-        ? "Sem comparação"
-        : magnitude > LIMITE_CRITICO_VAZAO_PERCENTUAL + 1e-9
-          ? "Crítico"
-          : magnitude >= LIMITE_ATENCAO_VAZAO_PERCENTUAL - 1e-9
-            ? "Atenção"
-            : "Normal";
+          ? "Sem comparação"
+          : indicador.somenteAcimaDaReferencia && variacao <= 0
+            ? "Normal"
+            : magnitude > LIMITE_CRITICO_VAZAO_PERCENTUAL + 1e-9
+              ? "Crítico"
+              : magnitude >= LIMITE_ATENCAO_VAZAO_PERCENTUAL - 1e-9
+                ? "Atenção"
+                : "Normal";
     return { ...indicador, variacao, direcao, status };
   });
   const indicadoresClassificaveis = indicadores.filter(
@@ -2400,9 +2434,11 @@ function criarPainelInformativoAlarme(
   const vazaoRegra = document.createElement("p");
   vazaoRegra.textContent =
     `Comparação: ${obterRotuloBaseComparacao(baseComparacao)} ` +
-    `(${referencia.quantidade} dia(s) válidos). Queda ou aumento de ` +
-    `${LIMITE_ATENCAO_VAZAO_PERCENTUAL}% a ${LIMITE_CRITICO_VAZAO_PERCENTUAL}% ` +
-    `gera atenção; acima de ${LIMITE_CRITICO_VAZAO_PERCENTUAL}% é crítico. ` +
+    `(${referencia.quantidade} dia(s) válidos). Na vazão mínima, desvios para ` +
+    `cima ou para baixo de ${LIMITE_ATENCAO_VAZAO_PERCENTUAL}% a ` +
+    `${LIMITE_CRITICO_VAZAO_PERCENTUAL}% geram atenção; acima de ` +
+    `${LIMITE_CRITICO_VAZAO_PERCENTUAL}% são críticos. Na máxima, somente ` +
+    `aumentos em relação à referência geram alarme. ` +
     "A vazão média é informativa.";
   const indicadores = document.createElement("div");
   indicadores.className = "reservoir-alarm-indicators";
@@ -2424,13 +2460,15 @@ function criarPainelInformativoAlarme(
           ? indicador.valorAnterior === 0
             ? "Referência histórica zero; variação não calculável."
             : `Sem base suficiente (${indicador.quantidadeReferencia} dia(s) válidos).`
-          : `${formatarPercentual(indicador.variacao)} · ${
-              indicador.direcao === "baixa"
-                ? "vazão baixa"
-                : indicador.direcao === "alta"
-                  ? "vazão alta"
-                  : "sem variação"
-            }`;
+          : indicador.rotulo === "Máxima" && indicador.variacao <= 0
+            ? `${formatarPercentual(indicador.variacao)} · igual ou abaixo da referência, sem alarme`
+            : `${formatarPercentual(indicador.variacao)} · ${
+                indicador.direcao === "baixa"
+                  ? "vazão baixa"
+                  : indicador.direcao === "alta"
+                    ? "vazão alta"
+                    : "sem variação"
+              }`;
       const status = document.createElement("span");
       status.className = `badge-status ${obterClasseStatus(indicador.status)}`;
       status.textContent = indicador.status;
@@ -2839,6 +2877,13 @@ function renderizarAnaliseGraficoReservatorio(
     filtrarLeiturasVazaoValidas(reservatorio.leituras?.vazao),
     horarios,
   );
+  const estatisticasHistoricas = graficoAnaliseComHistorico
+    ? obterEstatisticasHistoricasPorHorario(
+        window.bancoDeDados,
+        chave,
+        horarios,
+      )
+    : null;
 
   const cabecalho = document.createElement("div");
   cabecalho.className = "reservoir-analysis-heading";
@@ -2888,7 +2933,28 @@ function renderizarAnaliseGraficoReservatorio(
     );
     modosGrafico.append(botao);
   });
-  graficoCabecalho.append(graficoTitulo, modosGrafico);
+  const controlesGrafico = document.createElement("div");
+  controlesGrafico.className = "reservoir-analysis-chart-controls";
+  controlesGrafico.append(modosGrafico);
+  const rotuloHistorico = document.createElement("label");
+  rotuloHistorico.className = "reservoir-analysis-history-toggle";
+  const controleHistorico = document.createElement("input");
+  controleHistorico.type = "checkbox";
+  controleHistorico.dataset.analysisHistory = "";
+  controleHistorico.checked = graficoAnaliseComHistorico;
+  const textoHistorico = document.createElement("span");
+  textoHistorico.textContent = "Histórico (mín., média, máx.)";
+  rotuloHistorico.append(controleHistorico, textoHistorico);
+  const seletorSeries = document.createElement("details");
+  seletorSeries.className = "reservoir-analysis-series-selector";
+  const tituloSeries = document.createElement("summary");
+  tituloSeries.textContent = "Séries visíveis";
+  const listaSeries = document.createElement("div");
+  listaSeries.className = "reservoir-analysis-series-list";
+  listaSeries.dataset.analysisSeriesList = "";
+  seletorSeries.append(tituloSeries, listaSeries);
+  controlesGrafico.append(rotuloHistorico, seletorSeries);
+  graficoCabecalho.append(graficoTitulo, controlesGrafico);
   const grafico = document.createElement("div");
   grafico.className = "reservoir-analysis-chart";
   const canvas = document.createElement("canvas");
@@ -2912,21 +2978,32 @@ function renderizarAnaliseGraficoReservatorio(
   observacao.textContent =
     "As diferenças são comparadas às médias válidas desta madrugada. " +
     "Os alertas de vazão são avaliados pelos extremos diários frente ao histórico.";
+  if (estatisticasHistoricas) {
+    observacao.textContent +=
+      " As estatísticas históricas por horário usam todas as datas disponíveis.";
+  }
   const tabelaWrap = document.createElement("div");
   tabelaWrap.className = "reservoir-analysis-table-wrap";
   const tabela = document.createElement("table");
   tabela.className = "reservoir-analysis-table";
   const cabecalhoTabela = document.createElement("thead");
   const linhaCabecalho = document.createElement("tr");
-  [
+  const colunasTabela = [
     "Horário",
     "Nível",
-    "Dif. média",
+    "Dif. nível",
     "Status nível",
+    ...(estatisticasHistoricas
+      ? ["Nível hist. mín.", "Nível hist. média", "Nível hist. máx."]
+      : []),
     "Vazão",
-    "Dif. média",
+    "Dif. vazão",
     "Qualidade vazão",
-  ].forEach((rotulo) => {
+    ...(estatisticasHistoricas
+      ? ["Vazão hist. mín.", "Vazão hist. média", "Vazão hist. máx."]
+      : []),
+  ];
+  colunasTabela.forEach((rotulo) => {
     const celula = document.createElement("th");
     celula.scope = "col";
     celula.textContent = rotulo;
@@ -2984,15 +3061,48 @@ function renderizarAnaliseGraficoReservatorio(
             calcularVariacaoPercentual(leituraVazao.valor, vazoes.media),
           );
 
-    [
+    const valoresLinha = [
       horarios[indice] ?? `Leitura ${indice + 1}`,
       formatarLeituraAnalitica(leituraNivel.valor, "%"),
       diferencaNivel,
       statusNivel,
+      ...(estatisticasHistoricas
+        ? [
+            formatarLeituraAnalitica(
+              estatisticasHistoricas.nivel.minimo[indice] ?? null,
+              "%",
+            ),
+            formatarLeituraAnalitica(
+              estatisticasHistoricas.nivel.media[indice] ?? null,
+              "%",
+            ),
+            formatarLeituraAnalitica(
+              estatisticasHistoricas.nivel.maximo[indice] ?? null,
+              "%",
+            ),
+          ]
+        : []),
       formatarLeituraAnalitica(leituraVazao.valor, " L/s"),
       variacaoVazao,
       statusVazao,
-    ].forEach((valor) => {
+      ...(estatisticasHistoricas
+        ? [
+            formatarLeituraAnalitica(
+              estatisticasHistoricas.vazao.minimo[indice] ?? null,
+              " L/s",
+            ),
+            formatarLeituraAnalitica(
+              estatisticasHistoricas.vazao.media[indice] ?? null,
+              " L/s",
+            ),
+            formatarLeituraAnalitica(
+              estatisticasHistoricas.vazao.maximo[indice] ?? null,
+              " L/s",
+            ),
+          ]
+        : []),
+    ];
+    valoresLinha.forEach((valor) => {
       const celula = document.createElement("td");
       celula.textContent = valor;
       linha.append(celula);
@@ -3009,7 +3119,64 @@ function renderizarAnaliseGraficoReservatorio(
     horarios,
     reservatorio.leituras,
     graficoAnaliseComMedias,
+    estatisticasHistoricas,
+    data,
   );
+}
+
+function obterEstatisticasHistoricasPorHorario(banco, chaveReservatorio, horarios) {
+  const amostras = {
+    nivel: horarios.map(() => []),
+    vazao: horarios.map(() => []),
+  };
+
+  banco.datasDisponiveis.forEach((data) => {
+    const dadosDoDia = banco.historico[data];
+    const leituras =
+      dadosDoDia?.reservatorios?.[chaveReservatorio]?.leituras;
+    if (!leituras) return;
+
+    const indicesPorHorario = new Map(
+      (dadosDoDia.horarios ?? []).map((horario, indice) => [horario, indice]),
+    );
+    horarios.forEach((horario, indiceAtual) => {
+      const indiceHistorico = indicesPorHorario.get(horario) ?? -1;
+      if (indiceHistorico < 0) return;
+
+      const nivel = obterLeituraAnalitica(leituras.nivel?.[indiceHistorico]);
+      if (
+        nivel.valor !== null &&
+        nivel.valor >= 0 &&
+        nivel.valor <= 110
+      ) {
+        amostras.nivel[indiceAtual].push(nivel.valor);
+      }
+
+      const vazao = obterLeituraAnalitica(leituras.vazao?.[indiceHistorico]);
+      if (vazao.valor !== null && vazao.valor >= 0) {
+        amostras.vazao[indiceAtual].push(vazao.valor);
+      }
+    });
+  });
+
+  const resumir = (leiturasPorHorario) => ({
+    minimo: leiturasPorHorario.map((valores) =>
+      valores.length
+        ? valores.reduce((menor, valor) => Math.min(menor, valor))
+        : null,
+    ),
+    media: leiturasPorHorario.map((valores) => calcularMediaValida(valores)),
+    maximo: leiturasPorHorario.map((valores) =>
+      valores.length
+        ? valores.reduce((maior, valor) => Math.max(maior, valor))
+        : null,
+    ),
+  });
+
+  return {
+    nivel: resumir(amostras.nivel),
+    vazao: resumir(amostras.vazao),
+  };
 }
 
 function obterLeituraAnalitica(valor) {
@@ -3035,7 +3202,7 @@ function formatarDiferencaNivel(diferenca) {
   return `${sinal}${new Intl.NumberFormat("pt-BR", {
     maximumFractionDigits: 1,
     minimumFractionDigits: 1,
-  }).format(diferenca)} p.p.`;
+  }).format(diferenca)}%`;
 }
 
 function formatarVariacaoAnalitica(variacao) {
@@ -3047,6 +3214,8 @@ function renderizarGrafico(
   horarios,
   leituras,
   incluirMedias = false,
+  estatisticasHistoricas = null,
+  dataSelecionada = null,
 ) {
   const sufixo = incluirMedias ? "-medias" : "";
   const idCanvas =
@@ -3065,6 +3234,7 @@ function renderizarGrafico(
       fill: true,
       yAxisID: "yNivel",
       tension: 0.3,
+      pointHitRadius: 8,
     },
     {
       label: "Vazão (L/s)",
@@ -3075,6 +3245,7 @@ function renderizarGrafico(
       borderDash: [4, 4],
       yAxisID: "yVazao",
       tension: 0.3,
+      pointHitRadius: 8,
     },
   ];
   if (incluirMedias) {
@@ -3095,6 +3266,7 @@ function renderizarGrafico(
           borderDash: [6, 5],
           pointRadius: 0,
           pointHoverRadius: 3,
+          pointHitRadius: 8,
           fill: false,
           yAxisID: "yNivel",
           tension: 0,
@@ -3112,12 +3284,70 @@ function renderizarGrafico(
           borderDash: [6, 5],
           pointRadius: 0,
           pointHoverRadius: 3,
+          pointHitRadius: 8,
           fill: false,
           yAxisID: "yVazao",
           tension: 0,
         },
       );
     }
+  }
+  if (estatisticasHistoricas) {
+    const seriesHistoricas = [
+      {
+        chave: "minimo",
+        rotulo: "mín.",
+        dash: [2, 4],
+        nivelColor: "#7c3aed",
+        vazaoColor: "#0f766e",
+      },
+      {
+        chave: "media",
+        rotulo: "média",
+        dash: [7, 4],
+        nivelColor: "#c026d3",
+        vazaoColor: "#16a34a",
+      },
+      {
+        chave: "maximo",
+        rotulo: "máx.",
+        dash: [3, 2],
+        nivelColor: "#be185d",
+        vazaoColor: "#ca8a04",
+      },
+    ];
+    seriesHistoricas.forEach((serie) => {
+      datasets.push(
+        {
+          label: `Nível hist. ${serie.rotulo}`,
+          data: estatisticasHistoricas.nivel[serie.chave],
+          borderColor: serie.nivelColor,
+          backgroundColor: "transparent",
+          borderWidth: 2,
+          borderDash: serie.dash,
+          pointRadius: 0,
+          pointHoverRadius: 3,
+          pointHitRadius: 8,
+          fill: false,
+          yAxisID: "yNivel",
+          tension: 0,
+        },
+        {
+          label: `Vazão hist. ${serie.rotulo}`,
+          data: estatisticasHistoricas.vazao[serie.chave],
+          borderColor: serie.vazaoColor,
+          backgroundColor: "transparent",
+          borderWidth: 2,
+          borderDash: serie.dash,
+          pointRadius: 0,
+          pointHoverRadius: 3,
+          pointHitRadius: 8,
+          fill: false,
+          yAxisID: "yVazao",
+          tension: 0,
+        },
+      );
+    });
   }
 
   const chart = new Chart(ctx, {
@@ -3130,16 +3360,66 @@ function renderizarGrafico(
       responsive: true,
       maintainAspectRatio: false,
       interaction: {
-        mode: "index",
-        intersect: false,
+        mode: "nearest",
+        intersect: true,
       },
       plugins: {
         legend: {
+          onClick(event, legendItem, legend) {
+            const indiceSerie = legendItem.datasetIndex;
+            const chartDaLegenda = legend.chart;
+            const visivel = chartDaLegenda.isDatasetVisible(indiceSerie);
+            chartDaLegenda.setDatasetVisibility(indiceSerie, !visivel);
+            const nomeSerie = chartDaLegenda.data.datasets[indiceSerie]?.label;
+            const possuiSeletor = Boolean(
+              chartDaLegenda.canvas
+                .closest(".reservoir-analysis-card")
+                ?.querySelector("[data-analysis-series-list]"),
+            );
+            if (nomeSerie && possuiSeletor) {
+              const chaveSerie = obterChaveSerieAnalise(nomeSerie);
+              if (visivel) seriesAnaliseOcultas.add(chaveSerie);
+              else seriesAnaliseOcultas.delete(chaveSerie);
+            }
+            if (possuiSeletor) atualizarSeletorSeries(chartDaLegenda);
+            chartDaLegenda.update();
+          },
           labels: {
             color: obterVariavelCSS("--text-color"),
             boxWidth: 12,
             font: { size: 11 },
           },
+        },
+        tooltip: {
+          mode: "nearest",
+          intersect: true,
+          callbacks: {
+            title(items) {
+              const item = items[0];
+              const seriesSelecionada = item?.dataset.label;
+              const [dia, mes] = String(dataSelecionada ?? "").split("/");
+              if (
+                (seriesSelecionada === "Nível (%)" ||
+                  seriesSelecionada === "Vazão (L/s)") &&
+                dia &&
+                mes
+              ) {
+                return `${item.label} · ${dia}/${mes}`;
+              }
+              return item?.label ?? "";
+            },
+          },
+          displayColors: false,
+          backgroundColor: "rgba(15, 23, 42, 0.88)",
+          borderColor: "rgba(148, 163, 184, 0.28)",
+          borderWidth: 1,
+          cornerRadius: 5,
+          padding: 7,
+          caretSize: 4,
+          titleFont: { size: 10, weight: "600" },
+          bodyFont: { size: 10 },
+          titleMarginBottom: 3,
+          bodySpacing: 2,
         },
       },
       scales: {
@@ -3151,7 +3431,15 @@ function renderizarGrafico(
           type: "linear",
           position: "left",
           min: 0,
-          max: 100,
+          max: estatisticasHistoricas
+            ? Math.max(
+                100,
+                estatisticasHistoricas.nivel.maximo.reduce(
+                  (maior, valor) => (valor === null ? maior : Math.max(maior, valor)),
+                  100,
+                ),
+              )
+            : 100,
           title: {
             display: true,
             text: "Nível (%)",
@@ -3171,7 +3459,46 @@ function renderizarGrafico(
     },
   });
 
+  chart.data.datasets.forEach((dataset, indice) => {
+    if (seriesAnaliseOcultas.has(obterChaveSerieAnalise(dataset.label))) {
+      chart.setDatasetVisibility(indice, false);
+    }
+  });
+  atualizarSeletorSeries(chart);
+  chart.update("none");
   instanciasGraficos[`${nomeReservatorio}${sufixo}`] = chart;
+}
+
+function obterChaveSerieAnalise(rotulo) {
+  return rotulo.replace(/ \([^)]*\)$/, "");
+}
+
+function atualizarSeletorSeries(chart) {
+  const lista = chart.canvas
+    .closest(".reservoir-analysis-card")
+    ?.querySelector("[data-analysis-series-list]");
+  if (!lista) return;
+
+  lista.replaceChildren();
+  chart.data.datasets.forEach((dataset, indice) => {
+    const rotulo = document.createElement("label");
+    rotulo.className = "reservoir-analysis-series-option";
+
+    const controle = document.createElement("input");
+    controle.type = "checkbox";
+    controle.dataset.analysisSeries = String(indice);
+    controle.checked = chart.isDatasetVisible(indice);
+
+    const amostraCor = document.createElement("span");
+    amostraCor.className = "reservoir-analysis-series-color";
+    amostraCor.style.borderColor = dataset.borderColor;
+    amostraCor.setAttribute("aria-hidden", "true");
+
+    const nome = document.createElement("span");
+    nome.textContent = dataset.label;
+    rotulo.append(controle, amostraCor, nome);
+    lista.append(rotulo);
+  });
 }
 
 function obterVariavelCSS(nome) {

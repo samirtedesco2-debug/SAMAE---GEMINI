@@ -66,9 +66,11 @@ Para a vazao, o painel compara os valores atuais minimo e maximo com as
 medias diarias dos mesmos indicadores. Sao necessarios ao menos dois dias
 validos para cada indicador; caso contrario, ele aparece sem base suficiente
 e nao gera alerta. Uma referencia igual a zero impede calcular a variacao
-percentual para aquele indicador. Quedas ou aumentos de 20% a 35% geram
-"Atencao"; variacoes acima de 35% em qualquer direcao geram "Critico". Assim,
-quedas acentuadas de vazao tambem sao sinalizadas. A vazao media diaria
+percentual para aquele indicador. Na vazao minima, quedas ou aumentos de 20%
+a 35% geram "Atencao"; variacoes acima de 35% em qualquer direcao geram
+"Critico". Na vazao maxima, somente aumentos em relacao a referencia podem
+gerar alarme: de 20% a 35% geram "Atencao" e acima de 35% gera "Critico".
+Vazao maxima igual ou abaixo da referencia nao gera alarme. A vazao media diaria
 continua visivel para consulta, mas nao participa da classificacao nem gera
 alertas. A classificacao do boletim usa a maior gravidade entre os status de
 nivel e os alertas de vazao minima/maxima. Os detalhes mostram a quantidade e
@@ -116,7 +118,16 @@ horario, com leituras, diferencas em relacao as medias, status do nivel e
 qualidade dos dados de vazao. O modo "Com medias" inclui as linhas de media no
 grafico. As variacoes horarias em relacao a media sao informativas; os alertas
 de vazao continuam sendo avaliados pelos extremos diarios comparados ao
-historico. Use "Voltar ao reservatorio" para retornar ao card.
+historico. Na analise detalhada, marque "Historico (min., media, max.)" para
+incluir no grafico e na matriz as estatisticas historicas de nivel e vazao por
+horario. O calculo considera todas as datas disponiveis, inclusive a data
+selecionada, e ignora leituras ausentes, invalidas ou negativas; leituras de
+nivel acima de 110% tambem sao descartadas. Quando nao houver amostras validas
+para um horario e indicador, a matriz mostra um tracinho e o grafico nao plota
+um valor naquele ponto. Desmarque a opcao para voltar a exibicao sem as series
+historicas. Use "Series visiveis" para ocultar ou exibir individualmente cada
+linha do grafico; a legenda tambem permite alternar a visibilidade das series.
+Use "Voltar ao reservatorio" para retornar ao card.
 Na area de comparacao de cada card, nivel, vazao minima e vazao maxima aparecem
 em blocos separados com o percentual de variacao, a direcao (alta/baixa) e a
 cor do status do alarme. A base fica indicada nos controles do boletim e nao e

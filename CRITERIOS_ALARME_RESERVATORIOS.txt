@@ -18,14 +18,18 @@ Nivel (%), para todos os reservatorios:
 Vazao (L/s), calculada individualmente para cada reservatorio:
 - A referencia da minima e a media das minimas diarias da base selecionada.
 - A referencia da maxima e a media das maximas diarias da mesma base.
-- Atencao: queda ou aumento de 20% ate 35%, inclusive.
-- Critico: queda ou aumento acima de 35%.
+- Vazao minima: atencao para queda ou aumento de 20% ate 35%, inclusive;
+  critico para variacao acima de 35% em qualquer direcao.
+- Vazao maxima: somente aumentos em relacao a referencia podem gerar alerta;
+  atencao de 20% a 35%, inclusive, e critico acima de 35%. Valor igual ou
+  abaixo da referencia nao gera alarme.
 - Vazao media e informativa; nao participa do alarme.
 - Sao necessarios pelo menos dois dias de referencia validos por indicador.
 - Se a referencia for zero, a variacao percentual nao e calculavel; o
   indicador fica sem comparacao e nao deve ser interpretado como normal.
 
-Na lista abaixo, os limites de baixa/alta sao calculados sobre a referencia:
+Na lista abaixo, os limites de baixa/alta sao calculados sobre a referencia.
+Para a vazao maxima, os limites de baixa sao informativos e nao geram alarme:
 - Baixa: Atencao <= 80% da referencia; Critico < 65%.
 - Alta: Atencao >= 120% da referencia; Critico > 135%.
 - Os limites estao arredondados a 0,1 L/s para leitura; a classificacao usa
