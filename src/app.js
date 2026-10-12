@@ -1,4 +1,4 @@
-// app.js - Lógica principal, orquestração e funçẽes auxiliares
+// app.js - Lógica principal, orquestração e funções auxiliares com carregamento assíncrono modular
 
 let instanciasGraficos = {};
 let graficosAnaliticos = {};
@@ -22,13 +22,72 @@ const coresAnaliticas = [
   "#5975d9",
 ];
 
+// Inicialização Assíncrona Carregando Todos os Meses Históricos
+async function inicializarBancoAssincrono() {
+  try {
+    const respostaIndice = await fetch("indice_datas.json");
+    if (!respostaIndice.ok) {
+      throw new Error("Não foi possível carregar o índice de datas.");
+    }
+    const indice = await respostaIndice.json();
+
+    window.bancoDeDados = {
+      datasDisponiveis: indice.datasDisponiveis || [],
+      historico: {},
+    };
+
+    const datas = window.bancoDeDados.datasDisponiveis;
+    if (datas.length > 0) {
+      // Identifica todos os meses distintos presentes no histórico para carregar tudo
+      const mesesParaCarregar = new Set();
+      datas.forEach((dataStr) => {
+        const partes = dataStr.split("/");
+        if (partes.length === 3) {
+          mesesParaCarregar.add(`${partes[2]}_${partes[1]}`); // Formato: ano_mes (ex: 2026_10)
+        }
+      });
+
+      // Carrega em paralelo todos os arquivos JSON mensais existentes
+      const promessasCarregamento = Array.from(mesesParaCarregar).map(
+        async (anoMes) => {
+          const arquivoMes = `dados_historicos/${anoMes}.json`;
+          try {
+            const resp = await fetch(arquivoMes);
+            if (resp.ok) {
+              const dadosMes = await resp.json();
+              if (dadosMes && dadosMes.dias) {
+                Object.assign(window.bancoDeDados.historico, dadosMes.dias);
+              }
+            }
+          } catch (e) {
+            console.warn(
+              `Aviso: Não foi possível carregar o ficheiro mensal ${arquivoMes}`,
+            );
+          }
+        },
+      );
+
+      await Promise.all(promessasCarregamento);
+    }
+
+    inicializarTema();
+    inicializarDashboard();
+  } catch (erro) {
+    console.error("Erro ao inicializar dados:", erro);
+    const grid = document.getElementById("grid-reservatorios");
+    if (grid) {
+      grid.innerHTML =
+        "<p style='color: #8e8e8e;'>Erro ao carregar dados históricos. Verifique os arquivos JSON.</p>";
+    }
+  }
+}
 document.addEventListener("DOMContentLoaded", () => {
-  inicializarTema();
-  inicializarDashboard();
+  inicializarBancoAssincrono();
 });
 
 function inicializarTema() {
   const botaoTema = document.getElementById("theme-toggle");
+  if (!botaoTema) return;
   const temaSalvo = localStorage.getItem("tema-dashboard");
   const temaInicial = temaSalvo === "light" ? "light" : "dark";
 
@@ -204,7 +263,8 @@ function inicializarDashboard() {
 
   renderizarDashboard();
 
-  seletorData.addEventListener("change", (e) => {
+  seletorData.addEventListener("change", async (e) => {
+    await carregarMesPorData(e.target.value);
     preencherSeletorFiltro(e.target.value, seletorFiltro.value);
     renderizarDashboard();
   });
@@ -272,7 +332,7 @@ function inicializarNavegacao() {
   });
 }
 
-function inicializarAnalises() {
+async function inicializarAnalises() {
   const banco = window.bancoDeDados;
   const datas = banco.datasDisponiveis;
   const seletorInicio = document.getElementById("analise-inicio");
@@ -280,6 +340,10 @@ function inicializarAnalises() {
   const seletorGrupo = document.getElementById("analise-grupo");
   const seletorReservatorios = document.getElementById("analise-reservatorios");
 
+  if (!seletorInicio || !seletorFim) return;
+
+  seletorInicio.innerHTML = "";
+  seletorFim.innerHTML = "";
   datas.forEach((data) => {
     seletorInicio.add(new Option(data, data));
     seletorFim.add(new Option(data, data));
@@ -287,18 +351,31 @@ function inicializarAnalises() {
   seletorInicio.value = datas[obterIndiceInicioPeriodoRecente(datas)];
   seletorFim.value = datas[datas.length - 1];
 
+  // Garante carregamento dos meses do período selecionado nas análises
+  await garantirPeriodoCarregado(seletorInicio.value, seletorFim.value);
+
+  seletorGrupo.innerHTML = "";
   seletorGrupo.add(new Option("Todos os grupos", "TODOS"));
-  const ultimoDia = banco.historico[datas[datas.length - 1]];
-  const grupos = new Set(
-    Object.values(ultimoDia.reservatorios).map(
-      (reservatorio) => reservatorio.grupo,
-    ),
-  );
-  grupos.forEach((grupo) => seletorGrupo.add(new Option(grupo, grupo)));
+
+  const ultimaData = datas[datas.length - 1];
+  const ultimoDia = banco.historico[ultimaData];
+  if (ultimoDia && ultimoDia.reservatorios) {
+    const grupos = new Set(
+      Object.values(ultimoDia.reservatorios).map(
+        (reservatorio) => reservatorio.grupo,
+      ),
+    );
+    grupos.forEach((grupo) => seletorGrupo.add(new Option(grupo, grupo)));
+  }
 
   preencherReservatoriosAnalise("TODOS", []);
-  seletorInicio.addEventListener("change", renderizarAnalises);
-  seletorFim.addEventListener("change", renderizarAnalises);
+
+  seletorInicio.removeEventListener("change", acaoMudancaAnalise);
+  seletorInicio.addEventListener("change", acaoMudancaAnalise);
+
+  seletorFim.removeEventListener("change", acaoMudancaAnalise);
+  seletorFim.addEventListener("change", acaoMudancaAnalise);
+
   seletorGrupo.addEventListener("change", () => {
     const selecoes = obterReservatoriosSelecionados(seletorReservatorios);
     preencherReservatoriosAnalise(seletorGrupo.value, selecoes);
@@ -313,15 +390,49 @@ function inicializarAnalises() {
   });
 }
 
-function inicializarEngenharia() {
+async function acaoMudancaAnalise() {
+  const seletorInicio = document.getElementById("analise-inicio");
+  const seletorFim = document.getElementById("analise-fim");
+  await garantirPeriodoCarregado(seletorInicio.value, seletorFim.value);
+  renderizarAnalises();
+}
+
+async function garantirPeriodoCarregado(inicioStr, fimStr) {
+  const banco = window.bancoDeDados;
+  const datas = banco.datasDisponiveis;
+  const iInicio = datas.indexOf(inicioStr);
+  const iFim = datas.indexOf(fimStr);
+  if (iInicio < 0 || iFim < 0) return;
+
+  const periodo = datas.slice(
+    Math.min(iInicio, iFim),
+    Math.max(iInicio, iFim) + 1,
+  );
+  for (const data of periodo) {
+    if (!banco.historico[data]) {
+      await carregarMesPorData(data);
+    }
+  }
+}
+
+async function inicializarEngenharia() {
   const banco = window.bancoDeDados;
   const datas = banco.datasDisponiveis;
   const ultimaData = datas[datas.length - 1];
-  const reservatorios = banco.historico[ultimaData].reservatorios;
+
+  if (!banco.historico[ultimaData]) {
+    await carregarMesPorData(ultimaData);
+  }
+
+  const reservatorios = banco.historico[ultimaData]?.reservatorios || {};
   const seletorInicio = document.getElementById("engenharia-inicio");
   const seletorFim = document.getElementById("engenharia-fim");
   const seletorGrupo = document.getElementById("engenharia-grupo");
 
+  if (!seletorInicio || !seletorFim) return;
+
+  seletorInicio.innerHTML = "";
+  seletorFim.innerHTML = "";
   datas.forEach((data) => {
     seletorInicio.add(new Option(data, data));
     seletorFim.add(new Option(data, data));
@@ -329,6 +440,12 @@ function inicializarEngenharia() {
   seletorInicio.value = datas[obterIndiceInicioPeriodoRecente(datas)];
   seletorFim.value = ultimaData;
 
+  await garantirPeriodoCarregadoEngenharia(
+    seletorInicio.value,
+    seletorFim.value,
+  );
+
+  seletorGrupo.innerHTML = "";
   seletorGrupo.add(new Option("Todos os grupos", "TODOS"));
   const grupos = new Set(
     Object.values(reservatorios).map((reservatorio) => reservatorio.grupo),
@@ -336,8 +453,11 @@ function inicializarEngenharia() {
   grupos.forEach((grupo) => seletorGrupo.add(new Option(grupo, grupo)));
   preencherReservatoriosEngenharia("TODOS", []);
 
-  seletorInicio.addEventListener("change", renderizarEngenharia);
-  seletorFim.addEventListener("change", renderizarEngenharia);
+  seletorInicio.removeEventListener("change", acaoMudancaEngenharia);
+  seletorInicio.addEventListener("change", acaoMudancaEngenharia);
+  seletorFim.removeEventListener("change", acaoMudancaEngenharia);
+  seletorFim.addEventListener("change", acaoMudancaEngenharia);
+
   seletorGrupo.addEventListener("change", () => {
     const selecionador = document.getElementById("engenharia-reservatorios");
     const selecionados = obterReservatoriosSelecionados(selecionador);
@@ -356,10 +476,42 @@ function inicializarEngenharia() {
   });
 }
 
-function renderizarDashboard() {
+async function acaoMudancaEngenharia() {
+  const seletorInicio = document.getElementById("engenharia-inicio");
+  const seletorFim = document.getElementById("engenharia-fim");
+  await garantirPeriodoCarregadoEngenharia(
+    seletorInicio.value,
+    seletorFim.value,
+  );
+  renderizarEngenharia();
+}
+
+async function garantirPeriodoCarregadoEngenharia(inicioStr, fimStr) {
+  const banco = window.bancoDeDados;
+  const datas = banco.datasDisponiveis;
+  const iInicio = datas.indexOf(inicioStr);
+  const iFim = datas.indexOf(fimStr);
+  if (iInicio < 0 || iFim < 0) return;
+
+  const periodo = datas.slice(
+    Math.min(iInicio, iFim),
+    Math.max(iInicio, iFim) + 1,
+  );
+  for (const data of periodo) {
+    if (!banco.historico[data]) {
+      await carregarMesPorData(data);
+    }
+  }
+}
+
+async function renderizarDashboard() {
   const banco = window.bancoDeDados;
   const dataSelecionada = document.getElementById("seletor-data").value;
   const filtroSelecionado = document.getElementById("seletor-filtro").value;
+
+  if (!banco.historico[dataSelecionada]) {
+    await carregarMesPorData(dataSelecionada);
+  }
 
   const dadosDoDia = banco.historico ? banco.historico[dataSelecionada] : null;
 
@@ -409,6 +561,11 @@ function renderizarDashboard() {
   const datas = banco.datasDisponiveis;
   const indiceData = datas.indexOf(dataSelecionada);
   const dataAnterior = indiceData > 0 ? datas[indiceData - 1] : null;
+
+  if (dataAnterior && !banco.historico[dataAnterior]) {
+    await carregarMesPorData(dataAnterior);
+  }
+
   const dadosDiaAnterior = dataAnterior ? banco.historico[dataAnterior] : null;
   const reservatoriosDiaAnterior = dadosDiaAnterior?.reservatorios ?? {};
   const baseComparacao = document.getElementById("seletor-base-vazao").value;
@@ -533,7 +690,7 @@ function renderizarEngenharia() {
   }
 
   const catalogo =
-    window.bancoDeDados.historico[datas[datas.length - 1]].reservatorios;
+    window.bancoDeDados.historico[datas[datas.length - 1]]?.reservatorios || {};
   const totais = {
     registros: 0,
     nivelValidas: 0,
@@ -682,6 +839,8 @@ function renderizarAnalises() {
   const resumo = document.getElementById("analise-resumo");
   const corpoTabela = document.getElementById("analise-comparacao");
 
+  if (!resumo || !corpoTabela) return;
+
   resumo.replaceChildren();
   corpoTabela.replaceChildren();
   mensagem.textContent = "";
@@ -698,7 +857,7 @@ function renderizarAnalises() {
     document.getElementById("analise-reservatorios"),
   );
   const ultimaData = datas[datas.length - 1];
-  const catalogo = banco.historico[ultimaData].reservatorios;
+  const catalogo = banco.historico[ultimaData]?.reservatorios || {};
   const reservatorios = chavesSelecionadas
     .filter((chave) => catalogo[chave])
     .map((chave) => ({ chave, ...catalogo[chave] }));
@@ -710,6 +869,9 @@ function renderizarAnalises() {
     return;
   }
 
+  // --- DOWNSAMPLING INTELIGENTE (Agregação se período > 7 dias) ---
+  const usarDownsampling = datasPeriodo.length > 7;
+
   const series = reservatorios.map((reservatorio, index) => {
     const alertas = {
       nivelAcimaDe100: 0,
@@ -717,29 +879,54 @@ function renderizarAnalises() {
       nivelNegativo: 0,
       vazaoNegativa: 0,
     };
+
     const leiturasPorData = datasPeriodo.map((data) => {
-      const leituras =
-        banco.historico[data]?.reservatorios?.[reservatorio.chave]?.leituras;
-      const niveis = resumirLeituras(leituras?.nivel, "nivel");
-      const vazoes = resumirLeituras(
-        leituras?.vazao,
-        "vazao",
-        banco.historico[data]?.horarios,
-      );
-      alertas.nivelAcimaDe100 += niveis.alertas.acimaDe100;
-      alertas.nivelAcimaDe110 += niveis.alertas.acimaDe110;
-      alertas.nivelNegativo += niveis.alertas.negativo;
-      alertas.vazaoNegativa += vazoes.alertas.negativo;
-      return {
-        nivel: niveis.media,
-        nivelMin: niveis.minimo,
-        nivelMax: niveis.maximo,
-        vazao: vazoes.media,
-        vazaoMin: vazoes.minimo,
-        vazaoMax: vazoes.maximo,
-        vazaoMinHorario: vazoes.horarioMinimo,
-        vazaoMaxHorario: vazoes.horarioMaximo,
-      };
+      const regDia = banco.historico[data]?.reservatorios?.[reservatorio.chave];
+      const leituras = regDia?.leituras;
+
+      if (usarDownsampling && regDia?.kpis) {
+        const kpis = regDia.kpis;
+        const nMed =
+          kpis.nivelMedio !== "N/A" ? parseFloat(kpis.nivelMedio) : null;
+        const nMin = kpis.nivelMin !== "N/A" ? parseFloat(kpis.nivelMin) : null;
+        const nMax = kpis.nivelMax !== "N/A" ? parseFloat(kpis.nivelMax) : null;
+        const vMed =
+          kpis.vazaoMedia !== "N/A" ? parseFloat(kpis.vazaoMedia) : null;
+        const vMin = kpis.vazaoMin !== "N/A" ? parseFloat(kpis.vazaoMin) : null;
+        const vMax = kpis.vazaoMax !== "N/A" ? parseFloat(kpis.vazaoMax) : null;
+
+        return {
+          nivel: nMed,
+          nivelMin: nMin,
+          nivelMax: nMax,
+          vazao: vMed,
+          vazaoMin: vMin,
+          vazaoMax: vMax,
+          vazaoMinHorario: null,
+          vazaoMaxHorario: null,
+        };
+      } else {
+        const niveis = resumirLeituras(leituras?.nivel, "nivel");
+        const vazoes = resumirLeituras(
+          leituras?.vazao,
+          "vazao",
+          banco.historico[data]?.horarios,
+        );
+        alertas.nivelAcimaDe100 += niveis.alertas.acimaDe100;
+        alertas.nivelAcimaDe110 += niveis.alertas.acimaDe110;
+        alertas.nivelNegativo += niveis.alertas.negativo;
+        alertas.vazaoNegativa += vazoes.alertas.negativo;
+        return {
+          nivel: niveis.media,
+          nivelMin: niveis.minimo,
+          nivelMax: niveis.maximo,
+          vazao: vazoes.media,
+          vazaoMin: vazoes.minimo,
+          vazaoMax: vazoes.maximo,
+          vazaoMinHorario: vazoes.horarioMinimo,
+          vazaoMaxHorario: vazoes.horarioMaximo,
+        };
+      }
     });
 
     const niveis = leiturasPorData
@@ -879,8 +1066,6 @@ function obterReservatoriosSelecionados(container) {
     (checkbox) => checkbox.value,
   );
 }
-
-// --- FUNÇÕES AUXILIARES DE LÓGICA DE DADOS (RESTAURADAS) ---
 
 function obterRotuloBaseComparacao(base) {
   const rotulos = {
