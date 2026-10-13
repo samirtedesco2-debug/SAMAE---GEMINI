@@ -1,0 +1,105 @@
+================================================================================
+REGISTRO DE EVOLUÇÃO E MELHORIAS - VISÃO OPERACIONAL (CCO SAMAE)
+================================================================================
+
+PROJETO: Sistema de Monitoramento de Reservatórios - SAMAE Jaraguá do Sul
+FOCO: Usabilidade, clareza visual e facilidade de leitura no Centro de Controle Operacional
+ÚLTIMA ATUALIZAÇÃO: 13/10/2026
+
+--------------------------------------------------------------------------------
+1. OBJETIVO DO DOCUMENTO
+--------------------------------------------------------------------------------
+Este documento registra as sugestões de melhorias técnicas e de interface para 
+a aba "Visão Operacional", bem como o histórico de implementação no modelo 
+"COMO ESTAVA" vs "COMO FICOU", garantindo auditabilidade e controle de versão 
+das entregas focadas nos operadores do CCO.
+
+--------------------------------------------------------------------------------
+2. MATRIZ DE MELHORIAS (PLANO VS IMPLEMENTAÇÃO)
+--------------------------------------------------------------------------------
+
+[ITEM 01] - SELO DE STATUS E HORA DO BOLETIM
+- Status: 🟡 Planejado
+- Categoria: Usabilidade / Segurança da Informação
+- Como Estava:
+    * A data/hora do boletim carregado ficava dispersa ou subentendida nos dados do JSON.
+    * O operador precisava procurar manualmente para saber se estava olhando o boletim da madrugada.
+- Como Ficou:
+    * [Aguardando implementação]
+    * Proposta: Badge destacado no topo fixo da tela: "Boletim Operacional: 13/10/2026 - 05:15" 
+      com indicador visual de atualização recente (ponto verde indicador de dados válidos).
+
+--------------------------------------------------------------------------------
+
+[ITEM 02] - HIGHLIGHT E ANIMAÇÃO PARA ALERTAS CRÍTICOS
+- Status: 🟡 Planejado
+- Categoria: Interface (UI) / Leitura Rápida
+- Como Estava:
+    * Cards de reservatórios em alerta usavam apenas cores estáticas básicas (amarelo e vermelho).
+    * Em monitores grandes do CCO (TVs de plantão), o alerta podia passar despercebido à distância.
+- Como Ficou:
+    * [Aguardando implementação]
+    * Proposta: Cards de nível crítico (<50%) ou vazão crítica (>35%) com borda pulsante sutil 
+      em tom vermelho vivo, badges destacados e agrupamento automático dos reservatórios em 
+      alerta no topo da página.
+
+--------------------------------------------------------------------------------
+
+[ITEM 03] - MODO OPERACIONAL CCO (TELA CHEIA / KIOSK MODE)
+- Status: 🟡 Planejado
+- Categoria: Experiência do Usuário (UX)
+- Como Estava:
+    * Interface padrão com barras de navegação tradicionais e margens laterais largas, ocupando 
+      espaço útil de tela.
+- Como Ficou:
+    * [Aguardando implementação]
+    * Proposta: Botão de alternância "Modo CCO / Tela Cheia" que esconde elementos secundários,
+      expande a grade de cards e otimiza o contraste para exibição contínua em painéis/monitores do CCO.
+
+--------------------------------------------------------------------------------
+
+[ITEM 04] - CABEÇALHO FIXO E FILTROS RÁPIDOS (STICKY HEADER)
+- Status: 🟡 Planejado
+- Categoria: Agilidade Operacional
+- Como Estava:
+    * Ao rolar a página para verificar reservatórios no fim da lista, o operador perdia o acesso 
+      visual ao resumo geral e aos botões de filtro de grupos.
+- Como Ficou:
+    * [Aguardando implementação]
+    * Proposta: Barra superior fixa (sticky) contendo os contadores globais (Normais, Atenção, 
+      Críticos, Incompletos) e seletores rápidos de zona/grupo sempre visíveis.
+
+--------------------------------------------------------------------------------
+
+[ITEM 05] - ABSTRAÇÃO DA CAMADA DE CONSUMO DE DADOS
+- Status: 🟡 Planejado
+- Categoria: Arquitetura de Código
+- Como Estava:
+    * Requisições 'fetch' aos arquivos JSON locais (`dados_historicos/`) ligadas diretamente à 
+      lógica de inicialização do frontend em `app.js`.
+- Como Ficou:
+    * [Aguardando implementação]
+    * Proposta: Criação do módulo `src/apiClient.js` padronizado. O frontend solicitará dados 
+      apenas a este serviço. Na transição futura do SAMAE para API/WebSockets/Rádio, altera-se 
+      apenas este arquivo sem mexer em `ui.js` ou `regrasNegocio.js`.
+
+--------------------------------------------------------------------------------
+
+[ITEM 06] - RESUMO RÁPIDO DE PASSAGEM DE PLANTÃO
+- Status: 🟡 Planejado
+- Categoria: Utilidade Operacional
+- Como Estava:
+    * O operador precisava anotar manualmente os reservatórios que apresentaram alteração no turno.
+- Como Ficou:
+    * [Aguardando implementação]
+    * Proposta: Botão "Copiar Resumo de Plantão" que gera uma lista textual simplificada dos 
+      reservatórios em Atenção/Crítico pronta para envio em relatórios internos ou chats de equipe.
+
+--------------------------------------------------------------------------------
+3. CRONOGRAMA DE EXECUÇÃO RECOMENDADO
+--------------------------------------------------------------------------------
+Fase 1 (Imediata): Itens 01, 02 e 04 (Identificação do Boletim, Alertas Visuais e Sticky Header).
+Fase 2 (Estrutural): Item 05 (Isolamento da Camada de Dados em `apiClient.js`).
+Fase 3 (Refinamento): Itens 03 e 06 (Modo Tela Cheia e Resumo de Plantão).
+
+================================================================================
