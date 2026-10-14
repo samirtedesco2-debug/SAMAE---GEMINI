@@ -22,54 +22,10 @@ const coresAnaliticas = [
   "#5975d9",
 ];
 
-// Inicialização Assíncrona Carregando Todos os Meses Históricos
+// Inicialização Assíncrona Carregando Todos os Meses Históricos via ApiClient
 async function inicializarBancoAssincrono() {
   try {
-    const respostaIndice = await fetch("indice_datas.json");
-    if (!respostaIndice.ok) {
-      throw new Error("Não foi possível carregar o índice de datas.");
-    }
-    const indice = await respostaIndice.json();
-
-    window.bancoDeDados = {
-      datasDisponiveis: indice.datasDisponiveis || [],
-      historico: {},
-    };
-
-    const datas = window.bancoDeDados.datasDisponiveis;
-    if (datas.length > 0) {
-      // Identifica todos os meses distintos presentes no histórico para carregar tudo
-      const mesesParaCarregar = new Set();
-      datas.forEach((dataStr) => {
-        const partes = dataStr.split("/");
-        if (partes.length === 3) {
-          mesesParaCarregar.add(`${partes[2]}_${partes[1]}`); // Formato: ano_mes (ex: 2026_10)
-        }
-      });
-
-      // Carrega em paralelo todos os arquivos JSON mensais existentes
-      const promessasCarregamento = Array.from(mesesParaCarregar).map(
-        async (anoMes) => {
-          const arquivoMes = `dados_historicos/${anoMes}.json`;
-          try {
-            const resp = await fetch(arquivoMes);
-            if (resp.ok) {
-              const dadosMes = await resp.json();
-              if (dadosMes && dadosMes.dias) {
-                Object.assign(window.bancoDeDados.historico, dadosMes.dias);
-              }
-            }
-          } catch (e) {
-            console.warn(
-              `Aviso: Não foi possível carregar o ficheiro mensal ${arquivoMes}`,
-            );
-          }
-        },
-      );
-
-      await Promise.all(promessasCarregamento);
-    }
-
+    window.bancoDeDados = await window.ApiClient.inicializarBanco();
     inicializarTema();
     inicializarDashboard();
   } catch (erro) {
@@ -78,6 +34,17 @@ async function inicializarBancoAssincrono() {
     if (grid) {
       grid.innerHTML =
         "<p style='color: #8e8e8e;'>Erro ao carregar dados históricos. Verifique os arquivos JSON.</p>";
+    }
+  }
+}
+
+async function carregarMesPorData(dataStr) {
+  const partes = dataStr.split("/");
+  if (partes.length === 3) {
+    const anoMes = `${partes[2]}_${partes[1]}`;
+    const dadosMes = await window.ApiClient.carregarMes(anoMes);
+    if (dadosMes && dadosMes.dias) {
+      Object.assign(window.bancoDeDados.historico, dadosMes.dias);
     }
   }
 }
@@ -136,6 +103,11 @@ function inicializarDashboard() {
   const lblAtualizacao = document.getElementById("lbl-atualizacao");
   if (lblAtualizacao) {
     lblAtualizacao.textContent = ultimaDataDoBanco;
+  }
+  const dadosUltimoDia = banco.historico[ultimaDataDoBanco];
+  const lblBoletimDataHora = document.getElementById("lbl-boletim-data-hora");
+  if (lblBoletimDataHora && dadosUltimoDia) {
+    lblBoletimDataHora.textContent = dadosUltimoDia.ultimaAtualizacao || `${ultimaDataDoBanco} 05:15`;
   }
 
   const seletorData = document.getElementById("seletor-data");
@@ -518,6 +490,11 @@ async function renderizarDashboard() {
   if (!dadosDoDia) {
     console.error(`Dados não encontrados para a data ${dataSelecionada}`);
     return;
+  }
+
+  const lblBoletimDataHora = document.getElementById("lbl-boletim-data-hora");
+  if (lblBoletimDataHora) {
+    lblBoletimDataHora.textContent = dadosDoDia.ultimaAtualizacao || `${dataSelecionada} 05:15`;
   }
 
   const containerGrid = document.getElementById("grid-reservatorios");

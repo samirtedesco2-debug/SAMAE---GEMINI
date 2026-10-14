@@ -29,6 +29,13 @@
           <p class="header-subtitle">Níveis e vazões</p>
         </div>
       </div>
+      <div class="bulletin-status-badge" id="selo-boletim" role="status" aria-label="Status do Boletim Operacional">
+        <span class="bulletin-dot" aria-hidden="true"></span>
+        <div class="bulletin-info">
+          <span class="bulletin-title">Boletim Operacional</span>
+          <strong id="lbl-boletim-data-hora">--</strong>
+        </div>
+      </div>
       <div class="header-actions">
         <button type="button" id="btn-modo-cco" class="btn-operacional-quadrado" title="Modo CCO">
           <!-- Ícone de Monitor Expandido em SVG -->
@@ -328,6 +335,7 @@
   </section>
 
   <!-- Scripts JavaScript reorganizados -->
+  <script src="src/apiClient.js"></script>
   <script src="src/dados.js"></script>
   <script src="src/regrasNegocio.js"></script>
   <script src="src/graficos.js"></script>

@@ -236,6 +236,59 @@ header h1 {
   /* Garante que o container flutue para o canto se estiver em um flexbox maior */
 }
 
+.bulletin-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background-color: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.bulletin-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--status-normal-color);
+  box-shadow: 0 0 10px var(--status-normal-color);
+  animation: pulsarVerde 2s infinite ease-in-out;
+}
+
+@keyframes pulsarVerde {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 4px var(--status-normal-color);
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 0.75;
+    box-shadow: 0 0 12px var(--status-normal-color);
+  }
+}
+
+.bulletin-info {
+  display: grid;
+  gap: 2px;
+}
+
+.bulletin-title {
+  font-size: 0.65rem;
+  color: var(--muted-color);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.bulletin-info strong {
+  font-size: 0.88rem;
+  color: var(--accent-color);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 
 .btn-operacional-quadrado {
   /* Copia fiel do estilo do seu botão de tema */

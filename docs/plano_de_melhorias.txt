@@ -19,15 +19,15 @@ das entregas focadas nos operadores do CCO.
 --------------------------------------------------------------------------------
 
 [ITEM 01] - SELO DE STATUS E HORA DO BOLETIM
-- Status: 🟡 Planejado
+- Status: 🟢 Concluído
 - Categoria: Usabilidade / Segurança da Informação
 - Como Estava:
     * A data/hora do boletim carregado ficava dispersa ou subentendida nos dados do JSON.
     * O operador precisava procurar manualmente para saber se estava olhando o boletim da madrugada.
 - Como Ficou:
-    * [Aguardando implementação]
-    * Proposta: Badge destacado no topo fixo da tela: "Boletim Operacional: 13/10/2026 - 05:15" 
-      com indicador visual de atualização recente (ponto verde indicador de dados válidos).
+    * [Badge de Status e Hora]: Implementado o selo/badge destacado no cabeçalho superior (`.bulletin-status-badge`) exibindo claramente a indicação "Boletim Operacional" acompanhada da data e horário exatos obtidos dinamicamente dos dados (ex: `13/10/2026 - 05:15`).
+    * [Indicador Visual de Validade]: Integrado um indicador visual com ponto luminoso verde pulsante (`.bulletin-dot` com `@keyframes pulsarVerde`), garantindo confirmação visual instantânea de que o operador está visualizando dados válidos e atualizados.
+    * [Sincronia Dinâmica]: O selo atualiza-se automaticamente sempre que o operador altera a data consultada no seletor do painel operacional.
 
 --------------------------------------------------------------------------------
 
@@ -77,16 +77,15 @@ das entregas focadas nos operadores do CCO.
 --------------------------------------------------------------------------------
 
 [ITEM 05] - ABSTRAÇÃO DA CAMADA DE CONSUMO DE DADOS
-- Status: 🟡 Planejado
+- Status: 🟢 Concluído
 - Categoria: Arquitetura de Código
 - Como Estava:
     * Requisições 'fetch' aos arquivos JSON locais (`dados_historicos/`) ligadas diretamente à 
       lógica de inicialização do frontend em `app.js`.
 - Como Ficou:
-    * [Aguardando implementação]
-    * Proposta: Criação do módulo `src/apiClient.js` padronizado. O frontend solicitará dados 
-      apenas a este serviço. Na transição futura do SAMAE para API/WebSockets/Rádio, altera-se 
-      apenas este arquivo sem mexer em `ui.js` ou `regrasNegocio.js`.
+    * [Criação do Serviço `src/apiClient.js`]: Implementado o módulo padronizado `window.ApiClient` encarregado de encapsular todas as requisições HTTP e o carregamento assíncrono dos arquivos JSON mensais e índices (`indice_datas.json`).
+    * [Isolamento Arquitetural]: A camada de frontend em `app.js` agora consome dados exclusivamente através de `ApiClient`, desacoplando completamente a lógica de apresentação e regras de negócio da infraestrutura de rede.
+    * [Preparação para Futura API]: Na transição futura do SAMAE para API REST, WebSockets ou Rádio, bastará alterar os métodos de `src/apiClient.js`, sem necessidade de modificações em `ui.js`, `graficos.js` ou `regrasNegocio.js`.
 
 --------------------------------------------------------------------------------
 
