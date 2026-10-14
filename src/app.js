@@ -264,7 +264,7 @@ function inicializarDashboard() {
   renderizarDashboard();
 
   seletorData.addEventListener("change", async (e) => {
-    await carregarMesPorData(e.target.value);
+    //await carregarMesPorData(e.target.value);
     preencherSeletorFiltro(e.target.value, seletorFiltro.value);
     renderizarDashboard();
   });
@@ -1442,3 +1442,44 @@ function obterLeiturasAusentes(
   });
   return ausentes;
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+  const btnCCO = document.getElementById("btn-modo-cco");
+
+  // Definição dos dois ícones em formato profissional de traço
+  const iconeCCO = `<svg xmlns="http://w3.org" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 5H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z"/><path d="M12 18v4"/><path d="M8 22h8"/></svg>`;
+  const iconePadrao = `<svg xmlns="http://w3.org" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>`;
+
+  if (btnCCO) {
+    btnCCO.addEventListener("click", () => {
+      document.body.classList.toggle("modo-cco-ativo");
+
+      if (document.body.classList.contains("modo-cco-ativo")) {
+        btnCCO.innerHTML = iconePadrao;
+        btnCCO.title = "Modo Padrão";
+        btnCCO.style.borderColor = "var(--accent-color)"; // Dá um destaque sutil em azul quando ativo
+        
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen();
+        }
+      } else {
+        btnCCO.innerHTML = iconeCCO;
+        btnCCO.title = "Modo CCO";
+        btnCCO.style.borderColor = "var(--border-color)";
+        
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    });
+
+    document.addEventListener("fullscreenchange", () => {
+      if (!document.fullscreenElement) {
+        document.body.classList.remove("modo-cco-ativo");
+        btnCCO.innerHTML = iconeCCO;
+        btnCCO.style.borderColor = "var(--border-color)";
+        btnCCO.title = "Modo CCO";
+      }
+    });
+  }
+});

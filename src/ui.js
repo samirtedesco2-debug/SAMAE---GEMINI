@@ -1551,7 +1551,7 @@ function renderizarBoletimOperacional({
       registros: contagens.incompletos,
     },
   ];
-  resumo.replaceChildren(
+   resumo.replaceChildren(
     ...categorias.map(({ chave, rotulo, classe, registros }) => {
       const botao = document.createElement("button");
       botao.type = "button";
@@ -1572,10 +1572,18 @@ function renderizarBoletimOperacional({
       label.textContent = rotulo;
       const total = document.createElement("strong");
       total.textContent = String(registros.length);
+      
+      // === ADICIONE ESTA VERIFICAÇÃO AQUI ===
+      if (chave === "critico" && registros.length > 0) {
+        botao.classList.add("animar-pulso");
+      }
+      // ======================================
+
       botao.append(label, total);
       return botao;
     }),
   );
+
   renderizarDetalhesBoletim(
     detalhes,
     categorias.find(({ chave }) => chave === categoriaBoletimAtiva) ?? null,
