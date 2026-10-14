@@ -90,14 +90,14 @@ das entregas focadas nos operadores do CCO.
 --------------------------------------------------------------------------------
 
 [ITEM 06] - RESUMO RÁPIDO DE PASSAGEM DE PLANTÃO
-- Status: 🟡 Planejado
+- Status: 🟢 Concluído
 - Categoria: Utilidade Operacional
 - Como Estava:
     * O operador precisava anotar manualmente os reservatórios que apresentaram alteração no turno.
 - Como Ficou:
-    * [Aguardando implementação]
-    * Proposta: Botão "Copiar Resumo de Plantão" que gera uma lista textual simplificada dos 
-      reservatórios em Atenção/Crítico pronta para envio em relatórios internos ou chats de equipe.
+    * [Botão Copiar Resumo de Plantão]: Adicionado o botão "Copiar Resumo de Plantão" (`#btn-copiar-resumo`) com ícone vetorial e estilo alinhado ao Design System do CCO.
+    * [Geração Automática de Texto estruturado]: Ao ser acionado, o sistema analisa instantaneamente os reservatórios do boletim selecionado e compila uma mensagem formatada e limpa listando separadamente os reservatórios em estado **Crítico** e **Atenção**, pronta para envio imediato em chats de equipe, plantões ou relatórios internos.
+    * [Feedback Visual Instantâneo]: O botão exibe feedback visual dinâmico ("Resumo Copiado! 📋") com confirmação de sucesso na área de transferência (`navigator.clipboard`).
 
 --------------------------------------------------------------------------------
 3. CRONOGRAMA DE EXECUÇÃO RECOMENDADO

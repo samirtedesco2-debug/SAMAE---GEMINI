@@ -289,6 +289,31 @@ header h1 {
   letter-spacing: 0.02em;
 }
 
+.btn-copiar-resumo {
+  background-color: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  padding: 0 16px;
+  height: 44px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px var(--shadow-color);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.btn-copiar-resumo:hover {
+  border-color: var(--accent-color);
+  background-color: var(--surface-inset, rgba(255, 255, 255, 0.05));
+}
+
 
 .btn-operacional-quadrado {
   /* Copia fiel do estilo do seu botão de tema */

@@ -253,6 +253,77 @@ function inicializarDashboard() {
 
   seletorBaseComparacao.addEventListener("change", renderizarDashboard);
   seletorEscopo.addEventListener("change", renderizarDashboard);
+
+  const btnCopiarResumo = document.getElementById("btn-copiar-resumo");
+  if (btnCopiarResumo) {
+    btnCopiarResumo.addEventListener("click", () => {
+      const dataSelecionada = document.getElementById("seletor-data").value;
+      const dadosDoDia = window.bancoDeDados?.historico?.[dataSelecionada];
+      if (!dadosDoDia) {
+        alert("Nenhum dado carregado para gerar o resumo.");
+        return;
+      }
+
+      const criticos = [];
+      const atencao = [];
+      const incompletos = [];
+      const horarios = dadosDoDia.horarios || [];
+      const quantidadeSlots = horarios.length;
+
+      Object.entries(dadosDoDia.reservatorios || {}).forEach(([chave, res]) => {
+        const statusNivel = avaliarStatusNivel(res.leituras?.nivel);
+        const nomeRes = res.nome || chave;
+        const nivelAtual = obterUltimaLeituraNivel(res.leituras?.nivel);
+        const qualidade = avaliarQualidadeLeituras(res.leituras?.nivel, res.leituras?.vazao, quantidadeSlots);
+        
+        const info = `- ${nomeRes} (${chave}): Nível ${nivelAtual !== null ? nivelAtual + '%' : 'N/A'}`;
+        
+        if (statusNivel === "Crítico") criticos.push(info);
+        else if (statusNivel === "Atenção") atencao.push(info);
+
+        if (qualidade.nivelAusente > 0 || qualidade.vazaoAusente > 0 || statusNivel === "Sem Dados") {
+          incompletos.push(`- ${nomeRes} (${chave}): ${qualidade.nivelAusente + qualidade.vazaoAusente} leitura(s) ausente(s)`);
+        }
+      });
+
+      let textoResumo = `📋 RESUMO DE PASSAGEM DE PLANTÃO - CCO SAMAE\n`;
+      textoResumo += `📅 Boletim: ${dataSelecionada} (${dadosDoDia.ultimaAtualizacao || '05:15'})\n\n`;
+
+      if (criticos.length > 0) {
+        textoResumo += `🔴 CRÍTICOS (${criticos.length}):\n` + criticos.join("\n") + `\n\n`;
+      } else {
+        textoResumo += `🔴 CRÍTICOS: Nenhum\n\n`;
+      }
+
+      if (atencao.length > 0) {
+        textoResumo += `🟡 ATENÇÃO (${atencao.length}):\n` + atencao.join("\n") + `\n\n`;
+      } else {
+        textoResumo += `🟡 ATENÇÃO: Nenhum\n\n`;
+      }
+
+      if (incompletos.length > 0) {
+        textoResumo += `⚠️ INCOMPLETOS / AUSENTES (${incompletos.length}):\n` + incompletos.join("\n") + `\n\n`;
+      } else {
+        textoResumo += `⚠️ INCOMPLETOS: Nenhum\n\n`;
+      }
+
+      textoResumo += `*(Gerado automaticamente pelo Sistema de Monitoramento CCO)*`;
+
+      navigator.clipboard.writeText(textoResumo).then(() => {
+        const textoOriginal = btnCopiarResumo.innerHTML;
+        btnCopiarResumo.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> <span>Resumo Copiado!</span>`;
+        btnCopiarResumo.style.borderColor = "var(--status-normal-color)";
+        setTimeout(() => {
+          btnCopiarResumo.innerHTML = textoOriginal;
+          btnCopiarResumo.style.borderColor = "var(--border-color)";
+        }, 2500);
+      }).catch(err => {
+        console.error("Erro ao copiar resumo:", err);
+        alert("Não foi possível copiar o resumo para a área de transferência.");
+      });
+    });
+  }
+
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && seletorFiltro.value !== "TODOS") {
       e.preventDefault();
