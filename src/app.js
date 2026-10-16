@@ -1598,8 +1598,14 @@ function renderizarTabelaConfiguracoes() {
     const capacidadeUtil = config.capacidadeUtil !== undefined ? config.capacidadeUtil : "";
     const nivelAtencao = config.nivelAtencao !== undefined && config.nivelAtencao !== "" ? config.nivelAtencao : 60;
     const nivelCritico = config.nivelCritico !== undefined && config.nivelCritico !== "" ? config.nivelCritico : 50;
-    const vazaoAtencao = config.vazaoAtencao !== undefined && config.vazaoAtencao !== "" ? config.vazaoAtencao : 20;
-    const vazaoCritico = config.vazaoCritico !== undefined && config.vazaoCritico !== "" ? config.vazaoCritico : 35;
+    const nivelMedioAtencao = config.nivelMedioAtencao !== undefined && config.nivelMedioAtencao !== "" ? config.nivelMedioAtencao : 15;
+    const nivelMedioCritico = config.nivelMedioCritico !== undefined && config.nivelMedioCritico !== "" ? config.nivelMedioCritico : 25;
+    const vazaoEntradaAtencao = config.vazaoEntradaAtencao !== undefined && config.vazaoEntradaAtencao !== "" ? config.vazaoEntradaAtencao : 20;
+    const vazaoEntradaCritico = config.vazaoEntradaCritico !== undefined && config.vazaoEntradaCritico !== "" ? config.vazaoEntradaCritico : 35;
+    const vazaoSaidaAtencao = config.vazaoSaidaAtencao !== undefined && config.vazaoSaidaAtencao !== "" ? config.vazaoSaidaAtencao : 20;
+    const vazaoSaidaCritico = config.vazaoSaidaCritico !== undefined && config.vazaoSaidaCritico !== "" ? config.vazaoSaidaCritico : 35;
+    const vazaoMediaAtencao = config.vazaoMediaAtencao !== undefined && config.vazaoMediaAtencao !== "" ? config.vazaoMediaAtencao : 20;
+    const vazaoMediaCritico = config.vazaoMediaCritico !== undefined && config.vazaoMediaCritico !== "" ? config.vazaoMediaCritico : 35;
     const emManutencao = Boolean(config.emManutencao);
 
     const tr = document.createElement("tr");
@@ -1610,8 +1616,14 @@ function renderizarTabelaConfiguracoes() {
       <td><input type="number" step="any" class="cfg-capacidade" value="${capacidadeUtil}" placeholder="Ex: 5000"></td>
       <td><input type="number" step="any" class="cfg-nivel-atencao" value="${nivelAtencao}" min="0" max="100"></td>
       <td><input type="number" step="any" class="cfg-nivel-critico" value="${nivelCritico}" min="0" max="100"></td>
-      <td><input type="number" step="any" class="cfg-vazao-atencao" value="${vazaoAtencao}" min="0"></td>
-      <td><input type="number" step="any" class="cfg-vazao-critico" value="${vazaoCritico}" min="0"></td>
+      <td><input type="number" step="any" class="cfg-nivel-medio-atencao" value="${nivelMedioAtencao}" min="0"></td>
+      <td><input type="number" step="any" class="cfg-nivel-medio-critico" value="${nivelMedioCritico}" min="0"></td>
+      <td><input type="number" step="any" class="cfg-vazao-entrada-atencao" value="${vazaoEntradaAtencao}" min="0"></td>
+      <td><input type="number" step="any" class="cfg-vazao-entrada-critico" value="${vazaoEntradaCritico}" min="0"></td>
+      <td><input type="number" step="any" class="cfg-vazao-saida-atencao" value="${vazaoSaidaAtencao}" min="0"></td>
+      <td><input type="number" step="any" class="cfg-vazao-saida-critico" value="${vazaoSaidaCritico}" min="0"></td>
+      <td><input type="number" step="any" class="cfg-vazao-media-atencao" value="${vazaoMediaAtencao}" min="0"></td>
+      <td><input type="number" step="any" class="cfg-vazao-media-critico" value="${vazaoMediaCritico}" min="0"></td>
       <td style="text-align: center;"><input type="checkbox" class="cfg-manutencao" ${emManutencao ? "checked" : ""}></td>
       <td style="text-align: center;"><button type="button" class="btn-salvar-linha">Guardar</button></td>
     `;
@@ -1629,8 +1641,14 @@ function salvarLinhaConfiguracao(tr, chave) {
   const capacidadeUtil = tr.querySelector(".cfg-capacidade").value;
   const nivelAtencao = tr.querySelector(".cfg-nivel-atencao").value;
   const nivelCritico = tr.querySelector(".cfg-nivel-critico").value;
-  const vazaoAtencao = tr.querySelector(".cfg-vazao-atencao").value;
-  const vazaoCritico = tr.querySelector(".cfg-vazao-critico").value;
+  const nivelMedioAtencao = tr.querySelector(".cfg-nivel-medio-atencao").value;
+  const nivelMedioCritico = tr.querySelector(".cfg-nivel-medio-critico").value;
+  const vazaoEntradaAtencao = tr.querySelector(".cfg-vazao-entrada-atencao").value;
+  const vazaoEntradaCritico = tr.querySelector(".cfg-vazao-entrada-critico").value;
+  const vazaoSaidaAtencao = tr.querySelector(".cfg-vazao-saida-atencao").value;
+  const vazaoSaidaCritico = tr.querySelector(".cfg-vazao-saida-critico").value;
+  const vazaoMediaAtencao = tr.querySelector(".cfg-vazao-media-atencao").value;
+  const vazaoMediaCritico = tr.querySelector(".cfg-vazao-media-critico").value;
   const emManutencao = tr.querySelector(".cfg-manutencao").checked;
 
   const salvos = JSON.parse(localStorage.getItem("samai_reservatorios_config") || "{}");
@@ -1638,8 +1656,14 @@ function salvarLinhaConfiguracao(tr, chave) {
     capacidadeUtil,
     nivelAtencao: nivelAtencao !== "" ? Number(nivelAtencao) : 60,
     nivelCritico: nivelCritico !== "" ? Number(nivelCritico) : 50,
-    vazaoAtencao: vazaoAtencao !== "" ? Number(vazaoAtencao) : 20,
-    vazaoCritico: vazaoCritico !== "" ? Number(vazaoCritico) : 35,
+    nivelMedioAtencao: nivelMedioAtencao !== "" ? Number(nivelMedioAtencao) : 15,
+    nivelMedioCritico: nivelMedioCritico !== "" ? Number(nivelMedioCritico) : 25,
+    vazaoEntradaAtencao: vazaoEntradaAtencao !== "" ? Number(vazaoEntradaAtencao) : 20,
+    vazaoEntradaCritico: vazaoEntradaCritico !== "" ? Number(vazaoEntradaCritico) : 35,
+    vazaoSaidaAtencao: vazaoSaidaAtencao !== "" ? Number(vazaoSaidaAtencao) : 20,
+    vazaoSaidaCritico: vazaoSaidaCritico !== "" ? Number(vazaoSaidaCritico) : 35,
+    vazaoMediaAtencao: vazaoMediaAtencao !== "" ? Number(vazaoMediaAtencao) : 20,
+    vazaoMediaCritico: vazaoMediaCritico !== "" ? Number(vazaoMediaCritico) : 35,
     emManutencao
   };
   localStorage.setItem("samai_reservatorios_config", JSON.stringify(salvos));
@@ -1666,16 +1690,28 @@ function guardarTodasConfiguracoes() {
     const capacidadeUtil = tr.querySelector(".cfg-capacidade").value;
     const nivelAtencao = tr.querySelector(".cfg-nivel-atencao").value;
     const nivelCritico = tr.querySelector(".cfg-nivel-critico").value;
-    const vazaoAtencao = tr.querySelector(".cfg-vazao-atencao").value;
-    const vazaoCritico = tr.querySelector(".cfg-vazao-critico").value;
+    const nivelMedioAtencao = tr.querySelector(".cfg-nivel-medio-atencao").value;
+    const nivelMedioCritico = tr.querySelector(".cfg-nivel-medio-critico").value;
+    const vazaoEntradaAtencao = tr.querySelector(".cfg-vazao-entrada-atencao").value;
+    const vazaoEntradaCritico = tr.querySelector(".cfg-vazao-entrada-critico").value;
+    const vazaoSaidaAtencao = tr.querySelector(".cfg-vazao-saida-atencao").value;
+    const vazaoSaidaCritico = tr.querySelector(".cfg-vazao-saida-critico").value;
+    const vazaoMediaAtencao = tr.querySelector(".cfg-vazao-media-atencao").value;
+    const vazaoMediaCritico = tr.querySelector(".cfg-vazao-media-critico").value;
     const emManutencao = tr.querySelector(".cfg-manutencao").checked;
 
     salvos[chave] = {
       capacidadeUtil,
       nivelAtencao: nivelAtencao !== "" ? Number(nivelAtencao) : 60,
       nivelCritico: nivelCritico !== "" ? Number(nivelCritico) : 50,
-      vazaoAtencao: vazaoAtencao !== "" ? Number(vazaoAtencao) : 20,
-      vazaoCritico: vazaoCritico !== "" ? Number(vazaoCritico) : 35,
+      nivelMedioAtencao: nivelMedioAtencao !== "" ? Number(nivelMedioAtencao) : 15,
+      nivelMedioCritico: nivelMedioCritico !== "" ? Number(nivelMedioCritico) : 25,
+      vazaoEntradaAtencao: vazaoEntradaAtencao !== "" ? Number(vazaoEntradaAtencao) : 20,
+      vazaoEntradaCritico: vazaoEntradaCritico !== "" ? Number(vazaoEntradaCritico) : 35,
+      vazaoSaidaAtencao: vazaoSaidaAtencao !== "" ? Number(vazaoSaidaAtencao) : 20,
+      vazaoSaidaCritico: vazaoSaidaCritico !== "" ? Number(vazaoSaidaCritico) : 35,
+      vazaoMediaAtencao: vazaoMediaAtencao !== "" ? Number(vazaoMediaAtencao) : 20,
+      vazaoMediaCritico: vazaoMediaCritico !== "" ? Number(vazaoMediaCritico) : 35,
       emManutencao
     };
   });

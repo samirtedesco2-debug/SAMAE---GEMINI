@@ -172,13 +172,6 @@ function criarCardHTML(
     filtrarLeiturasNivelValidas(res.leituras?.nivel),
     horarios,
   );
-  const nivelAtual = obterUltimaLeituraNivel(res.leituras?.nivel);
-  const statusNivel = avaliarStatusNivel(res.leituras?.nivel, chave);
-  let statusClass = "status-normal";
-  if (statusNivel === "Atenção") statusClass = "status-atencao";
-  if (statusNivel === "Crítico") statusClass = "status-critico";
-  if (statusNivel === "Sem Dados") statusClass = "status-sem-dados";
-
   const vazoes = resumirLeiturasEstruturadas(res.leituras?.vazao, horarios);
   const alertaVazao = avaliarAlertaVazao(
     res.leituras?.vazao,
@@ -201,6 +194,11 @@ function criarCardHTML(
     horarios,
     obterUltimaLeituraNivel(res.leituras?.nivel),
   );
+  const statusNivel = avaliarStatusNivel(res.leituras?.nivel, chave, comparacaoNivel?.referencia);
+  let statusClass = "status-normal";
+  if (statusNivel === "Atenção") statusClass = "status-atencao";
+  if (statusNivel === "Crítico") statusClass = "status-critico";
+  if (statusNivel === "Sem Dados") statusClass = "status-sem-dados";
 
   const comparacoesVazao = alertaVazao.indicadores
     .filter((indicador) => indicador.classificaAlerta)
@@ -437,8 +435,16 @@ function criarPainelInformativoAlarme(
   identificacao.textContent = `${obterIdentificacaoReservatorio(chave)} · ${dataSelecionada}`;
   painel.append(cabecalho, identificacao);
 
+  const comparacaoNivel = obterComparacaoNivel(
+    banco,
+    chave,
+    dataSelecionada,
+    baseComparacao,
+    horarios,
+    obterUltimaLeituraNivel(reservatorio.leituras?.nivel),
+  );
   const nivel = obterUltimaLeituraNivel(reservatorio.leituras?.nivel);
-  const statusNivel = avaliarStatusNivel(reservatorio.leituras?.nivel, chave);
+  const statusNivel = avaliarStatusNivel(reservatorio.leituras?.nivel, chave, comparacaoNivel?.referencia);
   const nivelSecao = document.createElement("section");
   nivelSecao.className = "reservoir-alarm-info-section";
   const nivelTitulo = document.createElement("h4");
@@ -1459,6 +1465,16 @@ function renderizarBoletimOperacional({
 
     contagens.leiturasEsperadas += esperadas;
     contagens.leiturasAusentes += esperadas - validas;
+    const comparacaoNivel = reservatorio
+      ? obterComparacaoNivel(
+          banco,
+          chave,
+          dataSelecionada,
+          baseComparacao,
+          horarios,
+          obterUltimaLeituraNivel(reservatorio.leituras?.nivel),
+        )
+      : null;
     const registro = {
       chave,
       reservatorio: reservatorio ?? reservatoriosDiaAnterior[chave],
@@ -1466,18 +1482,9 @@ function renderizarBoletimOperacional({
       anterior: reservatoriosDiaAnterior[chave],
       ausentes: ausentesSelecionadas,
       statusNivel: reservatorio
-        ? avaliarStatusNivel(reservatorio.leituras?.nivel)
+        ? avaliarStatusNivel(reservatorio.leituras?.nivel, chave, comparacaoNivel?.referencia)
         : null,
-      comparacaoNivel: reservatorio
-        ? obterComparacaoNivel(
-            banco,
-            chave,
-            dataSelecionada,
-            baseComparacao,
-            horarios,
-            obterUltimaLeituraNivel(reservatorio.leituras?.nivel),
-          )
-        : null,
+      comparacaoNivel,
       alertaVazao: reservatorio
         ? avaliarAlertaVazao(
             reservatorio.leituras?.vazao,
@@ -1489,6 +1496,7 @@ function renderizarBoletimOperacional({
               horarios,
             ),
             horarios,
+            chave,
           )
         : null,
     };

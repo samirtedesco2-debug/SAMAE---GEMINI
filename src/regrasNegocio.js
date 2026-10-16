@@ -12,8 +12,14 @@ function obterConfiguracaoReservatorio(idReservatorio) {
     return {
       nivelAtencao: config?.nivelAtencao !== undefined && config?.nivelAtencao !== "" && !isNaN(config.nivelAtencao) ? Number(config.nivelAtencao) : LIMITE_ATENCAO_NIVEL_PERCENTUAL,
       nivelCritico: config?.nivelCritico !== undefined && config?.nivelCritico !== "" && !isNaN(config.nivelCritico) ? Number(config.nivelCritico) : LIMITE_CRITICO_NIVEL_PERCENTUAL,
-      vazaoAtencao: config?.vazaoAtencao !== undefined && config?.vazaoAtencao !== "" && !isNaN(config.vazaoAtencao) ? Number(config.vazaoAtencao) : LIMITE_ATENCAO_VAZAO_PERCENTUAL,
-      vazaoCritico: config?.vazaoCritico !== undefined && config?.vazaoCritico !== "" && !isNaN(config.vazaoCritico) ? Number(config.vazaoCritico) : LIMITE_CRITICO_VAZAO_PERCENTUAL,
+      nivelMedioAtencao: config?.nivelMedioAtencao !== undefined && config?.nivelMedioAtencao !== "" && !isNaN(config.nivelMedioAtencao) ? Number(config.nivelMedioAtencao) : 15,
+      nivelMedioCritico: config?.nivelMedioCritico !== undefined && config?.nivelMedioCritico !== "" && !isNaN(config.nivelMedioCritico) ? Number(config.nivelMedioCritico) : 25,
+      vazaoEntradaAtencao: config?.vazaoEntradaAtencao !== undefined && config?.vazaoEntradaAtencao !== "" && !isNaN(config.vazaoEntradaAtencao) ? Number(config.vazaoEntradaAtencao) : LIMITE_ATENCAO_VAZAO_PERCENTUAL,
+      vazaoEntradaCritico: config?.vazaoEntradaCritico !== undefined && config?.vazaoEntradaCritico !== "" && !isNaN(config.vazaoEntradaCritico) ? Number(config.vazaoEntradaCritico) : LIMITE_CRITICO_VAZAO_PERCENTUAL,
+      vazaoSaidaAtencao: config?.vazaoSaidaAtencao !== undefined && config?.vazaoSaidaAtencao !== "" && !isNaN(config.vazaoSaidaAtencao) ? Number(config.vazaoSaidaAtencao) : LIMITE_ATENCAO_VAZAO_PERCENTUAL,
+      vazaoSaidaCritico: config?.vazaoSaidaCritico !== undefined && config?.vazaoSaidaCritico !== "" && !isNaN(config.vazaoSaidaCritico) ? Number(config.vazaoSaidaCritico) : LIMITE_CRITICO_VAZAO_PERCENTUAL,
+      vazaoMediaAtencao: config?.vazaoMediaAtencao !== undefined && config?.vazaoMediaAtencao !== "" && !isNaN(config.vazaoMediaAtencao) ? Number(config.vazaoMediaAtencao) : LIMITE_ATENCAO_VAZAO_PERCENTUAL,
+      vazaoMediaCritico: config?.vazaoMediaCritico !== undefined && config?.vazaoMediaCritico !== "" && !isNaN(config.vazaoMediaCritico) ? Number(config.vazaoMediaCritico) : LIMITE_CRITICO_VAZAO_PERCENTUAL,
       capacidadeUtil: config?.capacidadeUtil ?? "",
       emManutencao: Boolean(config?.emManutencao)
     };
@@ -21,8 +27,14 @@ function obterConfiguracaoReservatorio(idReservatorio) {
     return {
       nivelAtencao: LIMITE_ATENCAO_NIVEL_PERCENTUAL,
       nivelCritico: LIMITE_CRITICO_NIVEL_PERCENTUAL,
-      vazaoAtencao: LIMITE_ATENCAO_VAZAO_PERCENTUAL,
-      vazaoCritico: LIMITE_CRITICO_VAZAO_PERCENTUAL,
+      nivelMedioAtencao: 15,
+      nivelMedioCritico: 25,
+      vazaoEntradaAtencao: LIMITE_ATENCAO_VAZAO_PERCENTUAL,
+      vazaoEntradaCritico: LIMITE_CRITICO_VAZAO_PERCENTUAL,
+      vazaoSaidaAtencao: LIMITE_ATENCAO_VAZAO_PERCENTUAL,
+      vazaoSaidaCritico: LIMITE_CRITICO_VAZAO_PERCENTUAL,
+      vazaoMediaAtencao: LIMITE_ATENCAO_VAZAO_PERCENTUAL,
+      vazaoMediaCritico: LIMITE_CRITICO_VAZAO_PERCENTUAL,
       capacidadeUtil: "",
       emManutencao: false
     };
@@ -40,13 +52,33 @@ function obterUltimaLeituraValida(valores) {
   return null;
 }
 
-function avaliarStatusNivel(valores, idReservatorio) {
+function avaliarStatusNivel(valores, idReservatorio, referenciaMedia) {
   const config = obterConfiguracaoReservatorio(idReservatorio);
   if (config.emManutencao) return "Manutenção";
+
   const nivelAtual = obterUltimaLeituraValida(valores);
-  if (nivelAtual === null) return "Sem Dados";
-  if (nivelAtual < config.nivelCritico) return "Crítico";
-  if (nivelAtual < config.nivelAtencao) return "Atenção";
+  let statusInstantaneo = "Normal";
+  if (nivelAtual !== null) {
+    if (nivelAtual < config.nivelCritico) statusInstantaneo = "Crítico";
+    else if (nivelAtual < config.nivelAtencao) statusInstantaneo = "Atenção";
+  } else {
+    statusInstantaneo = "Sem Dados";
+  }
+
+  let statusMedio = "Normal";
+  if (referenciaMedia !== null && referenciaMedia !== undefined && referenciaMedia > 0 && Array.isArray(valores)) {
+    const mediaAtual = calcularMediaValida(filtrarLeiturasNivelValidas(valores));
+    if (mediaAtual !== null) {
+      const variacao = ((mediaAtual - referenciaMedia) / Math.abs(referenciaMedia)) * 100;
+      const magnitude = Math.abs(variacao);
+      if (magnitude > config.nivelMedioCritico + 1e-9) statusMedio = "Crítico";
+      else if (magnitude >= config.nivelMedioAtencao - 1e-9) statusMedio = "Atenção";
+    }
+  }
+
+  if (statusInstantaneo === "Crítico" || statusMedio === "Crítico") return "Crítico";
+  if (statusInstantaneo === "Atenção" || statusMedio === "Atenção") return "Atenção";
+  if (statusInstantaneo === "Sem Dados" && statusMedio === "Sem Dados") return "Sem Dados";
   return "Normal";
 }
 
@@ -132,7 +164,7 @@ function avaliarAlertaVazao(leiturasAtuais, referencia, horarios, idReservatorio
       valorAtual: atual.media,
       valorAnterior: referencia?.media ?? null,
       quantidadeReferencia: referencia?.quantidades.media ?? 0,
-      classificaAlerta: false,
+      classificaAlerta: true,
     },
     {
       rotulo: "Mínima",
@@ -167,15 +199,27 @@ function avaliarAlertaVazao(leiturasAtuais, referencia, horarios, idReservatorio
           : variacao > 0
             ? "alta"
             : "estável";
+
+    let limAtencao = config.vazaoEntradaAtencao;
+    let limCritico = config.vazaoEntradaCritico;
+
+    if (indicador.rotulo === "Mínima") {
+      limAtencao = config.vazaoSaidaAtencao;
+      limCritico = config.vazaoSaidaCritico;
+    } else if (indicador.rotulo === "Média") {
+      limAtencao = config.vazaoMediaAtencao;
+      limCritico = config.vazaoMediaCritico;
+    }
+
     const status = !indicador.classificaAlerta
       ? "Informativo"
       : magnitude === null
         ? "Sem comparação"
         : indicador.somenteAcimaDaReferencia && variacao <= 0
           ? "Normal"
-          : magnitude > config.vazaoCritico + 1e-9
+          : magnitude > limCritico + 1e-9
             ? "Crítico"
-            : magnitude >= config.vazaoAtencao - 1e-9
+            : magnitude >= limAtencao - 1e-9
               ? "Atenção"
               : "Normal";
     return { ...indicador, variacao, direcao, status };
