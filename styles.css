@@ -2381,3 +2381,7 @@ header h1 {
     padding: 10px 8px;
   }
 }
+
+.footer {
+  padding: 10px 0px 0px 0px;
+}
