@@ -127,6 +127,7 @@ function inicializarDashboard() {
   inicializarNavegacao();
   inicializarAnalises();
   inicializarEngenharia();
+  inicializarConfiguracoes();
 
   const containerGrid = document.getElementById("grid-reservatorios");
   const resumoOperacional = document.getElementById("operational-summary");
@@ -1531,3 +1532,161 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+function inicializarConfiguracoes() {
+  const btnConfig = document.getElementById("btn-modo-configuracao");
+  const painelConfig = document.getElementById("painel-configuracoes");
+  const abas = Array.from(document.querySelectorAll(".view-tab"));
+  const paineis = [
+    document.getElementById("painel-operacional"),
+    document.getElementById("painel-analitico"),
+    document.getElementById("painel-engenharia"),
+  ];
+
+  if (!btnConfig || !painelConfig) return;
+
+  btnConfig.addEventListener("click", () => {
+    const estaAtivo = !painelConfig.hidden;
+    if (estaAtivo) {
+      painelConfig.hidden = true;
+      const painelOp = document.getElementById("painel-operacional");
+      if (painelOp) painelOp.hidden = false;
+      abas.forEach((aba) => {
+        const ativa = aba.id === "tab-operacional";
+        aba.classList.toggle("is-active", ativa);
+        aba.setAttribute("aria-selected", String(ativa));
+      });
+    } else {
+      paineis.forEach((p) => { if (p) p.hidden = true; });
+      painelConfig.hidden = false;
+      abas.forEach((aba) => {
+        aba.classList.remove("is-active");
+        aba.setAttribute("aria-selected", "false");
+      });
+      renderizarTabelaConfiguracoes();
+    }
+  });
+
+  abas.forEach((aba) => {
+    aba.addEventListener("click", () => {
+      painelConfig.hidden = true;
+    });
+  });
+
+  const btnGuardarTodas = document.getElementById("btn-guardar-todas-config");
+  if (btnGuardarTodas) {
+    btnGuardarTodas.addEventListener("click", guardarTodasConfiguracoes);
+  }
+}
+
+function renderizarTabelaConfiguracoes() {
+  const tbody = document.getElementById("configuracoes-tabela-corpo");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  const banco = window.bancoDeDados;
+  if (!banco || !banco.datasDisponiveis || banco.datasDisponiveis.length === 0) return;
+
+  const ultimaData = banco.datasDisponiveis[banco.datasDisponiveis.length - 1];
+  const dadosDia = banco.historico[ultimaData];
+  const reservatorios = dadosDia?.reservatorios || {};
+
+  const configsSalvas = JSON.parse(localStorage.getItem("samai_reservatorios_config") || "{}");
+
+  Object.entries(reservatorios).forEach(([chave, res]) => {
+    const config = configsSalvas[chave] || {};
+    const capacidadeUtil = config.capacidadeUtil !== undefined ? config.capacidadeUtil : "";
+    const nivelAtencao = config.nivelAtencao !== undefined && config.nivelAtencao !== "" ? config.nivelAtencao : 60;
+    const nivelCritico = config.nivelCritico !== undefined && config.nivelCritico !== "" ? config.nivelCritico : 50;
+    const vazaoAtencao = config.vazaoAtencao !== undefined && config.vazaoAtencao !== "" ? config.vazaoAtencao : 20;
+    const vazaoCritico = config.vazaoCritico !== undefined && config.vazaoCritico !== "" ? config.vazaoCritico : 35;
+    const emManutencao = Boolean(config.emManutencao);
+
+    const tr = document.createElement("tr");
+    tr.dataset.reservoirId = chave;
+
+    tr.innerHTML = `
+      <td><strong>${res.nome || chave}</strong><br><span style="color: var(--muted-color); font-size: 0.75rem;">Grupo: ${res.grupo || "Geral"} (${chave})</span></td>
+      <td><input type="number" step="any" class="cfg-capacidade" value="${capacidadeUtil}" placeholder="Ex: 5000"></td>
+      <td><input type="number" step="any" class="cfg-nivel-atencao" value="${nivelAtencao}" min="0" max="100"></td>
+      <td><input type="number" step="any" class="cfg-nivel-critico" value="${nivelCritico}" min="0" max="100"></td>
+      <td><input type="number" step="any" class="cfg-vazao-atencao" value="${vazaoAtencao}" min="0"></td>
+      <td><input type="number" step="any" class="cfg-vazao-critico" value="${vazaoCritico}" min="0"></td>
+      <td style="text-align: center;"><input type="checkbox" class="cfg-manutencao" ${emManutencao ? "checked" : ""}></td>
+      <td style="text-align: center;"><button type="button" class="btn-salvar-linha">Guardar</button></td>
+    `;
+
+    const btnSalvar = tr.querySelector(".btn-salvar-linha");
+    btnSalvar.addEventListener("click", () => {
+      salvarLinhaConfiguracao(tr, chave);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+function salvarLinhaConfiguracao(tr, chave) {
+  const capacidadeUtil = tr.querySelector(".cfg-capacidade").value;
+  const nivelAtencao = tr.querySelector(".cfg-nivel-atencao").value;
+  const nivelCritico = tr.querySelector(".cfg-nivel-critico").value;
+  const vazaoAtencao = tr.querySelector(".cfg-vazao-atencao").value;
+  const vazaoCritico = tr.querySelector(".cfg-vazao-critico").value;
+  const emManutencao = tr.querySelector(".cfg-manutencao").checked;
+
+  const salvos = JSON.parse(localStorage.getItem("samai_reservatorios_config") || "{}");
+  salvos[chave] = {
+    capacidadeUtil,
+    nivelAtencao: nivelAtencao !== "" ? Number(nivelAtencao) : 60,
+    nivelCritico: nivelCritico !== "" ? Number(nivelCritico) : 50,
+    vazaoAtencao: vazaoAtencao !== "" ? Number(vazaoAtencao) : 20,
+    vazaoCritico: vazaoCritico !== "" ? Number(vazaoCritico) : 35,
+    emManutencao
+  };
+  localStorage.setItem("samai_reservatorios_config", JSON.stringify(salvos));
+
+  const msg = document.getElementById("configuracao-mensagem");
+  if (msg) {
+    msg.textContent = `Configuração do reservatório ${chave} guardada com sucesso!`;
+    msg.classList.remove("has-alerts");
+    setTimeout(() => {
+      msg.textContent = "";
+    }, 4000);
+  }
+}
+
+function guardarTodasConfiguracoes() {
+  const tbody = document.getElementById("configuracoes-tabela-corpo");
+  if (!tbody) return;
+  const linhas = tbody.querySelectorAll("tr");
+  const salvos = JSON.parse(localStorage.getItem("samai_reservatorios_config") || "{}");
+
+  linhas.forEach((tr) => {
+    const chave = tr.dataset.reservoirId;
+    if (!chave) return;
+    const capacidadeUtil = tr.querySelector(".cfg-capacidade").value;
+    const nivelAtencao = tr.querySelector(".cfg-nivel-atencao").value;
+    const nivelCritico = tr.querySelector(".cfg-nivel-critico").value;
+    const vazaoAtencao = tr.querySelector(".cfg-vazao-atencao").value;
+    const vazaoCritico = tr.querySelector(".cfg-vazao-critico").value;
+    const emManutencao = tr.querySelector(".cfg-manutencao").checked;
+
+    salvos[chave] = {
+      capacidadeUtil,
+      nivelAtencao: nivelAtencao !== "" ? Number(nivelAtencao) : 60,
+      nivelCritico: nivelCritico !== "" ? Number(nivelCritico) : 50,
+      vazaoAtencao: vazaoAtencao !== "" ? Number(vazaoAtencao) : 20,
+      vazaoCritico: vazaoCritico !== "" ? Number(vazaoCritico) : 35,
+      emManutencao
+    };
+  });
+
+  localStorage.setItem("samai_reservatorios_config", JSON.stringify(salvos));
+  const msg = document.getElementById("configuracao-mensagem");
+  if (msg) {
+    msg.textContent = "Todas as configurações de reservatórios foram guardadas com sucesso!";
+    msg.classList.remove("has-alerts");
+    setTimeout(() => {
+      msg.textContent = "";
+    }, 4000);
+  }
+}

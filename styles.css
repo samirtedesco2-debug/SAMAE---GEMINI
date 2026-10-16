@@ -2410,3 +2410,94 @@ header h1 {
 .footer {
   padding: 10px 0px 0px 0px;
 }
+
+/* ==========================================================================
+   Configurações de Reservatórios
+   ========================================================================== */
+.config-view {
+  display: grid;
+  gap: 20px;
+}
+
+.config-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 18px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background-color: var(--surface-bg);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.config-actions-global {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-guardar-config {
+  padding: 10px 16px;
+  border: 1px solid var(--accent-color);
+  border-radius: 7px;
+  background-color: var(--accent-color);
+  color: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.btn-guardar-config:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.btn-guardar-config:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.config-table input[type="number"],
+.config-table input[type="text"] {
+  width: 80px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--surface-inset);
+  color: var(--text-color);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.config-table input[type="number"]:focus-visible,
+.config-table input[type="text"]:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.config-table input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-color);
+  cursor: pointer;
+}
+
+.btn-salvar-linha {
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--surface-bg);
+  color: var(--accent-color);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-salvar-linha:hover {
+  border-color: var(--accent-color);
+  background-color: var(--surface-inset);
+}

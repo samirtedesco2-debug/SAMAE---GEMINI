@@ -5,6 +5,51 @@ const LIMITE_CRITICO_NIVEL_PERCENTUAL = 50;
 const LIMITE_ATENCAO_VAZAO_PERCENTUAL = 20;
 const LIMITE_CRITICO_VAZAO_PERCENTUAL = 35;
 
+function obterConfiguracaoReservatorio(idReservatorio) {
+  try {
+    const salvos = JSON.parse(localStorage.getItem("samai_reservatorios_config") || "{}");
+    const config = salvos[idReservatorio];
+    return {
+      nivelAtencao: config?.nivelAtencao !== undefined && config?.nivelAtencao !== "" && !isNaN(config.nivelAtencao) ? Number(config.nivelAtencao) : LIMITE_ATENCAO_NIVEL_PERCENTUAL,
+      nivelCritico: config?.nivelCritico !== undefined && config?.nivelCritico !== "" && !isNaN(config.nivelCritico) ? Number(config.nivelCritico) : LIMITE_CRITICO_NIVEL_PERCENTUAL,
+      vazaoAtencao: config?.vazaoAtencao !== undefined && config?.vazaoAtencao !== "" && !isNaN(config.vazaoAtencao) ? Number(config.vazaoAtencao) : LIMITE_ATENCAO_VAZAO_PERCENTUAL,
+      vazaoCritico: config?.vazaoCritico !== undefined && config?.vazaoCritico !== "" && !isNaN(config.vazaoCritico) ? Number(config.vazaoCritico) : LIMITE_CRITICO_VAZAO_PERCENTUAL,
+      capacidadeUtil: config?.capacidadeUtil ?? "",
+      emManutencao: Boolean(config?.emManutencao)
+    };
+  } catch (e) {
+    return {
+      nivelAtencao: LIMITE_ATENCAO_NIVEL_PERCENTUAL,
+      nivelCritico: LIMITE_CRITICO_NIVEL_PERCENTUAL,
+      vazaoAtencao: LIMITE_ATENCAO_VAZAO_PERCENTUAL,
+      vazaoCritico: LIMITE_CRITICO_VAZAO_PERCENTUAL,
+      capacidadeUtil: "",
+      emManutencao: false
+    };
+  }
+}
+
+function obterUltimaLeituraValida(valores) {
+  if (!Array.isArray(valores)) return null;
+  for (let i = valores.length - 1; i >= 0; i--) {
+    const v = valores[i];
+    if (v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v))) {
+      return Number(v);
+    }
+  }
+  return null;
+}
+
+function avaliarStatusNivel(valores, idReservatorio) {
+  const config = obterConfiguracaoReservatorio(idReservatorio);
+  if (config.emManutencao) return "Manutenção";
+  const nivelAtual = obterUltimaLeituraValida(valores);
+  if (nivelAtual === null) return "Sem Dados";
+  if (nivelAtual < config.nivelCritico) return "Crítico";
+  if (nivelAtual < config.nivelAtencao) return "Atenção";
+  return "Normal";
+}
+
 function calcularMediaValida(valores) {
   if (!Array.isArray(valores)) return null;
   const validos = valores
@@ -72,7 +117,11 @@ function resumirLeiturasEstruturadas(valores, horarios) {
   };
 }
 
-function avaliarAlertaVazao(leiturasAtuais, referencia, horarios) {
+function avaliarAlertaVazao(leiturasAtuais, referencia, horarios, idReservatorio) {
+  const config = obterConfiguracaoReservatorio(idReservatorio);
+  if (config.emManutencao) {
+    return { status: "Manutenção", indicadores: [], referencia };
+  }
   const atual = resumirLeiturasEstruturadas(
     filtrarLeiturasVazaoValidas(leiturasAtuais),
     horarios,
@@ -124,9 +173,9 @@ function avaliarAlertaVazao(leiturasAtuais, referencia, horarios) {
         ? "Sem comparação"
         : indicador.somenteAcimaDaReferencia && variacao <= 0
           ? "Normal"
-          : magnitude > LIMITE_CRITICO_VAZAO_PERCENTUAL + 1e-9
+          : magnitude > config.vazaoCritico + 1e-9
             ? "Crítico"
-            : magnitude >= LIMITE_ATENCAO_VAZAO_PERCENTUAL - 1e-9
+            : magnitude >= config.vazaoAtencao - 1e-9
               ? "Atenção"
               : "Normal";
     return { ...indicador, variacao, direcao, status };

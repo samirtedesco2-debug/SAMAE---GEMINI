@@ -173,7 +173,7 @@ function criarCardHTML(
     horarios,
   );
   const nivelAtual = obterUltimaLeituraNivel(res.leituras?.nivel);
-  const statusNivel = avaliarStatusNivel(res.leituras?.nivel);
+  const statusNivel = avaliarStatusNivel(res.leituras?.nivel, chave);
   let statusClass = "status-normal";
   if (statusNivel === "Atenção") statusClass = "status-atencao";
   if (statusNivel === "Crítico") statusClass = "status-critico";
@@ -190,6 +190,7 @@ function criarCardHTML(
       horarios,
     ),
     horarios,
+    chave,
   );
   const vazaoSemComparacao = alertaVazao.status === "Sem comparação";
   const comparacaoNivel = obterComparacaoNivel(
@@ -437,7 +438,7 @@ function criarPainelInformativoAlarme(
   painel.append(cabecalho, identificacao);
 
   const nivel = obterUltimaLeituraNivel(reservatorio.leituras?.nivel);
-  const statusNivel = avaliarStatusNivel(reservatorio.leituras?.nivel);
+  const statusNivel = avaliarStatusNivel(reservatorio.leituras?.nivel, chave);
   const nivelSecao = document.createElement("section");
   nivelSecao.className = "reservoir-alarm-info-section";
   const nivelTitulo = document.createElement("h4");
@@ -470,6 +471,7 @@ function criarPainelInformativoAlarme(
     reservatorio.leituras?.vazao,
     referencia,
     horarios,
+    chave,
   );
   const vazaoSecao = document.createElement("section");
   vazaoSecao.className = "reservoir-alarm-info-section";
@@ -1312,6 +1314,7 @@ function obterClasseStatus(status) {
   if (status === "Crítico") return "status-critico";
   if (status === "Sem Dados") return "status-sem-dados";
   if (status === "Sem comparação") return "status-sem-comparacao";
+  if (status === "Manutenção") return "status-normal";
   return "status-normal";
 }
 

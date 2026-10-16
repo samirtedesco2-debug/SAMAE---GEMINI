@@ -33,6 +33,14 @@
       </div>
       <div class="header-right">
         <div class="header-actions">
+          <button type="button" id="btn-modo-configuracao" class="btn-operacional-quadrado" title="Configurações de Reservatórios">
+            <!-- Ícone de Engrenagem SVG -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1.13 1.79l-.37.17a2 2 0 0 1-2.48-.9l-.22-.38a2 2 0 0 0-2.73-.73l-.31.18a2 2 0 0 0-.9 2.48l.17.37a2 2 0 0 1-1.79 1.13H2a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2h.18a2 2 0 0 1 1.79 1.13l.17.37a2 2 0 0 1-.9 2.48l-.31.18a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.48.9l.37-.17a2 2 0 0 1 1.13-1.79V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1.13-1.79l.37-.17a2 2 0 0 1 2.48.9l.22.38a2 2 0 0 0 2.73.73l.31-.18a2 2 0 0 0 .9-2.48l-.17-.37a2 2 0 0 1 1.79-1.13H22a2 2 0 0 0 2-2v-.44a2 2 0 0 0-2-2h-.18a2 2 0 0 1-1.79-1.13l-.17-.37a2 2 0 0 1 .9-2.48l.31-.18a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.48-.9l-.37.17a2 2 0 0 1-1.13-1.79V4a2 2 0 0 0-2-2z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
           <button type="button" id="btn-modo-cco" class="btn-operacional-quadrado" title="Modo CCO">
             <!-- Ícone de Monitor Expandido em SVG -->
             <svg xmlns="http://w3.org" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -346,6 +354,47 @@
       <button id="engenharia-carregar-mais" type="button">
         Carregar mais registros
       </button>
+    </div>
+  </section>
+
+  <section class="config-view view-panel" id="painel-configuracoes" role="tabpanel" aria-labelledby="tab-configuracoes" hidden>
+    <div class="analysis-intro config-intro">
+      <div>
+        <p class="analysis-eyebrow">PARAMETRIZAÇÃO</p>
+        <h2>Configurações de Reservatórios</h2>
+        <p class="analysis-description">
+          Defina limites individuais de atenção e crítico para nível (%) e variação de vazão (%), capacidade útil (m³) e estado de manutenção.
+        </p>
+      </div>
+      <div class="config-actions-global">
+        <button type="button" id="btn-guardar-todas-config" class="btn-guardar-config">Guardar Todas as Configurações</button>
+      </div>
+    </div>
+    <p class="analysis-message" id="configuracao-mensagem" role="status" aria-live="polite"></p>
+    <div class="engineering-table-wrap">
+      <table class="comparison-table engineering-table config-table">
+        <thead>
+          <tr>
+            <th scope="col">Identificação (Nome / Grupo)</th>
+            <th scope="col">Capacidade Útil (m³)</th>
+            <th scope="colgroup" colspan="2">Nível (%)</th>
+            <th scope="colgroup" colspan="2">Vazão (L/s)</th>
+            <th scope="col">Controlo</th>
+            <th scope="col">Ação</th>
+          </tr>
+          <tr>
+            <th scope="col"></th>
+            <th scope="col"></th>
+            <th scope="col">Atenção</th>
+            <th scope="col">Crítico</th>
+            <th scope="col">Atenção (Desvio %)</th>
+            <th scope="col">Crítico (Desvio %)</th>
+            <th scope="col">Em Manutenção</th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody id="configuracoes-tabela-corpo"></tbody>
+      </table>
     </div>
   </section>
 
