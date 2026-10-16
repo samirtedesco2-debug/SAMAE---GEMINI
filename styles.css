@@ -444,10 +444,41 @@ header h1 {
   box-shadow: 0 4px 10px var(--shadow-color);
 }
 
+.operational-brief-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .operational-brief-heading h2 {
   margin-top: 4px;
   color: var(--heading-color);
   font-size: 1.25rem;
+}
+
+.operational-brief details summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  color: var(--heading-color);
+  user-select: none;
+}
+
+.operational-brief details summary::marker {
+  color: var(--accent-color);
+}
+
+.operational-brief details summary h2 {
+  margin: 0;
+  color: var(--heading-color);
+  font-size: 1.25rem;
+}
+
+.operational-brief details[open] summary {
+  margin-bottom: 6px;
 }
 
 .operational-brief-description {

@@ -78,19 +78,6 @@
       <div class="meta-info">
         Última data disponível: <span id="lbl-atualizacao">--</span>
       </div>
-      <div class="control-group action-group">
-        <button type="button" id="btn-copiar-resumo" class="btn-copiar-resumo"
-          title="Copiar Resumo de Plantão (Atenção e Críticos)">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
-            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-            <path d="M9 14h6" />
-            <path d="M12 11v6" />
-          </svg>
-          <span>Copiar Resumo de Plantão</span>
-        </button>
-      </div>
     </div>
   </header>
 
@@ -115,11 +102,26 @@
       <div class="operational-brief-heading">
         <div>
           <p class="analysis-eyebrow">RESUMO DO MONITORAMENTO</p>
-          <h2 id="operational-brief-title">
-            Boletim operacional da madrugada
-          </h2>
-          <p id="operational-brief-description" class="operational-brief-description"></p>
+          <details>
+            <summary>
+              <h2 id="operational-brief-title">
+                Boletim operacional da madrugada
+              </h2>
+            </summary>
+            <p id="operational-brief-description" class="operational-brief-description"></p>
+          </details>
         </div>
+        <button type="button" id="btn-copiar-resumo" class="btn-copiar-resumo"
+          title="Copiar Resumo de Plantão (Atenção e Críticos)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+            <path d="M9 14h6" />
+            <path d="M12 11v6" />
+          </svg>
+          <span>Copiar Resumo de Plantão</span>
+        </button>
       </div>
       <div class="operational-filter-controls">
         <div class="operational-comparison-control">
