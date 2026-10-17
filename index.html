@@ -363,43 +363,23 @@
         <p class="analysis-eyebrow">PARAMETRIZAÇÃO</p>
         <h2>Configurações de Reservatórios</h2>
         <p class="analysis-description">
-          Defina limites individuais de atenção e crítico para nível (%) e variação de vazão (%), capacidade útil (m³) e estado de manutenção.
+          Selecione um reservatório na lista à esquerda para editar seus parâmetros operacionais, limites de alarme e interruptores granulares.
         </p>
       </div>
       <div class="config-actions-global">
-        <button type="button" id="btn-guardar-todas-config" class="btn-guardar-config">Guardar Todas as Configurações</button>
+        <button type="button" id="btn-guardar-todas-config" class="btn-guardar-config">Aplicar Padrões Globais</button>
       </div>
     </div>
     <p class="analysis-message" id="configuracao-mensagem" role="status" aria-live="polite"></p>
-    <div class="engineering-table-wrap">
-      <table class="comparison-table engineering-table config-table">
-        <thead>
-          <tr>
-            <th scope="col" rowspan="2">Identificação (Nome / Grupo)</th>
-            <th scope="col" rowspan="2">Capacidade Útil (m³)</th>
-            <th scope="colgroup" colspan="2">Nível (%)</th>
-            <th scope="colgroup" colspan="2">Nível Médio (Desvio %)</th>
-            <th scope="colgroup" colspan="2">Vazão de Entrada (Desvio %)</th>
-            <th scope="colgroup" colspan="2">Vazão de Saída (Desvio %)</th>
-            <th scope="colgroup" colspan="2">Vazão Média (Desvio %)</th>
-            <th scope="col" rowspan="2">Em Manutenção</th>
-            <th scope="col" rowspan="2">Ação</th>
-          </tr>
-          <tr>
-            <th scope="col">Atenção</th>
-            <th scope="col">Crítico</th>
-            <th scope="col">Atenção</th>
-            <th scope="col">Crítico</th>
-            <th scope="col">Atenção</th>
-            <th scope="col">Crítico</th>
-            <th scope="col">Atenção</th>
-            <th scope="col">Crítico</th>
-            <th scope="col">Atenção</th>
-            <th scope="col">Crítico</th>
-          </tr>
-        </thead>
-        <tbody id="configuracoes-tabela-corpo"></tbody>
-      </table>
+
+    <div class="config-master-detail">
+      <div class="config-master-sidebar">
+        <h3>Reservatórios</h3>
+        <div id="config-lista-reservatorios" class="config-reservoir-list"></div>
+      </div>
+      <div class="config-detail-panel" id="config-detalhe-container">
+        <!-- O formulário detalhado do reservatório selecionado será injetado aqui dinamicamente -->
+      </div>
     </div>
   </section>
 

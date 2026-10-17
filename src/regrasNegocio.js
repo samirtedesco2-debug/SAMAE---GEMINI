@@ -20,6 +20,11 @@ function obterConfiguracaoReservatorio(idReservatorio) {
       vazaoSaidaCritico: config?.vazaoSaidaCritico !== undefined && config?.vazaoSaidaCritico !== "" && !isNaN(config.vazaoSaidaCritico) ? Number(config.vazaoSaidaCritico) : LIMITE_CRITICO_VAZAO_PERCENTUAL,
       vazaoMediaAtencao: config?.vazaoMediaAtencao !== undefined && config?.vazaoMediaAtencao !== "" && !isNaN(config.vazaoMediaAtencao) ? Number(config.vazaoMediaAtencao) : LIMITE_ATENCAO_VAZAO_PERCENTUAL,
       vazaoMediaCritico: config?.vazaoMediaCritico !== undefined && config?.vazaoMediaCritico !== "" && !isNaN(config.vazaoMediaCritico) ? Number(config.vazaoMediaCritico) : LIMITE_CRITICO_VAZAO_PERCENTUAL,
+      alertaNivelAtivo: config?.alertaNivelAtivo !== undefined ? Boolean(config.alertaNivelAtivo) : true,
+      alertaNivelMedioAtivo: config?.alertaNivelMedioAtivo !== undefined ? Boolean(config.alertaNivelMedioAtivo) : true,
+      alertaVazaoEntradaAtivo: config?.alertaVazaoEntradaAtivo !== undefined ? Boolean(config.alertaVazaoEntradaAtivo) : true,
+      alertaVazaoSaidaAtivo: config?.alertaVazaoSaidaAtivo !== undefined ? Boolean(config.alertaVazaoSaidaAtivo) : true,
+      alertaVazaoMediaAtivo: config?.alertaVazaoMediaAtivo !== undefined ? Boolean(config.alertaVazaoMediaAtivo) : true,
       capacidadeUtil: config?.capacidadeUtil ?? "",
       emManutencao: Boolean(config?.emManutencao)
     };
@@ -35,6 +40,11 @@ function obterConfiguracaoReservatorio(idReservatorio) {
       vazaoSaidaCritico: LIMITE_CRITICO_VAZAO_PERCENTUAL,
       vazaoMediaAtencao: LIMITE_ATENCAO_VAZAO_PERCENTUAL,
       vazaoMediaCritico: LIMITE_CRITICO_VAZAO_PERCENTUAL,
+      alertaNivelAtivo: true,
+      alertaNivelMedioAtivo: true,
+      alertaVazaoEntradaAtivo: true,
+      alertaVazaoSaidaAtivo: true,
+      alertaVazaoMediaAtivo: true,
       capacidadeUtil: "",
       emManutencao: false
     };
@@ -56,17 +66,19 @@ function avaliarStatusNivel(valores, idReservatorio, referenciaMedia) {
   const config = obterConfiguracaoReservatorio(idReservatorio);
   if (config.emManutencao) return "Manutenção";
 
-  const nivelAtual = obterUltimaLeituraValida(valores);
   let statusInstantaneo = "Normal";
-  if (nivelAtual !== null) {
-    if (nivelAtual < config.nivelCritico) statusInstantaneo = "Crítico";
-    else if (nivelAtual < config.nivelAtencao) statusInstantaneo = "Atenção";
-  } else {
-    statusInstantaneo = "Sem Dados";
+  if (config.alertaNivelAtivo) {
+    const nivelAtual = obterUltimaLeituraValida(valores);
+    if (nivelAtual !== null) {
+      if (nivelAtual < config.nivelCritico) statusInstantaneo = "Crítico";
+      else if (nivelAtual < config.nivelAtencao) statusInstantaneo = "Atenção";
+    } else {
+      statusInstantaneo = "Sem Dados";
+    }
   }
 
   let statusMedio = "Normal";
-  if (referenciaMedia !== null && referenciaMedia !== undefined && referenciaMedia > 0 && Array.isArray(valores)) {
+  if (config.alertaNivelMedioAtivo && referenciaMedia !== null && referenciaMedia !== undefined && referenciaMedia > 0 && Array.isArray(valores)) {
     const mediaAtual = calcularMediaValida(filtrarLeiturasNivelValidas(valores));
     if (mediaAtual !== null) {
       const variacao = ((mediaAtual - referenciaMedia) / Math.abs(referenciaMedia)) * 100;
@@ -202,17 +214,22 @@ function avaliarAlertaVazao(leiturasAtuais, referencia, horarios, idReservatorio
 
     let limAtencao = config.vazaoEntradaAtencao;
     let limCritico = config.vazaoEntradaCritico;
+    let ativo = config.alertaVazaoEntradaAtivo;
 
     if (indicador.rotulo === "Mínima") {
       limAtencao = config.vazaoSaidaAtencao;
       limCritico = config.vazaoSaidaCritico;
+      ativo = config.alertaVazaoSaidaAtivo;
     } else if (indicador.rotulo === "Média") {
       limAtencao = config.vazaoMediaAtencao;
       limCritico = config.vazaoMediaCritico;
+      ativo = config.alertaVazaoMediaAtivo;
+    } else if (indicador.rotulo === "Máxima") {
+      ativo = config.alertaVazaoEntradaAtivo;
     }
 
-    const status = !indicador.classificaAlerta
-      ? "Informativo"
+    const status = !ativo || !indicador.classificaAlerta
+      ? "Normal"
       : magnitude === null
         ? "Sem comparação"
         : indicador.somenteAcimaDaReferencia && variacao <= 0

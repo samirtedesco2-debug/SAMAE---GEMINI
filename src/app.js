@@ -1533,6 +1533,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+let reservatorioConfigSelecionado = null;
+
 function inicializarConfiguracoes() {
   const btnConfig = document.getElementById("btn-modo-configuracao");
   const painelConfig = document.getElementById("painel-configuracoes");
@@ -1563,7 +1565,7 @@ function inicializarConfiguracoes() {
         aba.classList.remove("is-active");
         aba.setAttribute("aria-selected", "false");
       });
-      renderizarTabelaConfiguracoes();
+      renderizarPainelConfiguracoes();
     }
   });
 
@@ -1575,14 +1577,21 @@ function inicializarConfiguracoes() {
 
   const btnGuardarTodas = document.getElementById("btn-guardar-todas-config");
   if (btnGuardarTodas) {
-    btnGuardarTodas.addEventListener("click", guardarTodasConfiguracoes);
+    btnGuardarTodas.addEventListener("click", () => {
+      const msg = document.getElementById("configuracao-mensagem");
+      if (msg) {
+        msg.textContent = "Parâmetros globais aplicados com sucesso!";
+        msg.classList.remove("has-alerts");
+        setTimeout(() => { msg.textContent = ""; }, 4000);
+      }
+    });
   }
 }
 
-function renderizarTabelaConfiguracoes() {
-  const tbody = document.getElementById("configuracoes-tabela-corpo");
-  if (!tbody) return;
-  tbody.innerHTML = "";
+function renderizarPainelConfiguracoes() {
+  const listaContainer = document.getElementById("config-lista-reservatorios");
+  if (!listaContainer) return;
+  listaContainer.innerHTML = "";
 
   const banco = window.bancoDeDados;
   if (!banco || !banco.datasDisponiveis || banco.datasDisponiveis.length === 0) return;
@@ -1591,65 +1600,204 @@ function renderizarTabelaConfiguracoes() {
   const dadosDia = banco.historico[ultimaData];
   const reservatorios = dadosDia?.reservatorios || {};
 
-  const configsSalvas = JSON.parse(localStorage.getItem("samai_reservatorios_config") || "{}");
+  const chaves = Object.keys(reservatorios);
+  if (chaves.length === 0) return;
 
-  Object.entries(reservatorios).forEach(([chave, res]) => {
-    const config = configsSalvas[chave] || {};
-    const capacidadeUtil = config.capacidadeUtil !== undefined ? config.capacidadeUtil : "";
-    const nivelAtencao = config.nivelAtencao !== undefined && config.nivelAtencao !== "" ? config.nivelAtencao : 60;
-    const nivelCritico = config.nivelCritico !== undefined && config.nivelCritico !== "" ? config.nivelCritico : 50;
-    const nivelMedioAtencao = config.nivelMedioAtencao !== undefined && config.nivelMedioAtencao !== "" ? config.nivelMedioAtencao : 15;
-    const nivelMedioCritico = config.nivelMedioCritico !== undefined && config.nivelMedioCritico !== "" ? config.nivelMedioCritico : 25;
-    const vazaoEntradaAtencao = config.vazaoEntradaAtencao !== undefined && config.vazaoEntradaAtencao !== "" ? config.vazaoEntradaAtencao : 20;
-    const vazaoEntradaCritico = config.vazaoEntradaCritico !== undefined && config.vazaoEntradaCritico !== "" ? config.vazaoEntradaCritico : 35;
-    const vazaoSaidaAtencao = config.vazaoSaidaAtencao !== undefined && config.vazaoSaidaAtencao !== "" ? config.vazaoSaidaAtencao : 20;
-    const vazaoSaidaCritico = config.vazaoSaidaCritico !== undefined && config.vazaoSaidaCritico !== "" ? config.vazaoSaidaCritico : 35;
-    const vazaoMediaAtencao = config.vazaoMediaAtencao !== undefined && config.vazaoMediaAtencao !== "" ? config.vazaoMediaAtencao : 20;
-    const vazaoMediaCritico = config.vazaoMediaCritico !== undefined && config.vazaoMediaCritico !== "" ? config.vazaoMediaCritico : 35;
-    const emManutencao = Boolean(config.emManutencao);
+  if (!reservatorioConfigSelecionado || !reservatorios[reservatorioConfigSelecionado]) {
+    reservatorioConfigSelecionado = chaves[0];
+  }
 
-    const tr = document.createElement("tr");
-    tr.dataset.reservoirId = chave;
-
-    tr.innerHTML = `
-      <td><strong>${res.nome || chave}</strong><br><span style="color: var(--muted-color); font-size: 0.75rem;">Grupo: ${res.grupo || "Geral"} (${chave})</span></td>
-      <td><input type="number" step="any" class="cfg-capacidade" value="${capacidadeUtil}" placeholder="Ex: 5000"></td>
-      <td><input type="number" step="any" class="cfg-nivel-atencao" value="${nivelAtencao}" min="0" max="100"></td>
-      <td><input type="number" step="any" class="cfg-nivel-critico" value="${nivelCritico}" min="0" max="100"></td>
-      <td><input type="number" step="any" class="cfg-nivel-medio-atencao" value="${nivelMedioAtencao}" min="0"></td>
-      <td><input type="number" step="any" class="cfg-nivel-medio-critico" value="${nivelMedioCritico}" min="0"></td>
-      <td><input type="number" step="any" class="cfg-vazao-entrada-atencao" value="${vazaoEntradaAtencao}" min="0"></td>
-      <td><input type="number" step="any" class="cfg-vazao-entrada-critico" value="${vazaoEntradaCritico}" min="0"></td>
-      <td><input type="number" step="any" class="cfg-vazao-saida-atencao" value="${vazaoSaidaAtencao}" min="0"></td>
-      <td><input type="number" step="any" class="cfg-vazao-saida-critico" value="${vazaoSaidaCritico}" min="0"></td>
-      <td><input type="number" step="any" class="cfg-vazao-media-atencao" value="${vazaoMediaAtencao}" min="0"></td>
-      <td><input type="number" step="any" class="cfg-vazao-media-critico" value="${vazaoMediaCritico}" min="0"></td>
-      <td style="text-align: center;"><input type="checkbox" class="cfg-manutencao" ${emManutencao ? "checked" : ""}></td>
-      <td style="text-align: center;"><button type="button" class="btn-salvar-linha">Guardar</button></td>
+  chaves.forEach((chave) => {
+    const res = reservatorios[chave];
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = `config-reservoir-item ${chave === reservatorioConfigSelecionado ? "is-active" : ""}`;
+    item.innerHTML = `
+      <strong>${res.nome || chave}</strong>
+      <span>Grupo: ${res.grupo || "Geral"} (${chave})</span>
     `;
-
-    const btnSalvar = tr.querySelector(".btn-salvar-linha");
-    btnSalvar.addEventListener("click", () => {
-      salvarLinhaConfiguracao(tr, chave);
+    item.addEventListener("click", () => {
+      reservatorioConfigSelecionado = chave;
+      renderizarPainelConfiguracoes();
     });
+    listaContainer.appendChild(item);
+  });
 
-    tbody.appendChild(tr);
+  renderizarFormularioConfiguracao(reservatorioConfigSelecionado, reservatorios[reservatorioConfigSelecionado]);
+}
+
+function renderizarFormularioConfiguracao(chave, res) {
+  const container = document.getElementById("config-detalhe-container");
+  if (!container || !res) return;
+
+  const config = obterConfiguracaoReservatorio(chave);
+
+  container.innerHTML = `
+    <form id="form-config-reservatorio" class="config-detail-form">
+      <div class="config-form-header">
+        <h3>Editando: ${res.nome || chave}</h3>
+        <span class="config-reservoir-badge">ID: ${chave} · Grupo: ${res.grupo || "Geral"}</span>
+      </div>
+
+      <!-- Secção 1: Geral / Capacidade -->
+      <fieldset class="config-fieldset">
+        <legend>Informações Gerais</legend>
+        <div class="config-field-row">
+          <div class="config-field">
+            <label for="cfg-capacidade">Capacidade Útil (m³)</label>
+            <input type="number" step="any" id="cfg-capacidade" value="${config.capacidadeUtil !== undefined ? config.capacidadeUtil : ""}" placeholder="Ex: 5000">
+          </div>
+          <div class="config-field config-checkbox-field">
+            <label>
+              <input type="checkbox" id="cfg-manutencao" ${config.emManutencao ? "checked" : ""}>
+              Reservatório em Manutenção
+            </label>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Categoria: Nível -->
+      <div class="config-category-block">
+        <h4 class="config-category-title">Nível</h4>
+        <fieldset class="config-fieldset">
+          <legend>Nível (%)</legend>
+          <div class="config-section-header">
+            <span class="config-section-label">Limites de Alarme Instantâneo</span>
+            <label class="config-toggle-switch">
+              <span>Ativar Alarme de Nível</span>
+              <input type="checkbox" id="cfg-alerta-nivel-ativo" ${config.alertaNivelAtivo ? "checked" : ""}>
+            </label>
+          </div>
+          <div class="config-field-row">
+            <div class="config-field">
+              <label for="cfg-nivel-atencao">Limite de Atenção (%)</label>
+              <input type="number" step="any" id="cfg-nivel-atencao" value="${config.nivelAtencao}" min="0" max="100">
+            </div>
+            <div class="config-field">
+              <label for="cfg-nivel-critico">Limite Crítico (%)</label>
+              <input type="number" step="any" id="cfg-nivel-critico" value="${config.nivelCritico}" min="0" max="100">
+            </div>
+          </div>
+
+          <div class="config-section-header config-sub-header">
+            <span class="config-section-label">Desvio de Média (Madrugada)</span>
+            <label class="config-toggle-switch">
+              <span>Ativar Alarme de Média</span>
+              <input type="checkbox" id="cfg-alerta-nivel-medio-ativo" ${config.alertaNivelMedioAtivo ? "checked" : ""}>
+            </label>
+          </div>
+          <div class="config-field-row">
+            <div class="config-field">
+              <label for="cfg-nivel-medio-atencao">Desvio Atenção (%)</label>
+              <input type="number" step="any" id="cfg-nivel-medio-atencao" value="${config.nivelMedioAtencao}" min="0">
+            </div>
+            <div class="config-field">
+              <label for="cfg-nivel-medio-critico">Desvio Crítico (%)</label>
+              <input type="number" step="any" id="cfg-nivel-medio-critico" value="${config.nivelMedioCritico}" min="0">
+            </div>
+          </div>
+        </fieldset>
+      </div>
+
+      <!-- Categoria: Vazão -->
+      <div class="config-category-block">
+        <h4 class="config-category-title">Vazão</h4>
+        <fieldset class="config-fieldset">
+          <legend>Vazão de Entrada (L/s)</legend>
+          <div class="config-section-header">
+            <span class="config-section-label">Limites de Alarme de Variação</span>
+            <label class="config-toggle-switch">
+              <span>Ativar Alarme de Vazão de Entrada</span>
+              <input type="checkbox" id="cfg-alerta-vazao-entrada-ativo" ${config.alertaVazaoEntradaAtivo ? "checked" : ""}>
+            </label>
+          </div>
+          <div class="config-field-row">
+            <div class="config-field">
+              <label for="cfg-vazao-entrada-atencao">Desvio Atenção (%)</label>
+              <input type="number" step="any" id="cfg-vazao-entrada-atencao" value="${config.vazaoEntradaAtencao}" min="0">
+            </div>
+            <div class="config-field">
+              <label for="cfg-vazao-entrada-critico">Desvio Crítico (%)</label>
+              <input type="number" step="any" id="cfg-vazao-entrada-critico" value="${config.vazaoEntradaCritico}" min="0">
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="config-fieldset">
+          <legend>Vazão de Saída (L/s)</legend>
+          <div class="config-section-header">
+            <span class="config-section-label">Limites de Alarme de Variação</span>
+            <label class="config-toggle-switch">
+              <span>Ativar Alarme de Vazão de Saída</span>
+              <input type="checkbox" id="cfg-alerta-vazao-saida-ativo" ${config.alertaVazaoSaidaAtivo ? "checked" : ""}>
+            </label>
+          </div>
+          <div class="config-field-row">
+            <div class="config-field">
+              <label for="cfg-vazao-saida-atencao">Desvio Atenção (%)</label>
+              <input type="number" step="any" id="cfg-vazao-saida-atencao" value="${config.vazaoSaidaAtencao}" min="0">
+            </div>
+            <div class="config-field">
+              <label for="cfg-vazao-saida-critico">Desvio Crítico (%)</label>
+              <input type="number" step="any" id="cfg-vazao-saida-critico" value="${config.vazaoSaidaCritico}" min="0">
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="config-fieldset">
+          <legend>Vazão Média (L/s)</legend>
+          <div class="config-section-header">
+            <span class="config-section-label">Limites de Alarme de Variação</span>
+            <label class="config-toggle-switch">
+              <span>Ativar Alarme de Vazão Média</span>
+              <input type="checkbox" id="cfg-alerta-vazao-media-ativo" ${config.alertaVazaoMediaAtivo ? "checked" : ""}>
+            </label>
+          </div>
+          <div class="config-field-row">
+            <div class="config-field">
+              <label for="cfg-vazao-media-atencao">Desvio Atenção (%)</label>
+              <input type="number" step="any" id="cfg-vazao-media-atencao" value="${config.vazaoMediaAtencao}" min="0">
+            </div>
+            <div class="config-field">
+              <label for="cfg-vazao-media-critico">Desvio Crítico (%)</label>
+              <input type="number" step="any" id="cfg-vazao-media-critico" value="${config.vazaoMediaCritico}" min="0">
+            </div>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="config-form-actions">
+        <button type="submit" class="btn-guardar-config">Guardar Configuração</button>
+      </div>
+    </form>
+  `;
+
+  const form = document.getElementById("form-config-reservatorio");
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    salvarConfiguracaoReservatorio(chave);
   });
 }
 
-function salvarLinhaConfiguracao(tr, chave) {
-  const capacidadeUtil = tr.querySelector(".cfg-capacidade").value;
-  const nivelAtencao = tr.querySelector(".cfg-nivel-atencao").value;
-  const nivelCritico = tr.querySelector(".cfg-nivel-critico").value;
-  const nivelMedioAtencao = tr.querySelector(".cfg-nivel-medio-atencao").value;
-  const nivelMedioCritico = tr.querySelector(".cfg-nivel-medio-critico").value;
-  const vazaoEntradaAtencao = tr.querySelector(".cfg-vazao-entrada-atencao").value;
-  const vazaoEntradaCritico = tr.querySelector(".cfg-vazao-entrada-critico").value;
-  const vazaoSaidaAtencao = tr.querySelector(".cfg-vazao-saida-atencao").value;
-  const vazaoSaidaCritico = tr.querySelector(".cfg-vazao-saida-critico").value;
-  const vazaoMediaAtencao = tr.querySelector(".cfg-vazao-media-atencao").value;
-  const vazaoMediaCritico = tr.querySelector(".cfg-vazao-media-critico").value;
-  const emManutencao = tr.querySelector(".cfg-manutencao").checked;
+function salvarConfiguracaoReservatorio(chave) {
+  const capacidadeUtil = document.getElementById("cfg-capacidade").value;
+  const nivelAtencao = document.getElementById("cfg-nivel-atencao").value;
+  const nivelCritico = document.getElementById("cfg-nivel-critico").value;
+  const nivelMedioAtencao = document.getElementById("cfg-nivel-medio-atencao").value;
+  const nivelMedioCritico = document.getElementById("cfg-nivel-medio-critico").value;
+  const vazaoEntradaAtencao = document.getElementById("cfg-vazao-entrada-atencao").value;
+  const vazaoEntradaCritico = document.getElementById("cfg-vazao-entrada-critico").value;
+  const vazaoSaidaAtencao = document.getElementById("cfg-vazao-saida-atencao").value;
+  const vazaoSaidaCritico = document.getElementById("cfg-vazao-saida-critico").value;
+  const vazaoMediaAtencao = document.getElementById("cfg-vazao-media-atencao").value;
+  const vazaoMediaCritico = document.getElementById("cfg-vazao-media-critico").value;
+
+  const alertaNivelAtivo = document.getElementById("cfg-alerta-nivel-ativo").checked;
+  const alertaNivelMedioAtivo = document.getElementById("cfg-alerta-nivel-medio-ativo").checked;
+  const alertaVazaoEntradaAtivo = document.getElementById("cfg-alerta-vazao-entrada-ativo").checked;
+  const alertaVazaoSaidaAtivo = document.getElementById("cfg-alerta-vazao-saida-ativo").checked;
+  const alertaVazaoMediaAtivo = document.getElementById("cfg-alerta-vazao-media-ativo").checked;
+  const emManutencao = document.getElementById("cfg-manutencao").checked;
 
   const salvos = JSON.parse(localStorage.getItem("samai_reservatorios_config") || "{}");
   salvos[chave] = {
@@ -1664,62 +1812,19 @@ function salvarLinhaConfiguracao(tr, chave) {
     vazaoSaidaCritico: vazaoSaidaCritico !== "" ? Number(vazaoSaidaCritico) : 35,
     vazaoMediaAtencao: vazaoMediaAtencao !== "" ? Number(vazaoMediaAtencao) : 20,
     vazaoMediaCritico: vazaoMediaCritico !== "" ? Number(vazaoMediaCritico) : 35,
+    alertaNivelAtivo,
+    alertaNivelMedioAtivo,
+    alertaVazaoEntradaAtivo,
+    alertaVazaoSaidaAtivo,
+    alertaVazaoMediaAtivo,
     emManutencao
   };
+
   localStorage.setItem("samai_reservatorios_config", JSON.stringify(salvos));
 
   const msg = document.getElementById("configuracao-mensagem");
   if (msg) {
     msg.textContent = `Configuração do reservatório ${chave} guardada com sucesso!`;
-    msg.classList.remove("has-alerts");
-    setTimeout(() => {
-      msg.textContent = "";
-    }, 4000);
-  }
-}
-
-function guardarTodasConfiguracoes() {
-  const tbody = document.getElementById("configuracoes-tabela-corpo");
-  if (!tbody) return;
-  const linhas = tbody.querySelectorAll("tr");
-  const salvos = JSON.parse(localStorage.getItem("samai_reservatorios_config") || "{}");
-
-  linhas.forEach((tr) => {
-    const chave = tr.dataset.reservoirId;
-    if (!chave) return;
-    const capacidadeUtil = tr.querySelector(".cfg-capacidade").value;
-    const nivelAtencao = tr.querySelector(".cfg-nivel-atencao").value;
-    const nivelCritico = tr.querySelector(".cfg-nivel-critico").value;
-    const nivelMedioAtencao = tr.querySelector(".cfg-nivel-medio-atencao").value;
-    const nivelMedioCritico = tr.querySelector(".cfg-nivel-medio-critico").value;
-    const vazaoEntradaAtencao = tr.querySelector(".cfg-vazao-entrada-atencao").value;
-    const vazaoEntradaCritico = tr.querySelector(".cfg-vazao-entrada-critico").value;
-    const vazaoSaidaAtencao = tr.querySelector(".cfg-vazao-saida-atencao").value;
-    const vazaoSaidaCritico = tr.querySelector(".cfg-vazao-saida-critico").value;
-    const vazaoMediaAtencao = tr.querySelector(".cfg-vazao-media-atencao").value;
-    const vazaoMediaCritico = tr.querySelector(".cfg-vazao-media-critico").value;
-    const emManutencao = tr.querySelector(".cfg-manutencao").checked;
-
-    salvos[chave] = {
-      capacidadeUtil,
-      nivelAtencao: nivelAtencao !== "" ? Number(nivelAtencao) : 60,
-      nivelCritico: nivelCritico !== "" ? Number(nivelCritico) : 50,
-      nivelMedioAtencao: nivelMedioAtencao !== "" ? Number(nivelMedioAtencao) : 15,
-      nivelMedioCritico: nivelMedioCritico !== "" ? Number(nivelMedioCritico) : 25,
-      vazaoEntradaAtencao: vazaoEntradaAtencao !== "" ? Number(vazaoEntradaAtencao) : 20,
-      vazaoEntradaCritico: vazaoEntradaCritico !== "" ? Number(vazaoEntradaCritico) : 35,
-      vazaoSaidaAtencao: vazaoSaidaAtencao !== "" ? Number(vazaoSaidaAtencao) : 20,
-      vazaoSaidaCritico: vazaoSaidaCritico !== "" ? Number(vazaoSaidaCritico) : 35,
-      vazaoMediaAtencao: vazaoMediaAtencao !== "" ? Number(vazaoMediaAtencao) : 20,
-      vazaoMediaCritico: vazaoMediaCritico !== "" ? Number(vazaoMediaCritico) : 35,
-      emManutencao
-    };
-  });
-
-  localStorage.setItem("samai_reservatorios_config", JSON.stringify(salvos));
-  const msg = document.getElementById("configuracao-mensagem");
-  if (msg) {
-    msg.textContent = "Todas as configurações de reservatórios foram guardadas com sucesso!";
     msg.classList.remove("has-alerts");
     setTimeout(() => {
       msg.textContent = "";

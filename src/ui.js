@@ -172,6 +172,7 @@ function criarCardHTML(
     filtrarLeiturasNivelValidas(res.leituras?.nivel),
     horarios,
   );
+  const nivelAtual = obterUltimaLeituraNivel(res.leituras?.nivel);
   const vazoes = resumirLeiturasEstruturadas(res.leituras?.vazao, horarios);
   const alertaVazao = avaliarAlertaVazao(
     res.leituras?.vazao,

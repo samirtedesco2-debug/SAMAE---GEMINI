@@ -2501,3 +2501,283 @@ header h1 {
   border-color: var(--accent-color);
   background-color: var(--surface-inset);
 }
+
+/* Master-Detail Configuration Layout */
+.config-master-detail {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .config-master-detail {
+    grid-template-columns: 1fr;
+  }
+}
+
+.config-master-sidebar {
+  background-color: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 4px 12px var(--shadow-color);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 700px;
+  overflow-y: auto;
+}
+
+.config-master-sidebar h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-color);
+  letter-spacing: 0.5px;
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.config-reservoir-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.config-reservoir-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--surface-inset);
+  color: var(--text-color);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.config-reservoir-item:hover {
+  border-color: var(--accent-color);
+  background-color: var(--surface-bg);
+}
+
+.config-reservoir-item.is-active {
+  border-color: var(--accent-color);
+  background-color: var(--accent-color);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(51, 162, 229, 0.3);
+}
+
+.config-reservoir-item.is-active span {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.config-reservoir-item strong {
+  font-size: 0.9rem;
+}
+
+.config-reservoir-item span {
+  font-size: 0.75rem;
+  color: var(--muted-color);
+}
+
+.config-detail-panel {
+  background-color: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.config-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.config-form-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.config-reservoir-badge {
+  font-size: 0.78rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background-color: var(--surface-inset);
+  color: var(--muted-color);
+  border: 1px solid var(--border-color);
+}
+
+.config-fieldset {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background-color: var(--surface-inset);
+}
+
+.config-fieldset legend {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-color);
+  padding: 0 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.config-legend-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.config-sub-legend {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.config-field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-top: 10px;
+  align-items: end;
+}
+
+.config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.config-field label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted-color);
+}
+
+.config-field input[type="number"] {
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--surface-bg);
+  color: var(--text-color);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.config-field input[type="number"]:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.config-checkbox-field {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding-bottom: 2px;
+}
+
+.config-checkbox-field label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text-color);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.config-checkbox-field input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-color);
+  cursor: pointer;
+}
+
+.config-section-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 16px;
+  margin-top: 14px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.config-sub-header {
+  margin-top: 18px;
+}
+
+.config-section-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.config-toggle-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-color);
+  white-space: nowrap;
+}
+
+.config-toggle-switch input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-color);
+  cursor: pointer;
+}
+
+.config-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.config-category-block {
+  margin-top: 20px;
+  padding: 18px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background-color: var(--surface-bg);
+  display: grid;
+  gap: 14px;
+  box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.config-category-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 6px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border-color);
+}
