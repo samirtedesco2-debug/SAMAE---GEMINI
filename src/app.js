@@ -1769,6 +1769,19 @@ function renderizarFormularioConfiguracao(chave, res) {
       <div class="config-form-actions">
         <button type="submit" class="btn-guardar-config">Guardar Configuração</button>
       </div>
+
+      <!-- Categoria: Simulação de Alarme CCO (Teste) -->
+      <div class="config-category-block" style="margin-top: 24px;">
+        <h4 class="config-category-title">Simulação de Alarme CCO (Teste Visual)</h4>
+        <p style="font-size: 0.8rem; color: var(--muted-color); margin-bottom: 12px;">
+          Clique nos botões abaixo para forçar o aparecimento do banner de alarme preditivo no topo da tela e testar o sistema.
+        </p>
+        <div class="config-field-row" style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button type="button" id="btn-simular-critico" class="btn-guardar-config" style="background-color: var(--status-critical-color); color: #fff; border: none;">Simular Alarme Crítico</button>
+          <button type="button" id="btn-simular-atencao" class="btn-guardar-config" style="background-color: var(--status-attention-color); color: #fff; border: none;">Simular Alarme Atenção</button>
+          <button type="button" id="btn-limpar-simulacao" class="btn-guardar-config" style="background-color: var(--muted-color); color: #fff; border: none;">Limpar Simulação</button>
+        </div>
+      </div>
     </form>
   `;
 
@@ -1777,6 +1790,106 @@ function renderizarFormularioConfiguracao(chave, res) {
     e.preventDefault();
     salvarConfiguracaoReservatorio(chave);
   });
+
+  const btnCritico = document.getElementById("btn-simular-critico");
+  const btnAtencao = document.getElementById("btn-simular-atencao");
+  const btnLimpar = document.getElementById("btn-limpar-simulacao");
+
+  if (btnCritico) btnCritico.onclick = () => simularAlarmeCCO("Crítico");
+  if (btnAtencao) btnAtencao.onclick = () => simularAlarmeCCO("Atenção");
+  if (btnLimpar) btnLimpar.onclick = () => limparSimulacaoCCO();
+}
+
+let alarmeSimuladoCCO = null;
+
+function simularAlarmeCCO(status) {
+  alarmeSimuladoCCO = {
+    chave: "simulado-01",
+    nome: "Reservatório Setor B (Simulado)",
+    statusPredicao: status,
+    tempoEstimadoHoras: status === "Crítico" ? 1.5 : 3.2,
+    tendenciaUltimaHora: -4.2
+  };
+  ccoAlertaReconhecido = false;
+  atualizarAnunciadorAlarmesCCO();
+  const msg = document.getElementById("configuracao-mensagem");
+  if (msg) {
+    msg.textContent = `Alarme preditivo (${status}) simulado com sucesso! Verifique o banner no topo da tela.`;
+    msg.classList.remove("has-alerts");
+    setTimeout(() => { msg.textContent = ""; }, 4000);
+  }
+}
+
+function limparSimulacaoCCO() {
+  alarmeSimuladoCCO = null;
+  ccoAlertaReconhecido = false;
+  atualizarAnunciadorAlarmesCCO();
+  const msg = document.getElementById("configuracao-mensagem");
+  if (msg) {
+    msg.textContent = "Simulação de alarme limpa com sucesso.";
+    msg.classList.remove("has-alerts");
+    setTimeout(() => { msg.textContent = ""; }, 3000);
+  }
+}
+
+function atualizarAnunciadorAlarmesCCO() {
+  const banner = document.getElementById("cco-alarm-banner");
+  const msgSpan = document.getElementById("cco-banner-msg");
+  const btnAck = document.getElementById("cco-banner-ack");
+  if (!banner || !msgSpan) return;
+
+  const banco = window.bancoDeDados;
+  const dataSelecionada = document.getElementById("seletor-data")?.value;
+  if (!banco || !dataSelecionada || !banco.historico[dataSelecionada]) {
+    banner.hidden = true;
+    banner.style.display = "none";
+    return;
+  }
+
+  const dadosDia = banco.historico[dataSelecionada];
+  const reservatorios = dadosDia.reservatorios || {};
+  let alertaCriticoEncontrado = null;
+  let alertaAtencaoEncontrado = null;
+
+  if (alarmeSimuladoCCO) {
+    if (alarmeSimuladoCCO.statusPredicao === "Crítico") {
+      alertaCriticoEncontrado = alarmeSimuladoCCO;
+    } else {
+      alertaAtencaoEncontrado = alarmeSimuladoCCO;
+    }
+  } else {
+    Object.entries(reservatorios).forEach(([chave, res]) => {
+      const config = obterConfiguracaoReservatorio(chave);
+      const predicao = avaliarAlarmePreditivo(res, config, dadosDia.horarios || []);
+      if (predicao.statusPredicao === "Crítico") {
+        alertaCriticoEncontrado = { chave, nome: res.nome || chave, ...predicao };
+      } else if (predicao.statusPredicao === "Atenção" && !alertaCriticoEncontrado) {
+        alertaAtencaoEncontrado = { chave, nome: res.nome || chave, ...predicao };
+      }
+    });
+  }
+
+  const alertaAtivo = alertaCriticoEncontrado || alertaAtencaoEncontrado;
+
+  if (alertaAtivo && !ccoAlertaReconhecido) {
+    banner.hidden = false;
+    banner.style.display = "block";
+    banner.className = `cco-alarm-banner cco-banner-${alertaCriticoEncontrado ? 'critico' : 'atencao'}`;
+    msgSpan.textContent = `Reservatório ${alertaAtivo.nome} atingirá nível de ${alertaAtivo.statusPredicao.toLowerCase()} em ~${alertaAtivo.tempoEstimadoHoras.toFixed(1)}h (Tendência: ${alertaAtivo.tendenciaUltimaHora.toFixed(1)}%).`;
+  } else {
+    banner.hidden = true;
+    banner.style.display = "none";
+  }
+
+  if (btnAck && !btnAck.dataset.bound) {
+    btnAck.dataset.bound = "true";
+    btnAck.addEventListener("click", () => {
+      ccoAlertaReconhecido = true;
+      banner.hidden = true;
+      banner.style.display = "none";
+      setTimeout(() => { ccoAlertaReconhecido = false; }, 60000);
+    });
+  }
 }
 
 function salvarConfiguracaoReservatorio(chave) {

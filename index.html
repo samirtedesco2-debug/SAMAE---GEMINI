@@ -104,6 +104,18 @@
     </button>
   </nav>
 
+  <!-- Anunciador de Alarme CCO (Alarm Banner) -->
+  <div id="cco-alarm-banner" class="cco-alarm-banner" hidden>
+    <div class="cco-banner-content">
+      <span class="cco-banner-icon">⚠️</span>
+      <div class="cco-banner-text">
+        <strong>ALERTA PREDITIVO CCO:</strong>
+        <span id="cco-banner-msg">Nenhum alarme preditivo ativo no momento.</span>
+      </div>
+      <button type="button" id="cco-banner-ack" class="cco-banner-ack-btn">Reconhecer</button>
+    </div>
+  </div>
+
   <!-- Grid onde os cards dos reservatórios serão injetados -->
   <main class="view-panel" id="painel-operacional" role="tabpanel" aria-labelledby="tab-operacional">
     <section class="operational-brief" aria-labelledby="operational-brief-title">

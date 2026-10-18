@@ -202,7 +202,7 @@ function criarCardHTML(
   if (statusNivel === "Sem Dados") statusClass = "status-sem-dados";
 
   const comparacoesVazao = alertaVazao.indicadores
-    .filter((indicador) => indicador.classificaAlerta)
+    .filter((indicador) => indicador.classificaAlerta && indicador.rotulo !== "Média")
     .map((indicador) => {
       const direcao =
         indicador.direcao === "baixa"
@@ -326,11 +326,6 @@ function criarCardHTML(
         <span class="kpi-value">${formatarMetrica(vazoes.minimo, " L/s")} / ${formatarMetrica(vazoes.maximo, " L/s")}</span>
         <span class="kpi-detail">Mín. ${vazoes.horarioMinimo ?? "--"} · Máx. ${vazoes.horarioMaximo ?? "--"}</span>
       </div>
-      <div class="kpi-box kpi-flow-average">
-        <span class="kpi-label">Vazão média</span>
-        <span class="kpi-value">${vazaoMedia}</span>
-        <span class="kpi-detail">Média das leituras da madrugada</span>
-      </div>
     </div>`
     : `<div class="kpi-container">
       ${indicadorNivelHTML}
@@ -343,10 +338,6 @@ function criarCardHTML(
         <span class="kpi-label">Vazão Mín/Máx (dia)</span>
         <span class="kpi-value">${formatarMetrica(vazoes.minimo, " L/s")} / ${formatarMetrica(vazoes.maximo, " L/s")}</span>
         <span class="kpi-detail">Mín. ${vazoes.horarioMinimo ?? "--"} · Máx. ${vazoes.horarioMaximo ?? "--"}</span>
-      </div>
-      <div class="kpi-box">
-        <span class="kpi-label">Vazão Média</span>
-        <span class="kpi-value">${vazaoMedia}</span>
       </div>
     </div>`;
 
