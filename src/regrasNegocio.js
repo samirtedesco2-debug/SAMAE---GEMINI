@@ -30,7 +30,11 @@ function obterConfiguracaoReservatorio(idReservatorio) {
       alertaVazaoSaidaAtivo: config?.alertaVazaoSaidaAtivo !== undefined ? Boolean(config.alertaVazaoSaidaAtivo) : true,
       alertaVazaoMediaAtivo: config?.alertaVazaoMediaAtivo !== undefined ? Boolean(config.alertaVazaoMediaAtivo) : true,
       capacidadeUtil: config?.capacidadeUtil ?? "",
-      emManutencao: Boolean(config?.emManutencao)
+      emManutencao: Boolean(config?.emManutencao),
+      tempoAtencaoMinutos: config?.tempoAtencaoMinutos !== undefined && config?.tempoAtencaoMinutos !== "" && !isNaN(config.tempoAtencaoMinutos) ? Number(config.tempoAtencaoMinutos) : 180,
+      tempoCriticoMinutos: config?.tempoCriticoMinutos !== undefined && config?.tempoCriticoMinutos !== "" && !isNaN(config.tempoCriticoMinutos) ? Number(config.tempoCriticoMinutos) : 180,
+      nivelAlertaTempoAtencao: config?.nivelAlertaTempoAtencao !== undefined && config?.nivelAlertaTempoAtencao !== "" && !isNaN(config.nivelAlertaTempoAtencao) ? Number(config.nivelAlertaTempoAtencao) : 40,
+      nivelAlertaTempoCritico: config?.nivelAlertaTempoCritico !== undefined && config?.nivelAlertaTempoCritico !== "" && !isNaN(config.nivelAlertaTempoCritico) ? Number(config.nivelAlertaTempoCritico) : 30
     };
   } catch (e) {
     return {
@@ -50,7 +54,11 @@ function obterConfiguracaoReservatorio(idReservatorio) {
       alertaVazaoSaidaAtivo: true,
       alertaVazaoMediaAtivo: true,
       capacidadeUtil: "",
-      emManutencao: false
+      emManutencao: false,
+      tempoAtencaoMinutos: 180,
+      tempoCriticoMinutos: 180,
+      nivelAlertaTempoAtencao: 40,
+      nivelAlertaTempoCritico: 30
     };
   }
 }
@@ -259,55 +267,86 @@ function avaliarAlertaVazao(leiturasAtuais, referencia, horarios, idReservatorio
 function calcularAutonomiaEProjecao(reservatorio, idReservatorio) {
   const config = obterConfiguracaoReservatorio(idReservatorio);
   const capacidade = config.capacidadeUtil !== "" && !isNaN(config.capacidadeUtil) ? Number(config.capacidadeUtil) : 5000;
-  const nivelAtual = obterUltimaLeituraValida(reservatorio?.leituras?.nivel);
+  
+  const niveisRaw = reservatorio?.leituras?.nivel;
+  const nivelAtual = obterUltimaLeituraValida(niveisRaw);
   if (nivelAtual === null || nivelAtual === undefined) {
-    return { statusPreditivo: "Normal", horasAteCritico: null, horasAteAtencao: null, autonomiaHoras: null, tendencia: "Sem Dados" };
+    return { statusPreditivo: "Normal", tendencia: "Sem Dados", iconeTendencia: "→", minutosAteCritico: null, minutosAteAtencao: null, minutosAteNormal: null };
+  }
+
+  // Tendência última hora
+  const niveisValidos = (Array.isArray(niveisRaw) ? niveisRaw : [])
+    .map(v => (v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v)) ? Number(v) : null))
+    .filter(v => v !== null);
+
+  let tendencia = "Estável";
+  let iconeTendencia = "→";
+  if (niveisValidos.length >= 2) {
+    const ultimo = niveisValidos[niveisValidos.length - 1];
+    const penultimo = niveisValidos[niveisValidos.length - 2];
+    if (ultimo > penultimo) {
+      tendencia = "Subindo";
+      iconeTendencia = "↑";
+    } else if (ultimo < penultimo) {
+      tendencia = "Descendo";
+      iconeTendencia = "↓";
+    }
   }
 
   const vazoes = reservatorio?.leituras?.vazao;
   const vazaoAtual = obterUltimaLeituraValida(vazoes) ?? 0;
-  // Como temos vazão única ou balanço, estimamos saída e entrada se houver dados
   const saida = vazaoAtual > 0 ? vazaoAtual : 0; 
-  const entrada = 0; // Se houver leitura de entrada separada, ajustar aqui
+  const entrada = 0;
 
-  const vazaoLiquidaLs = saida - entrada;
+  const vazaoLiquidaLs = saida - entrada; // Positivo = esvaziando, Negativo = enchendo
   const vazaoLiquidaM3h = vazaoLiquidaLs * 3.6;
   const volumeAtualM3 = capacidade * (nivelAtual / 100);
 
-  if (vazaoLiquidaM3h <= 0) {
-    return {
-      statusPreditivo: "Normal",
-      autonomiaHoras: null,
-      tendencia: "Estável ou Enchendo",
-      horasAteCritico: null,
-      horasAteAtencao: null
-    };
-  }
-
-  const horasAteZero = volumeAtualM3 / vazaoLiquidaM3h;
-  const volAtencao = capacidade * (40 / 100);
-  const volCritico = capacidade * (30 / 100);
-
-  const horasAteAtencao = volumeAtualM3 > volAtencao ? (volumeAtualM3 - volAtencao) / vazaoLiquidaM3h : 0;
-  const horasAteCritico = volumeAtualM3 > volCritico ? (volumeAtualM3 - volCritico) / vazaoLiquidaM3h : 0;
-
   let statusPreditivo = "Normal";
   let mensagemPreditiva = "";
+  let minutosAteCritico = null;
+  let minutosAteAtencao = null;
+  let minutosAteNormal = null;
 
-  if (horasAteCritico <= 3 && nivelAtual >= config.nivelCritico) {
-    statusPreditivo = "Crítico";
-    mensagemPreditiva = `Risco de atingir nível crítico (<30%) em ~${horasAteCritico.toFixed(1)}h`;
-  } else if (horasAteAtencao <= 3 && nivelAtual >= config.nivelAtencao) {
-    statusPreditivo = "Atenção";
-    mensagemPreditiva = `Risco de atingir nível atenção (<40%) em ~${horasAteAtencao.toFixed(1)}h`;
+  if (vazaoLiquidaM3h < 0 && nivelAtual < 60) {
+    const volNormal = capacidade * (60 - nivelAtual) / 100;
+    const taxaEnchimentoM3h = Math.abs(vazaoLiquidaM3h);
+    if (taxaEnchimentoM3h > 0) {
+      const horasNormal = volNormal / taxaEnchimentoM3h;
+      minutosAteNormal = Math.round(horasNormal * 60);
+      mensagemPreditiva = `Nível subindo (${iconeTendencia}). Estimativa para normalizar (60%): ~${minutosAteNormal} min`;
+    }
+  } else if (vazaoLiquidaM3h > 0) {
+    const volAtencao = capacidade * (config.nivelAlertaTempoAtencao / 100);
+    const volCritico = capacidade * (config.nivelAlertaTempoCritico / 100);
+
+    const horasAteAtencao = volumeAtualM3 > volAtencao ? (volumeAtualM3 - volAtencao) / vazaoLiquidaM3h : 0;
+    const horasAteCritico = volumeAtualM3 > volCritico ? (volumeAtualM3 - volCritico) / vazaoLiquidaM3h : 0;
+
+    minutosAteAtencao = Math.round(horasAteAtencao * 60);
+    minutosAteCritico = Math.round(horasAteCritico * 60);
+
+    const limiteCriticoMin = config.tempoCriticoMinutos;
+    const limiteAtencaoMin = config.tempoAtencaoMinutos;
+
+    if (minutosAteCritico <= limiteCriticoMin && nivelAtual >= config.nivelCritico) {
+      statusPreditivo = "Crítico";
+      mensagemPreditiva = `Risco de atingir nível crítico (<${config.nivelAlertaTempoCritico}%) em ~${minutosAteCritico} min (${iconeTendencia})`;
+    } else if (minutosAteAtencao <= limiteAtencaoMin && nivelAtual >= config.nivelAtencao) {
+      statusPreditivo = "Atenção";
+      mensagemPreditiva = `Risco de atingir nível atenção (<${config.nivelAlertaTempoAtencao}%) em ~${minutosAteAtencao} min (${iconeTendencia})`;
+    }
   }
 
   return {
     statusPreditivo,
     mensagemPreditiva,
-    horasAteCritico: horasAteCritico.toFixed(1),
-    horasAteAtencao: horasAteAtencao.toFixed(1),
-    autonomiaHoras: horasAteZero.toFixed(1),
-    tendencia: "Esvaziando"
+    tendencia,
+    iconeTendencia,
+    minutosAteCritico,
+    minutosAteAtencao,
+    minutosAteNormal,
+    vazaoLiquidaLs,
+    vazaoLiquidaM3h
   };
 }

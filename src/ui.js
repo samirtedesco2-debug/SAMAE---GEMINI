@@ -1611,7 +1611,7 @@ function renderizarBoletimOperacional({
               <span>⏳ Alerta Preditivo de Autonomia (CCO)</span>
               <span style="font-size: 0.8rem; background: rgba(227,93,106,0.15); padding: 2px 8px; border-radius: 12px;">${alertasPreditivos.length} reservatório(s) em risco</span>
             </div>
-            <span style="font-size: 0.8rem; text-decoration: underline; color: var(--accent-color);">Ver Esquema Animado 📊</span>
+            <span style="font-size: 1.1rem; cursor: pointer;" title="Abrir esquema animado">📊</span>
           </div>
           <div style="display: flex; flex-wrap: wrap; gap: 8px;">
             ${alertasPreditivos.map(p => `
@@ -1627,7 +1627,7 @@ function renderizarBoletimOperacional({
       bannerPreditivo.innerHTML = `
         <div style="background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; color: var(--muted-color);">
           <span>⏳ <strong>Autonomia Preditiva:</strong> Todos os reservatórios com autonomia segura (> 3h nos limites configurados).</span>
-          <span style="font-size: 0.8rem; text-decoration: underline; color: var(--accent-color);">Ver Esquema Animado 📊</span>
+          <span style="font-size: 1.1rem; cursor: pointer;" title="Abrir esquema animado">📊</span>
         </div>
       `;
     }
