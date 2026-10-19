@@ -28,8 +28,23 @@ window.ApiClient = {
     return null;
   },
 
+  async carregarConfiguracoes() {
+    try {
+      const resp = await fetch("dados_historicos/config_reservatorios.json");
+      if (resp.ok) {
+        return await resp.json();
+      }
+    } catch (e) {
+      console.warn("Aviso: Não foi possível carregar config_reservatorios.json", e);
+    }
+    return {};
+  },
+
   async inicializarBanco() {
-    const indice = await this.carregarIndice();
+    const [indice, configuracoesArquivo] = await Promise.all([
+      this.carregarIndice(),
+      this.carregarConfiguracoes()
+    ]);
     const datasDisponiveis = indice.datasDisponiveis || [];
     const historico = {};
 
@@ -56,7 +71,8 @@ window.ApiClient = {
 
     return {
       datasDisponiveis,
-      historico
+      historico,
+      configuracoes: configuracoesArquivo
     };
   }
 };

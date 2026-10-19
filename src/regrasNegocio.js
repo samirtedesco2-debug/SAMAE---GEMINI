@@ -8,7 +8,11 @@ const LIMITE_CRITICO_VAZAO_PERCENTUAL = 35;
 function obterConfiguracaoReservatorio(idReservatorio) {
   try {
     const salvos = JSON.parse(localStorage.getItem("samai_reservatorios_config") || "{}");
-    const config = salvos[idReservatorio];
+    const arquivoConfig = window.bancoDeDados?.configuracoes || {};
+    const config = salvos[idReservatorio] !== undefined && salvos[idReservatorio] !== null && Object.keys(salvos[idReservatorio]).length > 0
+      ? salvos[idReservatorio]
+      : arquivoConfig[idReservatorio];
+
     return {
       nivelAtencao: config?.nivelAtencao !== undefined && config?.nivelAtencao !== "" && !isNaN(config.nivelAtencao) ? Number(config.nivelAtencao) : LIMITE_ATENCAO_NIVEL_PERCENTUAL,
       nivelCritico: config?.nivelCritico !== undefined && config?.nivelCritico !== "" && !isNaN(config.nivelCritico) ? Number(config.nivelCritico) : LIMITE_CRITICO_NIVEL_PERCENTUAL,

@@ -1605,16 +1605,44 @@ function inicializarConfiguracoes() {
     });
   });
 
-  const btnGuardarTodas = document.getElementById("btn-guardar-todas-config");
-  if (btnGuardarTodas) {
-    btnGuardarTodas.addEventListener("click", () => {
-      const msg = document.getElementById("configuracao-mensagem");
-      if (msg) {
-        msg.textContent = "Parâmetros globais aplicados com sucesso!";
-        msg.classList.remove("has-alerts");
-        setTimeout(() => { msg.textContent = ""; }, 4000);
-      }
+  const btnVincularConfig = document.getElementById("btn-vincular-config");
+  if (btnVincularConfig) {
+    btnVincularConfig.addEventListener("click", vincularArquivoConfiguracao);
+  }
+}
+
+let configFileHandle = null;
+
+async function vincularArquivoConfiguracao() {
+  try {
+    if (!window.showOpenFilePicker) {
+      alert("Seu navegador não suporta salvamento direto de arquivos. Utilize Google Chrome ou Microsoft Edge.");
+      return;
+    }
+    const [handle] = await window.showOpenFilePicker({
+      types: [{
+        description: 'JSON Configuration',
+        accept: { 'application/json': ['.json'] }
+      }],
+      multiple: false
     });
+    configFileHandle = handle;
+    const msg = document.getElementById("configuracao-mensagem");
+    if (msg) {
+      msg.textContent = "Arquivo config_reservatorios.json vinculado com sucesso! As alterações serão salvas diretamente.";
+      msg.classList.remove("has-alerts");
+      setTimeout(() => { msg.textContent = ""; }, 5000);
+    }
+    const btn = document.getElementById("btn-vincular-config");
+    if (btn) {
+      btn.style.borderColor = "var(--status-normal-color)";
+      btn.innerHTML = "✅ Arquivo Vinculado";
+    }
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.error("Erro ao vincular arquivo:", err);
+      alert("Erro ao vincular o arquivo.");
+    }
   }
 }
 
@@ -1922,7 +1950,7 @@ function atualizarAnunciadorAlarmesCCO() {
   }
 }
 
-function salvarConfiguracaoReservatorio(chave) {
+async function salvarConfiguracaoReservatorio(chave) {
   const capacidadeUtil = document.getElementById("cfg-capacidade").value;
   const nivelAtencao = document.getElementById("cfg-nivel-atencao").value;
   const nivelCritico = document.getElementById("cfg-nivel-critico").value;
@@ -1965,9 +1993,19 @@ function salvarConfiguracaoReservatorio(chave) {
 
   localStorage.setItem("samai_reservatorios_config", JSON.stringify(salvos));
 
+  if (configFileHandle) {
+    try {
+      const writable = await configFileHandle.createWritable();
+      await writable.write(JSON.stringify(salvos, null, 2));
+      await writable.close();
+    } catch (err) {
+      console.error("Erro ao gravar diretamente no arquivo vinculado:", err);
+    }
+  }
+
   const msg = document.getElementById("configuracao-mensagem");
   if (msg) {
-    msg.textContent = `Configuração do reservatório ${chave} guardada com sucesso!`;
+    msg.textContent = `Configuração do reservatório ${chave} guardada${configFileHandle ? ' e salva no arquivo' : ''} com sucesso!`;
     msg.classList.remove("has-alerts");
     setTimeout(() => {
       msg.textContent = "";
