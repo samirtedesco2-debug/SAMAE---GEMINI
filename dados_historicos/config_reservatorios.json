@@ -1,3 +1,200 @@
 {
-  "observacao": "Configurações personalizadas de reservatórios para sincronização via Git (Opção 1)"
+  "R01-A": {
+    "capacidadeUtil": "502",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "nivelMedioAtencao": 15,
+    "nivelMedioCritico": 25,
+    "vazaoEntradaAtencao": 20,
+    "vazaoEntradaCritico": 35,
+    "vazaoSaidaAtencao": 20,
+    "vazaoSaidaCritico": 35,
+    "vazaoMediaAtencao": 20,
+    "vazaoMediaCritico": 35,
+    "alertaNivelAtivo": true,
+    "alertaNivelMedioAtivo": true,
+    "alertaVazaoEntradaAtivo": true,
+    "alertaVazaoSaidaAtivo": true,
+    "alertaVazaoMediaAtivo": true,
+    "emManutencao": false
+  },
+  "R01-B": {
+    "capacidadeUtil": "600",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "nivelMedioAtencao": 15,
+    "nivelMedioCritico": 25,
+    "vazaoEntradaAtencao": 20,
+    "vazaoEntradaCritico": 35,
+    "vazaoSaidaAtencao": 20,
+    "vazaoSaidaCritico": 35,
+    "vazaoMediaAtencao": 20,
+    "vazaoMediaCritico": 35,
+    "alertaNivelAtivo": true,
+    "alertaNivelMedioAtivo": true,
+    "alertaVazaoEntradaAtivo": true,
+    "alertaVazaoSaidaAtivo": true,
+    "alertaVazaoMediaAtivo": true,
+    "emManutencao": false
+  },
+  "R02": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "R03-B": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "ERAT R303 - Rua Rinaldo Bogo": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "EAT - R314 - Boa Vista, Rua Domingos Rosa": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "ERAT Figueira": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "EAT R316 - (ERAT Krause) Rua Martim Kochella, Bairro Krause": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "ERAT R306 - (ERAT Águas Claras) Rua Águas Claras": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "R14 - Reservatório Caravágio": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "R04": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "EAT R413 - Rua Paulo Voltolini, Bairro Ribeirão Cavalo": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "R05": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "R06": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "ETA Sul": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "EAT ES03 - Rua Francisco Hruschka, Bairro São Luís": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "ERAT ES01 - Rua Alvino Flor da Silva, Bairro Jaraguá 84": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "R08 - Presídio": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "ERAT ES02 (Parque de Eventos) - Rua Walter Marquardt, Bairro Barra do Rio Molha": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "ERAT ES03 - (ERAT Molha Intermediária) Rua RI069, Barra do Rio Molha": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "ERAT ES04 - (SI Molha) Rua Pedro Chiodini, Bairro Barra do Rio Molha": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  },
+  "R17 - Reservatório Aldrovandi": {
+    "capacidadeUtil": "",
+    "nivelAtencao": 60,
+    "nivelCritico": 50,
+    "vazaoAtencao": 20,
+    "vazaoCritico": 35,
+    "emManutencao": false
+  }
 }

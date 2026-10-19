@@ -1609,12 +1609,102 @@ function inicializarConfiguracoes() {
   if (btnVincularConfig) {
     btnVincularConfig.addEventListener("click", vincularArquivoConfiguracao);
   }
+  verificarHandleSalvo();
 }
 
 let configFileHandle = null;
 
+async function salvarHandleNoIndexedDB(handle) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("SamaeConfigDB", 1);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains("handles")) {
+        db.createObjectStore("handles");
+      }
+    };
+    request.onsuccess = (e) => {
+      const db = e.target.result;
+      const transaction = db.transaction("handles", "readwrite");
+      const store = transaction.objectStore("handles");
+      store.put(handle, "configFile");
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = (err) => reject(err);
+    };
+    request.onerror = (err) => reject(err);
+  });
+}
+
+async function carregarHandleDoIndexedDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("SamaeConfigDB", 1);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains("handles")) {
+        db.createObjectStore("handles");
+      }
+    };
+    request.onsuccess = (e) => {
+      const db = e.target.result;
+      const transaction = db.transaction("handles", "readonly");
+      const store = transaction.objectStore("handles");
+      const req = store.get("configFile");
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = (err) => reject(err);
+    };
+    request.onerror = (err) => reject(err);
+  });
+}
+
+async function verificarHandleSalvo() {
+  try {
+    const handle = await carregarHandleDoIndexedDB();
+    if (handle) {
+      configFileHandle = handle;
+      const perm = await handle.queryPermission({ mode: 'readwrite' });
+      if (perm === 'granted') {
+        atualizarVisualBotaoVinculado();
+      } else {
+        const btn = document.getElementById("btn-vincular-config");
+        if (btn) {
+          btn.style.borderColor = "var(--accent-color)";
+          btn.innerHTML = "🔄 Reativar Vínculo de Config";
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Erro ao verificar handle salvo:", e);
+  }
+}
+
+function atualizarVisualBotaoVinculado() {
+  const btn = document.getElementById("btn-vincular-config");
+  if (btn) {
+    btn.style.borderColor = "var(--status-normal-color)";
+    btn.innerHTML = "✅ Arquivo Vinculado";
+  }
+}
+
 async function vincularArquivoConfiguracao() {
   try {
+    if (configFileHandle) {
+      try {
+        const perm = await configFileHandle.requestPermission({ mode: 'readwrite' });
+        if (perm === 'granted') {
+          atualizarVisualBotaoVinculado();
+          const msg = document.getElementById("configuracao-mensagem");
+          if (msg) {
+            msg.textContent = "Vínculo com config_reservatorios.json reativado com sucesso!";
+            msg.classList.remove("has-alerts");
+            setTimeout(() => { msg.textContent = ""; }, 5000);
+          }
+          return;
+        }
+      } catch (e) {
+        // Se falhar o pedido de permissão, prossegue para abrir o seletor normal
+      }
+    }
+
     if (!window.showOpenFilePicker) {
       alert("Seu navegador não suporta salvamento direto de arquivos. Utilize Google Chrome ou Microsoft Edge.");
       return;
@@ -1627,16 +1717,14 @@ async function vincularArquivoConfiguracao() {
       multiple: false
     });
     configFileHandle = handle;
+    await salvarHandleNoIndexedDB(handle);
+    atualizarVisualBotaoVinculado();
+
     const msg = document.getElementById("configuracao-mensagem");
     if (msg) {
       msg.textContent = "Arquivo config_reservatorios.json vinculado com sucesso! As alterações serão salvas diretamente.";
       msg.classList.remove("has-alerts");
       setTimeout(() => { msg.textContent = ""; }, 5000);
-    }
-    const btn = document.getElementById("btn-vincular-config");
-    if (btn) {
-      btn.style.borderColor = "var(--status-normal-color)";
-      btn.innerHTML = "✅ Arquivo Vinculado";
     }
   } catch (err) {
     if (err.name !== 'AbortError') {
