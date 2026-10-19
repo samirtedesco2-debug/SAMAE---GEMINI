@@ -259,11 +259,15 @@ function inicializarDashboard() {
   if (btnCopiarResumo) {
     btnCopiarResumo.addEventListener("click", () => {
       const dataSelecionada = document.getElementById("seletor-data").value;
-      const dadosDoDia = window.bancoDeDados?.historico?.[dataSelecionada];
+      const banco = window.bancoDeDados;
+      const dadosDoDia = banco?.historico?.[dataSelecionada];
       if (!dadosDoDia) {
         alert("Nenhum dado carregado para gerar o resumo.");
         return;
       }
+
+      const baseComparacao = document.getElementById("seletor-base-vazao")?.value || "same-weekday-4";
+      const escopoOperacional = document.getElementById("seletor-escopo-operacional")?.value || "ambos";
 
       const criticos = [];
       const atencao = [];
@@ -272,15 +276,41 @@ function inicializarDashboard() {
       const quantidadeSlots = horarios.length;
 
       Object.entries(dadosDoDia.reservatorios || {}).forEach(([chave, res]) => {
-        const statusNivel = avaliarStatusNivel(res.leituras?.nivel);
         const nomeRes = res.nome || chave;
         const nivelAtual = obterUltimaLeituraNivel(res.leituras?.nivel);
         const qualidade = avaliarQualidadeLeituras(res.leituras?.nivel, res.leituras?.vazao, quantidadeSlots);
         
-        const info = `- ${nomeRes} (${chave}): Nível ${nivelAtual !== null ? nivelAtual + '%' : 'N/A'}`;
-        
-        if (statusNivel === "Crítico") criticos.push(info);
-        else if (statusNivel === "Atenção") atencao.push(info);
+        const nivelAtencaoVal = escopoOperacional !== "vazao";
+        const vazaoAtivaVal = escopoOperacional !== "nivel";
+
+        const comparacaoNivel = obterComparacaoNivel(
+          banco,
+          chave,
+          dataSelecionada,
+          baseComparacao,
+          horarios,
+          nivelAtual,
+        );
+        const statusNivel = avaliarStatusNivel(res.leituras?.nivel, chave, comparacaoNivel?.referencia);
+        const alertaVazao = avaliarAlertaVazao(
+          res.leituras?.vazao,
+          obterReferenciaVazao(banco, chave, dataSelecionada, baseComparacao, horarios),
+          horarios,
+          chave,
+        );
+
+        const statusNivelAtivo = nivelAtencaoVal && ["Normal", "Atenção", "Crítico"].includes(statusNivel) ? statusNivel : null;
+        const statusVazaoAtivo = vazaoAtivaVal && ["Normal", "Atenção", "Crítico"].includes(alertaVazao?.status) ? alertaVazao.status : null;
+        const statusAtivos = [statusNivelAtivo, statusVazaoAtivo].filter(Boolean);
+
+        let statusGeral = "Normal";
+        if (statusAtivos.includes("Crítico")) statusGeral = "Crítico";
+        else if (statusAtivos.includes("Atenção")) statusGeral = "Atenção";
+
+        const info = `- ${nomeRes} (${chave}): Nível ${nivelAtual !== null ? nivelAtual + '%' : 'N/A'} (Nível: ${statusNivel}, Vazão: ${alertaVazao?.status})`;
+
+        if (statusGeral === "Crítico") criticos.push(info);
+        else if (statusGeral === "Atenção") atencao.push(info);
 
         if (qualidade.nivelAusente > 0 || qualidade.vazaoAusente > 0 || statusNivel === "Sem Dados") {
           incompletos.push(`- ${nomeRes} (${chave}): ${qualidade.nivelAusente + qualidade.vazaoAusente} leitura(s) ausente(s)`);

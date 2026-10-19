@@ -2781,3 +2781,42 @@ header h1 {
   padding-bottom: 8px;
   border-bottom: 2px solid var(--border-color);
 }
+
+.operational-detail-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.operational-detail-info-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background-color: var(--surface-inset);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted-color);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.operational-detail-info-btn:hover,
+.operational-detail-info-btn.is-active {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  background-color: var(--surface-bg);
+}
+
+.operational-detail-collapse {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border-color);
+}

@@ -617,7 +617,27 @@ function renderizarDetalhesBoletim(
     topo.className = "operational-detail-heading";
     const nome = document.createElement("h4");
     nome.textContent = obterIdentificacaoReservatorio(registro.chave);
-    topo.append(nome);
+
+    const btnInfo = document.createElement("button");
+    btnInfo.type = "button";
+    btnInfo.className = "operational-detail-info-btn";
+    btnInfo.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> <span>Base</span>`;
+    btnInfo.title = "Ver dados da base de comparação e referências";
+
+    btnInfo.addEventListener("click", () => {
+      const bases = card.querySelectorAll(".operational-detail-base-desc");
+      const isHidden = bases[0]?.hidden ?? true;
+      bases.forEach(b => { b.hidden = !isHidden; });
+      btnInfo.classList.toggle("is-active", isHidden);
+      btnInfo.innerHTML = isHidden
+        ? `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> <span>Ocultar</span>`
+        : `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> <span>Base</span>`;
+    });
+
+    const nomeContainer = document.createElement("div");
+    nomeContainer.className = "operational-detail-title-wrap";
+    nomeContainer.append(nome, btnInfo);
+    topo.append(nomeContainer);
     let statusNivel;
     if (escopoOperacional !== "vazao") {
       statusNivel = document.createElement("span");
@@ -701,7 +721,8 @@ function renderizarDetalhesBoletim(
             }.`
           : "";
       const descricaoReferenciaNivel = document.createElement("p");
-      descricaoReferenciaNivel.className = "operational-detail-reason";
+      descricaoReferenciaNivel.className = "operational-detail-reason operational-detail-base-desc";
+      descricaoReferenciaNivel.hidden = true;
       descricaoReferenciaNivel.textContent = `Base: ${obterRotuloBaseComparacao(baseComparacao)} · média de ${comparacaoNivel?.quantidade ?? 0} dia(s) válidos. Referência diária média: ${formatarMetrica(comparacaoNivel?.referencia ?? null, "%")}.${datasReferenciaNivel}`;
       secaoNivel.append(tituloNivel, gradeNivel);
       secaoNivel.append(descricaoReferenciaNivel);
@@ -735,7 +756,8 @@ function renderizarDetalhesBoletim(
               }.`
             : "";
         const descricaoBase = document.createElement("p");
-        descricaoBase.className = "operational-detail-reason";
+        descricaoBase.className = "operational-detail-reason operational-detail-base-desc";
+        descricaoBase.hidden = true;
         descricaoBase.textContent = `Base: ${obterRotuloBaseComparacao(baseComparacao)} · ${referencia?.quantidade ?? 0} dia(s) válidos.${datasReferencia} Para mínima e máxima, queda ou aumento de ${LIMITE_ATENCAO_VAZAO_PERCENTUAL}% gera atenção; acima de ${LIMITE_CRITICO_VAZAO_PERCENTUAL}% é crítico. Média exibida apenas como informação, sem gerar alerta.`;
         const gradeVazao = document.createElement("div");
         gradeVazao.className = "operational-flow-indicators";
