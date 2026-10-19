@@ -5,6 +5,11 @@ let graficosAnaliticos = {};
 let graficosEngenharia = {};
 let categoriaBoletimAtiva = null;
 let analiseReservatorioAberta = false;
+let exibindoEsquemaAutonomia = false;
+window.toggleEsquemaAutonomia = () => {
+  exibindoEsquemaAutonomia = !exibindoEsquemaAutonomia;
+  renderizarDashboard();
+};
 let graficoAnaliseComMedias = false;
 let graficoAnaliseComHistorico = false;
 const seriesAnaliseOcultas = new Set();
@@ -243,6 +248,7 @@ function inicializarDashboard() {
   });
 
   seletorFiltro.addEventListener("change", () => {
+    exibindoEsquemaAutonomia = false;
     if (
       analiseReservatorioAberta &&
       !seletorFiltro.value.startsWith("reservatorio:")
@@ -679,6 +685,29 @@ async function renderizarDashboard() {
     baseComparacao,
     escopoOperacional,
   });
+
+  if (exibindoEsquemaAutonomia) {
+    containerGrid.hidden = false;
+    containerGrid.innerHTML = `
+      <div style="grid-column: 1 / -1; background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.25rem; color: var(--text-color);">📊 Esquema Animado: Autonomia Preditiva & Alertas Baseados em Tempo</h3>
+            <p style="margin: 4px 0 0 0; font-size: 0.9rem; color: var(--muted-color);">Visualização esquemática do motor de projeção de níveis e vazões do CCO SAMAE.</p>
+          </div>
+          <button type="button" id="btn-fechar-esquema-autonomia" class="btn-guardar-config" style="padding: 8px 16px; background: var(--surface-bg); color: var(--accent-color); border: 1px solid var(--accent-color); cursor: pointer;">Voltar ao Monitoramento</button>
+        </div>
+        <div style="width: 100%; aspect-ratio: 16/9; max-height: 600px; background: #0b0f15; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+          <object data="manual-imagens/autonomia-preditiva.svg" type="image/svg+xml" width="100%" height="100%"></object>
+        </div>
+      </div>
+    `;
+    document.getElementById("btn-fechar-esquema-autonomia").addEventListener("click", () => {
+      exibindoEsquemaAutonomia = false;
+      renderizarDashboard();
+    });
+    return;
+  }
 
   chavesParaExibir.forEach((chave) => {
     const res = reservatorios[chave];
