@@ -269,6 +269,13 @@ function criarCardHTML(
     }
   </div>`;
 
+  const predicao = calcularAutonomiaEProjecao(res, chave);
+  const predicaoHTML = predicao && predicao.statusPreditivo !== "Normal"
+    ? `<div style="background: rgba(227,93,106,0.1); border: 1px solid var(--status-critico-color, #e35d6a); border-radius: 6px; padding: 6px 10px; margin-top: 10px; font-size: 0.8rem; color: var(--status-critico-color, #e35d6a); display: flex; align-items: center; gap: 6px;">
+        <span>⏳</span> <strong>Autonomia:</strong> ${predicao.mensagemPreditiva}
+       </div>`
+    : "";
+
   const idCanvas = `chart-${res.nome.replace(/[^a-zA-Z0-9]/g, "_")}`;
   const nivelMedio = formatarMetrica(niveis.media, "%");
   const vazaoMedia = formatarMetrica(vazoes.media, " L/s");
@@ -390,6 +397,7 @@ function criarCardHTML(
 
       ${comparacaoHTML}
       ${qualidadeHTML}
+      ${predicaoHTML}
       ${graficoHTML}
     </div>
   `;
@@ -1427,10 +1435,16 @@ function renderizarBoletimOperacional({
     leiturasAusentes: 0,
     leiturasEsperadas: 0,
   };
+  const alertasPreditivos = [];
   const quantidadeSlots = horarios.length;
 
   chavesFiltradas.forEach((chave) => {
     const reservatorio = reservatorios[chave];
+    const predicao = reservatorio ? calcularAutonomiaEProjecao(reservatorio, chave) : null;
+    if (predicao && predicao.statusPreditivo !== "Normal") {
+      alertasPreditivos.push({ chave, nome: reservatorio.nome || chave, ...predicao });
+    }
+
     const leituras = reservatorio?.leituras;
     const niveis = resumirLeiturasEstruturadas(leituras?.nivel, horarios);
     const vazoes = resumirLeiturasEstruturadas(leituras?.vazao, horarios);
@@ -1576,6 +1590,36 @@ function renderizarBoletimOperacional({
       registros: contagens.incompletos,
     },
   ];
+
+  const bannerPreditivo = document.getElementById("global-predictive-banner");
+  if (bannerPreditivo) {
+    if (alertasPreditivos.length > 0) {
+      bannerPreditivo.hidden = false;
+      bannerPreditivo.innerHTML = `
+        <div style="background: var(--surface-bg); border: 1px solid var(--status-critico-color, #e35d6a); border-radius: 8px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--status-critico-color, #e35d6a);">
+            <span>⏳ Alerta Preditivo de Autonomia (CCO)</span>
+            <span style="font-size: 0.8rem; background: rgba(227,93,106,0.15); padding: 2px 8px; border-radius: 12px;">${alertasPreditivos.length} reservatório(s) em risco</span>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            ${alertasPreditivos.map(p => `
+              <button type="button" data-detail-reservoir="${p.chave}" style="background: var(--card-bg); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; font-size: 0.85rem; color: var(--text-color);">
+                <strong>${p.nome}</strong>: <span style="color: var(--status-critico-color, #e35d6a);">${p.mensagemPreditiva}</span>
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    } else {
+      bannerPreditivo.hidden = false;
+      bannerPreditivo.innerHTML = `
+        <div style="background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 16px; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--muted-color);">
+          <span>⏳ <strong>Autonomia Preditiva:</strong> Todos os reservatórios com autonomia segura (> 3h nos limites configurados).</span>
+        </div>
+      `;
+    }
+  }
+
    resumo.replaceChildren(
     ...categorias.map(({ chave, rotulo, classe, registros }) => {
       const botao = document.createElement("button");

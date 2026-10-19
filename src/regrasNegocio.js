@@ -255,3 +255,59 @@ function avaliarAlertaVazao(leiturasAtuais, referencia, horarios, idReservatorio
 
   return { status, indicadores, referencia };
 }
+
+function calcularAutonomiaEProjecao(reservatorio, idReservatorio) {
+  const config = obterConfiguracaoReservatorio(idReservatorio);
+  const capacidade = config.capacidadeUtil !== "" && !isNaN(config.capacidadeUtil) ? Number(config.capacidadeUtil) : 5000;
+  const nivelAtual = obterUltimaLeituraValida(reservatorio?.leituras?.nivel);
+  if (nivelAtual === null || nivelAtual === undefined) {
+    return { statusPreditivo: "Normal", horasAteCritico: null, horasAteAtencao: null, autonomiaHoras: null, tendencia: "Sem Dados" };
+  }
+
+  const vazoes = reservatorio?.leituras?.vazao;
+  const vazaoAtual = obterUltimaLeituraValida(vazoes) ?? 0;
+  // Como temos vazão única ou balanço, estimamos saída e entrada se houver dados
+  const saida = vazaoAtual > 0 ? vazaoAtual : 0; 
+  const entrada = 0; // Se houver leitura de entrada separada, ajustar aqui
+
+  const vazaoLiquidaLs = saida - entrada;
+  const vazaoLiquidaM3h = vazaoLiquidaLs * 3.6;
+  const volumeAtualM3 = capacidade * (nivelAtual / 100);
+
+  if (vazaoLiquidaM3h <= 0) {
+    return {
+      statusPreditivo: "Normal",
+      autonomiaHoras: null,
+      tendencia: "Estável ou Enchendo",
+      horasAteCritico: null,
+      horasAteAtencao: null
+    };
+  }
+
+  const horasAteZero = volumeAtualM3 / vazaoLiquidaM3h;
+  const volAtencao = capacidade * (40 / 100);
+  const volCritico = capacidade * (30 / 100);
+
+  const horasAteAtencao = volumeAtualM3 > volAtencao ? (volumeAtualM3 - volAtencao) / vazaoLiquidaM3h : 0;
+  const horasAteCritico = volumeAtualM3 > volCritico ? (volumeAtualM3 - volCritico) / vazaoLiquidaM3h : 0;
+
+  let statusPreditivo = "Normal";
+  let mensagemPreditiva = "";
+
+  if (horasAteCritico <= 3 && nivelAtual >= config.nivelCritico) {
+    statusPreditivo = "Crítico";
+    mensagemPreditiva = `Risco de atingir nível crítico (<30%) em ~${horasAteCritico.toFixed(1)}h`;
+  } else if (horasAteAtencao <= 3 && nivelAtual >= config.nivelAtencao) {
+    statusPreditivo = "Atenção";
+    mensagemPreditiva = `Risco de atingir nível atenção (<40%) em ~${horasAteAtencao.toFixed(1)}h`;
+  }
+
+  return {
+    statusPreditivo,
+    mensagemPreditiva,
+    horasAteCritico: horasAteCritico.toFixed(1),
+    horasAteAtencao: horasAteAtencao.toFixed(1),
+    autonomiaHoras: horasAteZero.toFixed(1),
+    tendencia: "Esvaziando"
+  };
+}
