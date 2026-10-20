@@ -589,6 +589,9 @@ function criarPainelAutonomiaPreditiva(
   const diffNivel = niveisValidos.length >= 2 ? (niveisValidos[niveisValidos.length - 1] - niveisValidos[niveisValidos.length - 2]).toFixed(1) : "0.0";
   const sinalDiff = Number(diffNivel) > 0 ? "+" : "";
 
+  const conf = predAlvo.confiabilidade || "Média";
+  const corConf = conf === "Alta" ? "var(--status-normal-color)" : conf === "Média" ? "#d7a52b" : "var(--status-critico-color)";
+
   let predicaoAlertHTML = "";
   if (predAlvo && predAlvo.statusPreditivo !== "Normal") {
     predicaoAlertHTML = `
@@ -624,7 +627,12 @@ function criarPainelAutonomiaPreditiva(
         </h3>
         <p style="margin: 4px 0 0 0; font-size: 0.9rem; color: var(--muted-color);">Visualização operacional em tempo real do motor de projeção de níveis e vazões do CCO SAMAE.</p>
       </div>
-      <button type="button" id="btn-fechar-esquema-autonomia" class="btn-guardar-config" style="padding: 8px 16px; background: var(--surface-bg); color: var(--accent-color); border: 1px solid var(--accent-color); cursor: pointer;">Voltar ao Monitoramento</button>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 0.85rem; padding: 4px 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 12px; color: ${corConf}; font-weight: 600;" title="Confiabilidade baseada na densidade de leituras válidas">
+          Confiabilidade: ${conf}
+        </span>
+        <button type="button" id="btn-fechar-esquema-autonomia" class="btn-guardar-config" style="padding: 8px 16px; background: var(--surface-bg); color: var(--accent-color); border: 1px solid var(--accent-color); cursor: pointer;">Voltar ao Monitoramento</button>
+      </div>
     </div>
 
     ${predicaoAlertHTML}

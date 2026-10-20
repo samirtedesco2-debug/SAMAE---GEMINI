@@ -265,6 +265,19 @@ function avaliarAlertaVazao(leiturasAtuais, referencia, horarios, idReservatorio
   return { status, indicadores, referencia };
 }
 
+function calcularMediaMovel(valores, janela = 3) {
+  if (!Array.isArray(valores) || valores.length === 0) return [];
+  return valores.map((val, idx, arr) => {
+    if (val === null || val === undefined || val === "" || !Number.isFinite(Number(val))) return null;
+    const inicio = Math.max(0, idx - janela + 1);
+    const sub = arr.slice(inicio, idx + 1)
+      .filter(v => v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v)))
+      .map(Number);
+    if (sub.length === 0) return Number(val);
+    return sub.reduce((a, b) => a + b, 0) / sub.length;
+  });
+}
+
 function calcularAutonomiaEProjecao(reservatorio, idReservatorio) {
   const config = obterConfiguracaoReservatorio(idReservatorio);
   const capacidade = config.capacidadeUtil !== "" && !isNaN(config.capacidadeUtil) ? Number(config.capacidadeUtil) : 5000;
@@ -272,13 +285,22 @@ function calcularAutonomiaEProjecao(reservatorio, idReservatorio) {
   const niveisRaw = reservatorio?.leituras?.nivel;
   const nivelAtual = obterUltimaLeituraValida(niveisRaw);
   if (nivelAtual === null || nivelAtual === undefined) {
-    return { statusPreditivo: "Normal", tendencia: "Sem Dados", iconeTendencia: "→", minutosAteCritico: null, minutosAteAtencao: null, minutosAteNormal: null, possuiMedicaoVazao: config.possuiMedicaoVazao, fallbackUsoApenasNivel: false };
+    return { statusPreditivo: "Normal", tendencia: "Sem Dados", iconeTendencia: "→", minutosAteCritico: null, minutosAteAtencao: null, minutosAteNormal: null, possuiMedicaoVazao: config.possuiMedicaoVazao, fallbackUsoApenasNivel: false, confiabilidade: "Baixa" };
   }
 
-  // Tendência última hora
-  const niveisValidos = (Array.isArray(niveisRaw) ? niveisRaw : [])
-    .map(v => (v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v)) ? Number(v) : null))
-    .filter(v => v !== null);
+  // Filtro de ruído temporal (Média Móvel) e tendência
+  const niveisSmoothed = calcularMediaMovel(niveisRaw, 3);
+  const niveisValidos = niveisSmoothed.filter(v => v !== null);
+
+  const totalSlots = Array.isArray(niveisRaw) ? niveisRaw.length : 0;
+  const validosCount = niveisValidos.length;
+  const taxaPreenchimento = totalSlots > 0 ? validosCount / totalSlots : 0;
+  let confiabilidade = "Alta";
+  if (taxaPreenchimento < 0.5 || validosCount < 3) {
+    confiabilidade = "Baixa";
+  } else if (taxaPreenchimento < 0.8) {
+    confiabilidade = "Média";
+  }
 
   let tendencia = "Estável";
   let iconeTendencia = "→";
