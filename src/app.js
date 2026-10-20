@@ -5,17 +5,6 @@ let graficosAnaliticos = {};
 let graficosEngenharia = {};
 let categoriaBoletimAtiva = null;
 let analiseReservatorioAberta = false;
-let exibindoEsquemaAutonomia = false;
-window.toggleEsquemaAutonomia = () => {
-  exibindoEsquemaAutonomia = !exibindoEsquemaAutonomia;
-  renderizarDashboard();
-  if (exibindoEsquemaAutonomia) {
-    setTimeout(() => {
-      const el = document.getElementById("esquema-autonomia-container");
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 100);
-  }
-};
 let graficoAnaliseComMedias = false;
 let graficoAnaliseComHistorico = false;
 const seriesAnaliseOcultas = new Set();
@@ -718,6 +707,16 @@ async function renderizarDashboard() {
         baseComparacao,
       );
       containerGrid.append(painelAlarme);
+
+      const painelAutonomia = criarPainelAutonomiaPreditiva(
+        res,
+        chave,
+        horarios,
+        banco,
+        dataSelecionada,
+        baseComparacao,
+      );
+      containerGrid.append(painelAutonomia);
     }
 
     if (exibirGrafico && !analiseReservatorioAberta) {
@@ -736,102 +735,6 @@ async function renderizarDashboard() {
       );
     }
   });
-
-  if (exibindoEsquemaAutonomia) {
-    const chaves = Object.keys(reservatorios);
-    let chaveAlvo = chaves[0];
-    if (filtroSelecionado.startsWith("reservatorio:")) {
-      const reservatorioSelecionado = filtroSelecionado.slice("reservatorio:".length);
-      if (reservatorios[reservatorioSelecionado]) {
-        chaveAlvo = reservatorioSelecionado;
-      }
-    } else {
-      const chaveAlerta = chaves.find(k => {
-        const p = calcularAutonomiaEProjecao(reservatorios[k], k);
-        return p.statusPreditivo !== "Normal";
-      });
-      if (chaveAlerta) chaveAlvo = chaveAlerta;
-    }
-
-    const resAlvo = reservatorios[chaveAlvo];
-    const predAlvo = resAlvo ? calcularAutonomiaEProjecao(resAlvo, chaveAlvo) : null;
-    const nivelAlvo = resAlvo ? obterUltimaLeituraNivel(resAlvo.leituras?.nivel) : null;
-    const vazaoAlvo = resAlvo ? obterUltimaLeitura(resAlvo.leituras?.vazao) : 0;
-    const configAlvo = obterConfiguracaoReservatorio(chaveAlvo);
-    const capAlvo = configAlvo.capacidadeUtil !== "" && !isNaN(configAlvo.capacidadeUtil) ? Number(configAlvo.capacidadeUtil) : 5000;
-
-    const niveisValidos = (Array.isArray(resAlvo?.leituras?.nivel) ? resAlvo.leituras.nivel : [])
-      .map(v => (v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v)) ? Number(v) : null))
-      .filter(v => v !== null);
-    const diffNivel = niveisValidos.length >= 2 ? (niveisValidos[niveisValidos.length - 1] - niveisValidos[niveisValidos.length - 2]).toFixed(1) : "0.0";
-    const sinalDiff = Number(diffNivel) > 0 ? "+" : "";
-
-    const esquemaDiv = document.createElement("div");
-    esquemaDiv.id = "esquema-autonomia-container";
-    esquemaDiv.style.cssText = "grid-column: 1 / -1; background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 20px; margin-top: 20px;";
-    
-    esquemaDiv.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
-        <div>
-          <h3 style="margin: 0; font-size: 1.25rem; color: var(--text-color); display: flex; align-items: center; gap: 8px;">
-            <span>📊</span> Autonomia Preditiva & Alertas Baseados em Tempo (${resAlvo?.nome || chaveAlvo})
-          </h3>
-          <p style="margin: 4px 0 0 0; font-size: 0.9rem; color: var(--muted-color);">Visualização operacional em tempo real do motor de projeção de níveis e vazões do CCO SAMAE.</p>
-        </div>
-        <button type="button" id="btn-fechar-esquema-autonomia" class="btn-guardar-config" style="padding: 8px 16px; background: var(--surface-bg); color: var(--accent-color); border: 1px solid var(--accent-color); cursor: pointer;">Voltar ao Monitoramento</button>
-      </div>
-
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
-        <!-- Card 1: Reservatório -->
-        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
-          <h4 style="margin: 0; font-size: 1rem; color: var(--text-color);">Status do Reservatório</h4>
-          <span style="font-size: 0.85rem; color: var(--muted-color);">Capacidade Útil: ${capAlvo} m³</span>
-          <div style="background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; text-align: center;">
-            <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent-color);">${nivelAlvo !== null ? nivelAlvo.toFixed(1) + '%' : 'N/A'}</div>
-            <div style="font-size: 0.8rem; color: var(--muted-color); margin-top: 4px;">Nível Atual (Tendência: ${predAlvo?.tendencia || 'Estável'} ${predAlvo?.iconeTendencia || '→'})</div>
-            <div style="font-size: 0.8rem; color: ${Number(diffNivel) >= 0 ? 'var(--status-normal-color)' : 'var(--status-critico-color)'}; margin-top: 6px; font-weight: 600;">Saldo última hora: ${sinalDiff}${diffNivel}%</div>
-          </div>
-        </div>
-
-        <!-- Card 2: Balanço Hidráulico -->
-        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
-          <h4 style="margin: 0; font-size: 1rem; color: var(--text-color);">Balanço Hidráulico (Net Flow)</h4>
-          <span style="font-size: 0.85rem; color: var(--muted-color);">Taxa de variação entre entrada e saída</span>
-          <div style="background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem;">
-            <div style="display: flex; justify-content: space-between;"><span style="color: var(--muted-color);">Vazão de Saída:</span> <strong style="color: var(--status-critico-color);">${vazaoAlvo} L/s</strong></div>
-            <div style="display: flex; justify-content: space-between;"><span style="color: var(--muted-color);">Vazão Líquida:</span> <strong style="color: ${predAlvo?.vazaoLiquidaLs > 0 ? 'var(--status-critico-color)' : 'var(--status-normal-color)'};">${predAlvo?.vazaoLiquidaLs ? (predAlvo.vazaoLiquidaLs > 0 ? '+' : '') + predAlvo.vazaoLiquidaLs.toFixed(1) + ' L/s (~' + predAlvo.vazaoLiquidaM3h.toFixed(0) + ' m³/h)' : '0 L/s'}</strong></div>
-          </div>
-        </div>
-
-        <!-- Card 3: Projeção & Autonomia -->
-        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
-          <h4 style="margin: 0; font-size: 1rem; color: var(--text-color);">Projeção & Autonomia</h4>
-          <span style="font-size: 0.85rem; color: var(--muted-color);">Horizontes de alerta baseados em tempo</span>
-          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem;">
-            ${predAlvo?.minutosAteNormal !== null ? `
-              <div style="background: rgba(115,191,105,0.1); border: 1px solid rgba(115,191,105,0.3); border-radius: 6px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: var(--status-normal-color); font-weight: 600;">📈 Normalizar (60%)</span>
-                <strong style="color: var(--status-normal-color);">~ ${predAlvo.minutosAteNormal} min</strong>
-              </div>
-            ` : ''}
-            <div style="background: rgba(215,165,43,0.1); border: 1px solid rgba(215,165,43,0.3); border-radius: 6px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
-              <span style="color: #d7a52b; font-weight: 600;">⚠️ Atenção (&lt; ${configAlvo.nivelAlertaTempoAtencao}%)</span>
-              <strong style="color: #d7a52b;">${predAlvo?.minutosAteAtencao !== null ? '~ ' + predAlvo.minutosAteAtencao + ' min' : 'Estável'}</strong>
-            </div>
-            <div style="background: rgba(227,93,106,0.1); border: 1px solid rgba(227,93,106,0.3); border-radius: 6px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
-              <span style="color: var(--status-critico-color); font-weight: 600;">🔴 Crítico (&lt; ${configAlvo.nivelAlertaTempoCritico}%)</span>
-              <strong style="color: var(--status-critico-color);">${predAlvo?.minutosAteCritico !== null ? '~ ' + predAlvo.minutosAteCritico + ' min' : 'Estável'}</strong>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-    containerGrid.appendChild(esquemaDiv);
-    document.getElementById("btn-fechar-esquema-autonomia").addEventListener("click", () => {
-      exibindoEsquemaAutonomia = false;
-      renderizarDashboard();
-    });
-  }
 }
 
 function renderizarEngenharia() {
@@ -1907,6 +1810,12 @@ function renderizarFormularioConfiguracao(chave, res) {
               Reservatório em Manutenção
             </label>
           </div>
+          <div class="config-field config-checkbox-field">
+            <label>
+              <input type="checkbox" id="cfg-possui-vazao" ${config.possuiMedicaoVazao ? "checked" : ""}>
+              Possui Medição de Vazão
+            </label>
+          </div>
         </div>
       </fieldset>
 
@@ -2197,6 +2106,7 @@ async function salvarConfiguracaoReservatorio(chave) {
   const alertaVazaoSaidaAtivo = document.getElementById("cfg-alerta-vazao-saida-ativo").checked;
   const alertaVazaoMediaAtivo = document.getElementById("cfg-alerta-vazao-media-ativo").checked;
   const emManutencao = document.getElementById("cfg-manutencao").checked;
+  const possuiMedicaoVazao = document.getElementById("cfg-possui-vazao").checked;
 
   const salvos = JSON.parse(localStorage.getItem("samai_reservatorios_config") || "{}");
   salvos[chave] = {
@@ -2217,6 +2127,7 @@ async function salvarConfiguracaoReservatorio(chave) {
     alertaVazaoSaidaAtivo,
     alertaVazaoMediaAtivo,
     emManutencao,
+    possuiMedicaoVazao,
     tempoAtencaoMinutos: tempoAtencaoMinutos !== "" ? Number(tempoAtencaoMinutos) : 180,
     tempoCriticoMinutos: tempoCriticoMinutos !== "" ? Number(tempoCriticoMinutos) : 180,
     nivelAlertaTempoAtencao: nivelAlertaTempoAtencao !== "" ? Number(nivelAlertaTempoAtencao) : 40,

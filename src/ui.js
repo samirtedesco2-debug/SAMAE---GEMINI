@@ -270,11 +270,6 @@ function criarCardHTML(
   </div>`;
 
   const predicao = calcularAutonomiaEProjecao(res, chave);
-  const predicaoHTML = predicao && predicao.statusPreditivo !== "Normal"
-    ? `<div style="background: rgba(227,93,106,0.1); border: 1px solid var(--status-critico-color, #e35d6a); border-radius: 6px; padding: 6px 10px; margin-top: 10px; font-size: 0.8rem; color: var(--status-critico-color, #e35d6a); display: flex; align-items: center; gap: 6px;">
-        <span>⏳</span> <strong>Autonomia:</strong> ${predicao.mensagemPreditiva}
-       </div>`
-    : "";
 
   const idCanvas = `chart-${res.nome.replace(/[^a-zA-Z0-9]/g, "_")}`;
   const nivelMedio = formatarMetrica(niveis.media, "%");
@@ -397,7 +392,6 @@ function criarCardHTML(
 
       ${comparacaoHTML}
       ${qualidadeHTML}
-      ${predicaoHTML}
       ${graficoHTML}
     </div>
   `;
@@ -567,6 +561,134 @@ function criarPainelInformativoAlarme(
   });
   historicoSecao.append(historicoTitulo, extremosHistoricos);
   painel.append(historicoSecao);
+
+  return painel;
+}
+
+function criarPainelAutonomiaPreditiva(
+  reservatorio,
+  chave,
+  horarios,
+  banco,
+  dataSelecionada,
+  baseComparacao,
+) {
+  const painel = document.createElement("div");
+  painel.id = "esquema-autonomia-container";
+  painel.style.cssText = "grid-column: 1 / -1; background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 20px; margin-top: 20px;";
+
+  const predAlvo = calcularAutonomiaEProjecao(reservatorio, chave);
+  const nivelAlvo = obterUltimaLeituraNivel(reservatorio.leituras?.nivel);
+  const vazaoAlvo = obterUltimaLeitura(reservatorio.leituras?.vazao) ?? 0;
+  const configAlvo = obterConfiguracaoReservatorio(chave);
+  const capAlvo = configAlvo.capacidadeUtil !== "" && !isNaN(configAlvo.capacidadeUtil) ? Number(configAlvo.capacidadeUtil) : 5000;
+
+  const niveisValidos = (Array.isArray(reservatorio?.leituras?.nivel) ? reservatorio.leituras.nivel : [])
+    .map(v => (v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v)) ? Number(v) : null))
+    .filter(v => v !== null);
+  const diffNivel = niveisValidos.length >= 2 ? (niveisValidos[niveisValidos.length - 1] - niveisValidos[niveisValidos.length - 2]).toFixed(1) : "0.0";
+  const sinalDiff = Number(diffNivel) > 0 ? "+" : "";
+
+  let predicaoAlertHTML = "";
+  if (predAlvo && predAlvo.statusPreditivo !== "Normal") {
+    predicaoAlertHTML = `
+      <div style="background: rgba(227,93,106,0.1); border: 1px solid var(--status-critico-color, #e35d6a); border-radius: 8px; padding: 12px 16px; font-size: 0.9rem; color: var(--status-critico-color, #e35d6a); display: flex; align-items: center; gap: 8px;">
+        <span>⏳</span> <strong>Autonomia:</strong> ${predAlvo.mensagemPreditiva}
+      </div>
+    `;
+  }
+
+  let fallbackAlertHTML = "";
+  if (predAlvo && predAlvo.fallbackUsoApenasNivel) {
+    fallbackAlertHTML = `
+      <div style="background: rgba(215,165,43,0.15); border: 1px solid #d7a52b; border-radius: 8px; padding: 12px 16px; font-size: 0.9rem; color: #d7a52b; display: flex; align-items: center; gap: 8px;">
+        <span>⚠️</span> <strong>Aviso:</strong> ${predAlvo.mensagemFallback}
+      </div>
+    `;
+  }
+
+  let configVazaoOffHTML = "";
+  if (!configAlvo.possuiMedicaoVazao) {
+    configVazaoOffHTML = `
+      <div style="background: rgba(89,117,217,0.15); border: 1px solid #5975d9; border-radius: 8px; padding: 12px 16px; font-size: 0.9rem; color: #5975d9; display: flex; align-items: center; gap: 8px;">
+        <span>ℹ️</span> <strong>Modo Nível:</strong> A medição de vazão está desativada na parametrização; o cálculo utiliza a variação do nível e capacidade útil.
+      </div>
+    `;
+  }
+
+  painel.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
+      <div>
+        <h3 style="margin: 0; font-size: 1.25rem; color: var(--text-color); display: flex; align-items: center; gap: 8px;">
+          <span>📊</span> Autonomia Preditiva & Alertas Baseados em Tempo (${reservatorio?.nome || chave})
+        </h3>
+        <p style="margin: 4px 0 0 0; font-size: 0.9rem; color: var(--muted-color);">Visualização operacional em tempo real do motor de projeção de níveis e vazões do CCO SAMAE.</p>
+      </div>
+      <button type="button" id="btn-fechar-esquema-autonomia" class="btn-guardar-config" style="padding: 8px 16px; background: var(--surface-bg); color: var(--accent-color); border: 1px solid var(--accent-color); cursor: pointer;">Voltar ao Monitoramento</button>
+    </div>
+
+    ${predicaoAlertHTML}
+    ${fallbackAlertHTML}
+    ${configVazaoOffHTML}
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+      <!-- Card 1: Reservatório -->
+      <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+        <h4 style="margin: 0; font-size: 1rem; color: var(--text-color);">Status do Reservatório</h4>
+        <span style="font-size: 0.85rem; color: var(--muted-color);">Capacidade Útil: ${capAlvo} m³</span>
+        <div style="background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; text-align: center;">
+          <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent-color);">${nivelAlvo !== null ? nivelAlvo.toFixed(1) + '%' : 'N/A'}</div>
+          <div style="font-size: 0.8rem; color: var(--muted-color); margin-top: 4px;">Nível Atual (Tendência: ${predAlvo?.tendencia || 'Estável'} ${predAlvo?.iconeTendencia || '→'})</div>
+          <div style="font-size: 0.8rem; color: ${Number(diffNivel) >= 0 ? 'var(--status-normal-color)' : 'var(--status-critico-color)'}; margin-top: 6px; font-weight: 600;">Saldo última hora: ${sinalDiff}${diffNivel}%</div>
+        </div>
+      </div>
+
+      <!-- Card 2: Balanço Hidráulico -->
+      <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+        <h4 style="margin: 0; font-size: 1rem; color: var(--text-color);">Balanço Hidráulico (Net Flow)</h4>
+        <span style="font-size: 0.85rem; color: var(--muted-color);">Taxa de variação entre entrada e saída</span>
+        <div style="background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem;">
+          <div style="display: flex; justify-content: space-between;"><span style="color: var(--muted-color);">Vazão de Saída:</span> <strong style="color: var(--status-critico-color);">${vazaoAlvo} L/s</strong></div>
+          <div style="display: flex; justify-content: space-between;"><span style="color: var(--muted-color);">Vazão Líquida:</span> <strong style="color: ${predAlvo?.vazaoLiquidaLs > 0 ? 'var(--status-critico-color)' : 'var(--status-normal-color)'};">${predAlvo?.vazaoLiquidaLs !== undefined ? (predAlvo.vazaoLiquidaLs > 0 ? '+' : '') + predAlvo.vazaoLiquidaLs.toFixed(1) + ' L/s (~' + predAlvo.vazaoLiquidaM3h.toFixed(0) + ' m³/h)' : '0 L/s'}</strong></div>
+        </div>
+      </div>
+
+      <!-- Card 3: Projeção & Autonomia -->
+      <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+        <h4 style="margin: 0; font-size: 1rem; color: var(--text-color);">Projeção & Autonomia</h4>
+        <span style="font-size: 0.85rem; color: var(--muted-color);">Horizontes de alerta baseados em tempo</span>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem;">
+          ${predAlvo?.minutosAteNormal !== null && predAlvo?.minutosAteNormal !== undefined ? `
+            <div style="background: rgba(115,191,105,0.1); border: 1px solid rgba(115,191,105,0.3); border-radius: 6px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: var(--status-normal-color); font-weight: 600;">📈 Normalizar (60%)</span>
+              <strong style="color: var(--status-normal-color);">~ ${predAlvo.minutosAteNormal} min</strong>
+            </div>
+          ` : ''}
+          <div style="background: rgba(215,165,43,0.1); border: 1px solid rgba(215,165,43,0.3); border-radius: 6px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #d7a52b; font-weight: 600;">⚠️ Atenção (&lt; ${configAlvo.nivelAlertaTempoAtencao}%)</span>
+            <strong style="color: #d7a52b;">${predAlvo?.minutosAteAtencao !== null && predAlvo?.minutosAteAtencao !== undefined ? '~ ' + predAlvo.minutosAteAtencao + ' min' : 'Estável'}</strong>
+          </div>
+          <div style="background: rgba(227,93,106,0.1); border: 1px solid rgba(227,93,106,0.3); border-radius: 6px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: var(--status-critico-color); font-weight: 600;">🔴 Crítico (&lt; ${configAlvo.nivelAlertaTempoCritico}%)</span>
+            <strong style="color: var(--status-critico-color);">${predAlvo?.minutosAteCritico !== null && predAlvo?.minutosAteCritico !== undefined ? '~ ' + predAlvo.minutosAteCritico + ' min' : 'Estável'}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  setTimeout(() => {
+    const btnFechar = painel.querySelector("#btn-fechar-esquema-autonomia");
+    if (btnFechar) {
+      btnFechar.onclick = () => {
+        const seletorFiltro = document.getElementById("seletor-filtro");
+        if (seletorFiltro) {
+          seletorFiltro.value = "TODOS";
+          seletorFiltro.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      };
+    }
+  }, 50);
 
   return painel;
 }
@@ -1594,28 +1716,48 @@ function renderizarBoletimOperacional({
   const bannerPreditivo = document.getElementById("global-predictive-banner");
   if (bannerPreditivo) {
     bannerPreditivo.style.cursor = "pointer";
-    bannerPreditivo.title = "Clique para abrir o esquema animado de autonomia preditiva";
+    bannerPreditivo.title = "Abrir Autonomia Preditiva";
     bannerPreditivo.onclick = (e) => {
-      if (e.target.closest("button[data-detail-reservoir]")) return;
-      if (typeof window.toggleEsquemaAutonomia === "function") {
-        window.toggleEsquemaAutonomia();
+      const btnRes = e.target.closest("button[data-detail-reservoir]");
+      if (btnRes) {
+        const chaveRes = btnRes.dataset.detailReservoir;
+        categoriaBoletimAtiva = null;
+        const seletorFiltro = document.getElementById("seletor-filtro");
+        if (seletorFiltro) {
+          seletorFiltro.value = `reservatorio:${chaveRes}`;
+          seletorFiltro.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        setTimeout(() => {
+          document.querySelector(".card.is-selected")?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 150);
+        return;
+      }
+      if (alertasPreditivos.length === 1) {
+        const alertaUnico = alertasPreditivos[0];
+        categoriaBoletimAtiva = alertaUnico.statusPreditivo === "Crítico" ? "critico" : "atencao";
+        renderizarDashboard();
+        setTimeout(() => {
+          document.getElementById("operational-details")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 150);
+      } else if (alertasPreditivos.length >= 2) {
+        abrirModalAlertasPreditivos(alertasPreditivos);
       }
     };
 
     if (alertasPreditivos.length > 0) {
       bannerPreditivo.hidden = false;
       bannerPreditivo.innerHTML = `
-        <div style="background: var(--surface-bg); border: 1px solid var(--status-critico-color, #e35d6a); border-radius: 8px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px;">
+        <div title="Abrir Autonomia Preditiva" style="background: var(--surface-bg); border: 1px solid var(--status-critico-color, #e35d6a); border-radius: 8px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px;">
           <div style="display: flex; align-items: center; justify-content: space-between; font-weight: 600; color: var(--status-critico-color, #e35d6a);">
             <div style="display: flex; align-items: center; gap: 8px;">
               <span>⏳ Alerta Preditivo de Autonomia (CCO)</span>
               <span style="font-size: 0.8rem; background: rgba(227,93,106,0.15); padding: 2px 8px; border-radius: 12px;">${alertasPreditivos.length} reservatório(s) em risco</span>
             </div>
-            <span style="font-size: 1.1rem; cursor: pointer;" title="Abrir esquema animado">📊</span>
+            <span style="font-size: 1.1rem;" title="Abrir Autonomia Preditiva">📊</span>
           </div>
           <div style="display: flex; flex-wrap: wrap; gap: 8px;">
             ${alertasPreditivos.map(p => `
-              <button type="button" data-detail-reservoir="${p.chave}" style="background: var(--card-bg); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; font-size: 0.85rem; color: var(--text-color);">
+              <button type="button" data-detail-reservoir="${p.chave}" title="Abrir Autonomia Preditiva" style="background: var(--card-bg); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; font-size: 0.85rem; color: var(--text-color);">
                 <strong>${p.nome}</strong>: <span style="color: var(--status-critico-color, #e35d6a);">${p.mensagemPreditiva}</span>
               </button>
             `).join("")}
@@ -1625,9 +1767,9 @@ function renderizarBoletimOperacional({
     } else {
       bannerPreditivo.hidden = false;
       bannerPreditivo.innerHTML = `
-        <div style="background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; color: var(--muted-color);">
-          <span>⏳ <strong>Autonomia Preditiva:</strong> Todos os reservatórios com autonomia segura (> 3h nos limites configurados).</span>
-          <span style="font-size: 1.1rem; cursor: pointer;" title="Abrir esquema animado">📊</span>
+        <div title="Abrir Autonomia Preditiva" style="background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; color: var(--muted-color);">
+          <span title="Abrir Autonomia Preditiva">⏳ <strong>Autonomia Preditiva:</strong> Todos os reservatórios com autonomia segura (> 3h nos limites configurados).</span>
+          <span style="font-size: 1.1rem;" title="Abrir Autonomia Preditiva">📊</span>
         </div>
       `;
     }
@@ -1684,4 +1826,58 @@ function renderizarBoletimOperacional({
     "has-missing-data",
     contagens.leiturasAusentes > 0 || contagens.semRegistro > 0,
   );
+}
+
+function abrirModalAlertasPreditivos(alertas) {
+  let modal = document.getElementById("modal-alertas-preditivos");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "modal-alertas-preditivos";
+    modal.style.cssText = "position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px;";
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `
+    <div style="background: var(--surface-bg, #1e1e1e); border: 1px solid var(--border-color, #333); border-radius: 12px; width: 100%; max-width: 600px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+        <h3 style="margin: 0; font-size: 1.2rem; color: var(--text-color); display: flex; align-items: center; gap: 8px;" title="Abrir Autonomia Preditiva">
+          <span>⏳</span> Alertas Preditivos de Autonomia (${alertas.length})
+        </h3>
+        <button type="button" id="fechar-modal-preditivo" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-color);">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow-y: auto;">
+        ${alertas.map(p => `
+          <div data-popup-reservoir="${p.chave}" title="Abrir Autonomia Preditiva" style="background: var(--card-bg, #2a2a2a); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: background 0.2s;">
+            <div style="display: flex; justify-content: space-between; font-weight: 600; color: var(--text-color);">
+              <span>${p.nome} (${p.chave})</span>
+              <span style="color: var(--status-critico-color, #e35d6a);">${p.statusPreditivo}</span>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--muted-color);">${p.mensagemPreditiva}</div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+  modal.hidden = false;
+  modal.style.display = "flex";
+
+  modal.querySelector("#fechar-modal-preditivo").onclick = () => {
+    modal.remove();
+  };
+  modal.onclick = (e) => {
+    if (e.target === modal) modal.remove();
+    const item = e.target.closest("[data-popup-reservoir]");
+    if (item) {
+      const chaveRes = item.dataset.popupReservoir;
+      modal.remove();
+      const seletorFiltro = document.getElementById("seletor-filtro");
+      if (seletorFiltro) {
+        seletorFiltro.value = `reservatorio:${chaveRes}`;
+        seletorFiltro.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      setTimeout(() => {
+        const cardSel = document.querySelector(`.card.is-selected`) || document.getElementById("grid-reservatorios");
+        if (cardSel) cardSel.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+    }
+  };
 }

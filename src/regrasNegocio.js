@@ -29,6 +29,7 @@ function obterConfiguracaoReservatorio(idReservatorio) {
       alertaVazaoEntradaAtivo: config?.alertaVazaoEntradaAtivo !== undefined ? Boolean(config.alertaVazaoEntradaAtivo) : true,
       alertaVazaoSaidaAtivo: config?.alertaVazaoSaidaAtivo !== undefined ? Boolean(config.alertaVazaoSaidaAtivo) : true,
       alertaVazaoMediaAtivo: config?.alertaVazaoMediaAtivo !== undefined ? Boolean(config.alertaVazaoMediaAtivo) : true,
+      possuiMedicaoVazao: config?.possuiMedicaoVazao !== undefined ? Boolean(config.possuiMedicaoVazao) : false,
       capacidadeUtil: config?.capacidadeUtil ?? "",
       emManutencao: Boolean(config?.emManutencao),
       tempoAtencaoMinutos: config?.tempoAtencaoMinutos !== undefined && config?.tempoAtencaoMinutos !== "" && !isNaN(config.tempoAtencaoMinutos) ? Number(config.tempoAtencaoMinutos) : 180,
@@ -271,7 +272,7 @@ function calcularAutonomiaEProjecao(reservatorio, idReservatorio) {
   const niveisRaw = reservatorio?.leituras?.nivel;
   const nivelAtual = obterUltimaLeituraValida(niveisRaw);
   if (nivelAtual === null || nivelAtual === undefined) {
-    return { statusPreditivo: "Normal", tendencia: "Sem Dados", iconeTendencia: "→", minutosAteCritico: null, minutosAteAtencao: null, minutosAteNormal: null };
+    return { statusPreditivo: "Normal", tendencia: "Sem Dados", iconeTendencia: "→", minutosAteCritico: null, minutosAteAtencao: null, minutosAteNormal: null, possuiMedicaoVazao: config.possuiMedicaoVazao, fallbackUsoApenasNivel: false };
   }
 
   // Tendência última hora
@@ -294,12 +295,39 @@ function calcularAutonomiaEProjecao(reservatorio, idReservatorio) {
   }
 
   const vazoes = reservatorio?.leituras?.vazao;
-  const vazaoAtual = obterUltimaLeituraValida(vazoes) ?? 0;
-  const saida = vazaoAtual > 0 ? vazaoAtual : 0; 
-  const entrada = 0;
+  const vazaoAtual = obterUltimaLeituraValida(vazoes);
+  const temDadosVazao = vazaoAtual !== null && vazaoAtual !== undefined && Array.isArray(vazoes) && vazoes.some(v => v !== null && v !== undefined && v !== "");
 
-  const vazaoLiquidaLs = saida - entrada; // Positivo = esvaziando, Negativo = enchendo
-  const vazaoLiquidaM3h = vazaoLiquidaLs * 3.6;
+  let fallbackUsoApenasNivel = false;
+  let mensagemFallback = null;
+
+  let vazaoLiquidaM3h = 0;
+  let vazaoLiquidaLs = 0;
+
+  if (config.possuiMedicaoVazao && temDadosVazao) {
+    const saida = vazaoAtual > 0 ? vazaoAtual : 0; 
+    const entrada = 0;
+    vazaoLiquidaLs = saida - entrada; // Positivo = esvaziando, Negativo = enchendo
+    vazaoLiquidaM3h = vazaoLiquidaLs * 3.6;
+  } else {
+    if (config.possuiMedicaoVazao && !temDadosVazao) {
+      fallbackUsoApenasNivel = true;
+      mensagemFallback = "O cálculo passou a usar temporariamente somente o nível (dados de vazão ausentes).";
+    }
+    // Calculo baseado na variação percentual do nível ao longo do tempo em relação à capacidade útil
+    if (niveisValidos.length >= 2) {
+      const deltaNivelPorHora = niveisValidos[niveisValidos.length - 1] - niveisValidos[niveisValidos.length - 2];
+      const taxaVolumeM3h = capacidade * (Math.abs(deltaNivelPorHora) / 100);
+      if (deltaNivelPorHora > 0) {
+        vazaoLiquidaM3h = -taxaVolumeM3h;
+        vazaoLiquidaLs = -taxaVolumeM3h / 3.6;
+      } else {
+        vazaoLiquidaM3h = taxaVolumeM3h;
+        vazaoLiquidaLs = taxaVolumeM3h / 3.6;
+      }
+    }
+  }
+
   const volumeAtualM3 = capacidade * (nivelAtual / 100);
 
   let statusPreditivo = "Normal";
@@ -347,6 +375,9 @@ function calcularAutonomiaEProjecao(reservatorio, idReservatorio) {
     minutosAteAtencao,
     minutosAteNormal,
     vazaoLiquidaLs,
-    vazaoLiquidaM3h
+    vazaoLiquidaM3h,
+    possuiMedicaoVazao: config.possuiMedicaoVazao,
+    fallbackUsoApenasNivel,
+    mensagemFallback
   };
 }
