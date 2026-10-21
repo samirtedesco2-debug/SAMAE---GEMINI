@@ -423,7 +423,24 @@ function criarPainelInformativoAlarme(
   });
   const cabecalho = document.createElement("div");
   cabecalho.className = "reservoir-alarm-info-heading";
-  cabecalho.append(titulo, fechar);
+  cabecalho.append(titulo);
+
+  if (window.veioDeAlertasCCO) {
+    const btnVoltarAlertas = document.createElement("button");
+    btnVoltarAlertas.type = "button";
+    btnVoltarAlertas.className = "reservoir-alarm-info-close";
+    btnVoltarAlertas.style.background = "var(--accent-color)";
+    btnVoltarAlertas.style.color = "#fff";
+    btnVoltarAlertas.textContent = "← Voltar para Alertas";
+    btnVoltarAlertas.addEventListener("click", () => {
+      window.veioDeAlertasCCO = false;
+      const tabExceccoes = document.getElementById("tab-exceccoes");
+      if (tabExceccoes) tabExceccoes.click();
+    });
+    cabecalho.append(btnVoltarAlertas);
+  }
+  cabecalho.append(fechar);
+
   const identificacao = document.createElement("p");
   identificacao.className = "reservoir-alarm-info-id";
   identificacao.textContent = `${obterIdentificacaoReservatorio(chave)} · ${dataSelecionada}`;
@@ -1889,4 +1906,301 @@ function abrirModalAlertasPreditivos(alertas) {
       }, 150);
     }
   };
+}
+
+function obterReservatoriosComAlertaOuExcecao(banco, dataSelecionada) {
+  const dadosDoDia = banco.historico[dataSelecionada];
+  if (!dadosDoDia || !dadosDoDia.reservatorios) return [];
+
+  const horarios = dadosDoDia.horarios || [];
+  const quantidadeSlots = horarios.length;
+  const baseComparacao = document.getElementById("seletor-base-vazao")?.value || "same-weekday-4";
+  const escopoOperacional = document.getElementById("seletor-escopo-operacional")?.value || "ambos";
+
+  const exceccoesMap = new Map();
+
+  Object.entries(dadosDoDia.reservatorios).forEach(([chave, res]) => {
+    const nome = obterIdentificacaoReservatorio(chave);
+    const config = obterConfiguracaoReservatorio(chave);
+    if (config.emManutencao) return;
+
+    const predicao = calcularAutonomiaEProjecao(res, chave);
+    const leituras = res?.leituras;
+    
+    const nivelAtual = obterUltimaLeituraNivel(leituras?.nivel);
+    const statusNivel = avaliarStatusNivel(leituras?.nivel, chave);
+
+    const vazaoAtual = obterUltimaLeitura(filtrarLeiturasVazaoValidas(leituras?.vazao));
+    const referenciaVazao = obterReferenciaVazao(banco, chave, dataSelecionada, baseComparacao, horarios);
+    
+    let statusVazao = "Normal";
+    let variacaoVazao = null;
+    let direcaoVazao = "estável";
+    if (vazaoAtual !== null && referenciaVazao?.media !== null && referenciaVazao.media > 0) {
+      variacaoVazao = ((vazaoAtual - referenciaVazao.media) / referenciaVazao.media) * 100;
+      const mag = Math.abs(variacaoVazao);
+      direcaoVazao = variacaoVazao < 0 ? "baixa" : variacaoVazao > 0 ? "alta" : "estável";
+      
+      if (config.alertaVazaoMediaAtivo) {
+        if (mag >= config.vazaoMediaCritico) {
+          statusVazao = "Crítico";
+        } else if (mag >= config.vazaoMediaAtencao) {
+          statusVazao = "Atenção";
+        }
+      }
+    }
+
+    const nivelAtivo = escopoOperacional !== "vazao";
+    const vazaoAtiva = escopoOperacional !== "nivel";
+
+    const statusNivelAtivo = nivelAtivo && ["Normal", "Atenção", "Crítico"].includes(statusNivel) ? statusNivel : null;
+    const statusVazaoAtivo = vazaoAtiva && ["Normal", "Atenção", "Crítico"].includes(statusVazao) ? statusVazao : null;
+    
+    const nivelEsperado = nivelAtivo && temLeiturasHistoricasHabituais(banco, chave, "nivel", dataSelecionada);
+    const vazaoEsperada = vazaoAtiva && temLeiturasHistoricasHabituais(banco, chave, "vazao", dataSelecionada);
+    
+    const esperadasPorVariavel = Math.max(quantidadeSlots, leituras?.nivel?.length ?? 0, leituras?.vazao?.length ?? 0);
+    const ausentesNivel = obterLeiturasAusentes({ nivel: leituras?.nivel }, esperadasPorVariavel, horarios, ["nivel"]);
+    const ausentesVazao = obterLeiturasAusentes({ vazao: leituras?.vazao }, esperadasPorVariavel, horarios, ["vazao"]);
+    const ausentesSelecionadas = [
+      ...(nivelEsperado ? ausentesNivel : []),
+      ...(vazaoEsperada ? ausentesVazao : []),
+    ];
+
+    const isCritico = statusNivelAtivo === "Crítico" || statusVazaoAtivo === "Crítico" || predicao?.statusPreditivo === "Crítico";
+    const isAtencao = statusNivelAtivo === "Atenção" || statusVazaoAtivo === "Atenção" || predicao?.statusPreditivo === "Atenção";
+    const isIncompleto = ausentesSelecionadas.length > 0 || statusNivel === "Sem Dados";
+    const isPreditivo = predicao && predicao.statusPreditivo !== "Normal";
+
+    if (isCritico || isAtencao || isIncompleto || isPreditivo) {
+      let severidade = "Normal";
+      let cor = "var(--status-normal-color)";
+      let bg = "var(--status-normal-background)";
+      if (isCritico) {
+        severidade = "Crítico";
+        cor = "var(--status-critical-color)";
+        bg = "var(--status-critical-background)";
+      } else if (isAtencao) {
+        severidade = "Atenção";
+        cor = "#d7a52b";
+        bg = "rgba(215, 165, 43, 0.15)";
+      } else if (isPreditivo) {
+        severidade = predicao.statusPreditivo;
+        cor = predicao.statusPreditivo === "Crítico" ? "var(--status-critical-color)" : "#d7a52b";
+        bg = predicao.statusPreditivo === "Crítico" ? "var(--status-critical-background)" : "rgba(215, 165, 43, 0.15)";
+      } else if (isIncompleto) {
+        severidade = "Incompleto";
+        cor = "#3b82f6";
+        bg = "rgba(59, 130, 246, 0.15)";
+      }
+
+      const mensagens = [];
+      if (statusNivel && statusNivel !== "Normal" && statusNivel !== "Sem Dados") {
+        let detalheNivel = `Nível atual em ${nivelAtual}% (${statusNivel})`;
+        if (nivelAtual !== null) {
+          detalheNivel = `Nível atual em ${nivelAtual}% (${statusNivel}: ${nivelAtual < 50 ? 'abaixo do limite crítico' : 'abaixo do limite de atenção'})`;
+        }
+        mensagens.push(detalheNivel);
+      }
+      if (statusVazao !== "Normal") {
+        const varAbs = variacaoVazao !== null ? Math.abs(variacaoVazao).toFixed(0) + "%" : "";
+        const dirTxt = direcaoVazao === "alta" ? "acima da referência" : direcaoVazao === "baixa" ? "abaixo da referência" : "desviada";
+        mensagens.push(`Vazão atual (${vazaoAtual} L/s) está ${varAbs} ${dirTxt} (${statusVazao})`);
+      }
+      if (isPreditivo) {
+        mensagens.push(predicao.mensagemPreditiva);
+      }
+      if (isIncompleto) {
+        mensagens.push(`${ausentesSelecionadas.length} leitura(s) ausente(s) por falha de telemetria`);
+      }
+
+      exceccoesMap.set(chave, {
+        chave,
+        res,
+        nome,
+        severidade,
+        cor,
+        bg,
+        predicao,
+        statusNivel,
+        statusVazao,
+        ausentes: ausentesSelecionadas,
+        mensagens,
+      });
+    }
+  });
+
+  return Array.from(exceccoesMap.values());
+}
+
+function atualizarBadgeAlarmes() {
+  const banco = window.bancoDeDados;
+  const seletorData = document.getElementById("seletor-data");
+  if (!banco || !banco.historico || !seletorData) return;
+  const dataSelecionada = seletorData.value;
+
+  const exceccoes = obterReservatoriosComAlertaOuExcecao(banco, dataSelecionada);
+  const totalExceccoes = exceccoes.length;
+
+  const badge = document.getElementById("badge-alarmes-ativos");
+  const countTab = document.getElementById("count-tab-exceccoes");
+  const tabExceccoes = document.getElementById("tab-exceccoes");
+  if (badge) {
+    badge.textContent = totalExceccoes;
+    badge.style.display = totalExceccoes > 0 ? "inline-block" : "none";
+  }
+  if (countTab) {
+    countTab.textContent = totalExceccoes;
+  }
+  if (tabExceccoes) {
+    tabExceccoes.classList.toggle("animar-pulso-tab", totalExceccoes > 0);
+  }
+}
+
+function renderizarDashboardExceccoes() {
+  const banco = window.bancoDeDados;
+  const seletorData = document.getElementById("seletor-data");
+  const gridExceccoes = document.getElementById("grid-exceccoes");
+  if (!banco || !banco.historico || !seletorData || !gridExceccoes) return;
+
+  const dataSelecionada = seletorData.value;
+  gridExceccoes.innerHTML = "";
+
+  const exceccoes = obterReservatoriosComAlertaOuExcecao(banco, dataSelecionada);
+  atualizarBadgeAlarmes();
+
+  const totalCount = exceccoes.length;
+  const criticoCount = exceccoes.filter(e => e.severidade === "Crítico").length;
+  const atencaoCount = exceccoes.filter(e => e.severidade === "Atenção").length;
+  const incompletoCount = exceccoes.filter(e => e.severidade === "Incompleto").length;
+
+  const elTotais = document.getElementById("count-filtro-totais");
+  const elCriticos = document.getElementById("count-filtro-criticos");
+  const elAtencao = document.getElementById("count-filtro-atencao");
+  const elIncompletos = document.getElementById("count-filtro-incompletos");
+
+  if (elTotais) elTotais.textContent = totalCount;
+  if (elCriticos) elCriticos.textContent = criticoCount;
+  if (elAtencao) elAtencao.textContent = atencaoCount;
+  if (elIncompletos) elIncompletos.textContent = incompletoCount;
+
+  if (window.ccoFiltroAtual === undefined) {
+    window.ccoFiltroAtual = "TODOS";
+  }
+
+  const botoesFiltro = document.querySelectorAll(".cco-filter-btn");
+  botoesFiltro.forEach(btn => {
+    const filtro = btn.getAttribute("data-filter");
+    btn.classList.toggle("is-active", filtro === window.ccoFiltroAtual);
+    btn.onclick = () => {
+      window.ccoFiltroAtual = filtro;
+      renderizarDashboardExceccoes();
+    };
+  });
+
+  const exceccoesFiltradas = exceccoes.filter(e => {
+    if (window.ccoFiltroAtual === "TODOS") return true;
+    return e.severidade === window.ccoFiltroAtual;
+  });
+
+  if (exceccoesFiltradas.length === 0) {
+    gridExceccoes.innerHTML = `
+      <div style="grid-column: 1 / -1; background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--status-normal-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        <h3 style="margin: 0; color: var(--text-color);">Nenhum Alarme encontrado para o filtro "${window.ccoFiltroAtual}"</h3>
+        <p style="margin: 0; color: var(--muted-color); font-size: 0.9rem;">Selecione outra categoria ou visualize todos os alarmes.</p>
+      </div>`;
+    return;
+  }
+
+  exceccoesFiltradas.sort((a, b) => {
+    const peso = (sev) => sev === "Crítico" ? 1 : sev === "Atenção" ? 2 : sev === "Incompleto" ? 3 : 4;
+    return peso(a.severidade) - peso(b.severidade);
+  });
+
+  exceccoesFiltradas.forEach(({ chave, nome, severidade, cor, bg, mensagens, predicao }) => {
+    const card = document.createElement("article");
+    card.style.cssText = `background: var(--card-bg); border: 1px solid var(--border-color); border-left: 6px solid ${cor}; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;`;
+    card.title = "Clique para abrir detalhes operacionais e preditivos";
+
+    card.addEventListener("mouseenter", () => {
+      card.style.transform = "translateY(-2px)";
+      card.style.boxShadow = "0 6px 16px rgba(0,0,0,0.15)";
+    });
+    card.addEventListener("mouseleave", () => {
+      card.style.transform = "translateY(0)";
+      card.style.boxShadow = "none";
+    });
+
+    card.addEventListener("click", () => {
+      window.veioDeAlertasCCO = true;
+      const tabOp = document.getElementById("tab-operacional");
+      if (tabOp) tabOp.click();
+      const seletorFiltro = document.getElementById("seletor-filtro");
+      if (seletorFiltro) {
+        seletorFiltro.value = `reservatorio:${chave}`;
+        seletorFiltro.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
+
+    card.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 700; font-size: 1rem; color: var(--text-color);">${nome} (${chave})</span>
+        <span style="background: ${bg}; color: ${cor}; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${severidade}</span>
+      </div>
+      <div style="font-size: 0.85rem; color: var(--muted-color); display: flex; flex-direction: column; gap: 4px;">
+        ${mensagens.map(m => `<div>• ${m}</div>`).join("")}
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 8px; font-size: 0.85rem;">
+        <span style="color: var(--muted-color);">Tendência: <strong style="color: var(--text-color);">${predicao ? `${predicao.tendencia} ${predicao.iconeTendencia}` : 'N/A'}</strong></span>
+        <span style="color: var(--accent-color); font-weight: 600;">Ver detalhes →</span>
+      </div>
+    `;
+
+    gridExceccoes.append(card);
+  });
+}
+
+function atualizarHeaderEnxutoInvestigacao(painelOperacional, filtroSelecionado, reservatorios) {
+  let headerEnxuto = document.getElementById("cco-lean-investigation-header");
+  const resumoOperacional = painelOperacional.querySelector(".operational-brief");
+
+  if (filtroSelecionado.startsWith("reservatorio:")) {
+    const chave = filtroSelecionado.slice("reservatorio:".length);
+    const res = reservatorios[chave];
+    const nomeRes = res ? (res.nome || chave) : chave;
+
+    if (resumoOperacional) resumoOperacional.hidden = true;
+
+    if (!headerEnxuto) {
+      headerEnxuto = document.createElement("div");
+      headerEnxuto.id = "cco-lean-investigation-header";
+      headerEnxuto.style.cssText = "background: var(--surface-bg); border: 1px solid var(--border-color); border-left: 5px solid var(--accent-color); border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;";
+      painelOperacional.insertBefore(headerEnxuto, resumoOperacional);
+    }
+    headerEnxuto.hidden = false;
+    headerEnxuto.innerHTML = `
+      <div>
+        <span style="font-size: 0.7rem; color: var(--accent-color); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">Centro de Controle Operacional · Investigação de Alarme</span>
+        <h2 style="font-size: 1.25rem; color: var(--heading-color); margin-top: 4px;">Reservatório: ${nomeRes} (${chave})</h2>
+      </div>
+      <div>
+        <button type="button" id="btn-voltar-mural-alarmes" class="btn-guardar-config" style="padding: 8px 14px; font-size: 0.82rem; background: var(--accent-color); color: #fff; border: none; cursor: pointer; border-radius: 7px;">
+          ← Voltar para Alertas CCO
+        </button>
+      </div>
+    `;
+
+    const btnVoltar = headerEnxuto.querySelector("#btn-voltar-mural-alarmes");
+    if (btnVoltar) {
+      btnVoltar.onclick = () => {
+        window.veioDeAlertasCCO = false;
+        const tabExceccoes = document.getElementById("tab-exceccoes");
+        if (tabExceccoes) tabExceccoes.click();
+      };
+    }
+  } else {
+    if (headerEnxuto) headerEnxuto.hidden = true;
+    if (resumoOperacional) resumoOperacional.hidden = typeof analiseReservatorioAberta !== 'undefined' ? analiseReservatorioAberta : false;
+  }
 }

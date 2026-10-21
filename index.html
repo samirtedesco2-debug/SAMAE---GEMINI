@@ -116,6 +116,16 @@
                 ></path>
               </svg>
             </button>
+            <button
+              type="button"
+              id="btn-mural-alarmes"
+              class="btn-operacional-quadrado"
+              title="Mural de Alertas Ativos (Dashboard de Exceções)"
+              style="position: relative;"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+              <span id="badge-alarmes-ativos" style="position: absolute; top: -4px; right: -4px; background: var(--status-critical-color); color: white; font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 10px; display: none;">0</span>
+            </button>
           </div>
           <div
             class="bulletin-status-badge"
@@ -179,6 +189,17 @@
         tabindex="-1"
       >
         Engenharia (em produção)
+      </button>
+      <button
+        id="tab-exceccoes"
+        class="view-tab"
+        type="button"
+        role="tab"
+        aria-selected="false"
+        aria-controls="painel-exceccoes"
+        tabindex="-1"
+      >
+        🚨 Alertas CCO (<span id="count-tab-exceccoes">0</span>)
       </button>
     </nav>
 
@@ -297,6 +318,47 @@
         aria-labelledby="reservoir-analysis-title"
         hidden
       ></section>
+    </main>
+
+    <!-- Painel do Dashboard de Exceções (Mural de Alertas Ativos) -->
+    <main
+      class="exceptions-view view-panel"
+      id="painel-exceccoes"
+      role="tabpanel"
+      aria-labelledby="tab-exceccoes"
+      hidden
+    >
+      <div class="analysis-intro" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+        <div>
+          <p class="analysis-eyebrow">CENTRO DE CONTROLE OPERACIONAL</p>
+          <h2>Mural de Alertas Ativos</h2>
+          <div class="cco-filter-buttons" style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+            <button type="button" class="cco-filter-btn is-active" data-filter="TODOS" style="padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-inset); color: var(--text-color); font-weight: 600; cursor: pointer;">
+              📊 Totais (<span id="count-filtro-totais">0</span>)
+            </button>
+            <button type="button" class="cco-filter-btn" data-filter="Crítico" style="padding: 6px 14px; border-radius: 6px; border: 1px solid var(--status-critical-color); background: var(--status-critical-background); color: var(--status-critical-color); font-weight: 600; cursor: pointer;">
+              🔴 Críticos (<span id="count-filtro-criticos">0</span>)
+            </button>
+            <button type="button" class="cco-filter-btn" data-filter="Atenção" style="padding: 6px 14px; border-radius: 6px; border: 1px solid var(--status-attention-color); background: var(--status-attention-background); color: var(--status-attention-color); font-weight: 600; cursor: pointer;">
+              🟡 Atenção (<span id="count-filtro-atencao">0</span>)
+            </button>
+            <button type="button" class="cco-filter-btn" data-filter="Incompleto" style="padding: 6px 14px; border-radius: 6px; border: 1px solid #3b82f6; background: rgba(59, 130, 246, 0.15); color: #3b82f6; font-weight: 600; cursor: pointer;">
+              🔵 Incompletos (<span id="count-filtro-incompletos">0</span>)
+            </button>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+          <button type="button" id="btn-voltar-tela-principal" class="btn-guardar-config" style="padding: 8px 14px; font-size: 0.82rem; cursor: pointer;">
+            ← Voltar para Tela Principal
+          </button>
+          <div id="cco-clock-display" style="font-size: 0.85rem; font-weight: 700; color: var(--accent-color); background: var(--surface-inset); padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+            --/--/---- --:--:--
+          </div>
+        </div>
+      </div>
+      <div id="grid-exceccoes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-top: 10px;">
+        <!-- Injetado dinamicamente via ui.js -->
+      </div>
     </main>
 
     <section

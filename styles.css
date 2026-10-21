@@ -2820,3 +2820,46 @@ header h1 {
   padding-top: 14px;
   border-top: 1px dashed var(--border-color);
 }
+
+body.is-cco-fullscreen-active header {
+  display: none !important;
+}
+
+body.is-cco-fullscreen-active .view-tabs {
+  display: none !important;
+}
+
+.cco-filter-btn {
+  transition: all 0.2s ease;
+  opacity: 0.75;
+}
+
+.cco-filter-btn:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.cco-filter-btn.is-active {
+  opacity: 1;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  border-width: 2px !important;
+}
+
+@keyframes pulsarAlertaTab {
+  0% {
+    box-shadow: 0 0 0 0 rgba(227, 93, 106, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(227, 93, 106, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(227, 93, 106, 0);
+  }
+}
+
+.view-tab#tab-exceccoes.animar-pulso-tab {
+  animation: pulsarAlertaTab 1.6s infinite ease-in-out;
+  border-color: var(--status-critical-color);
+  color: var(--status-critical-color);
+  font-weight: 700;
+}

@@ -372,9 +372,11 @@ function inicializarNavegacao() {
     "tab-operacional": document.getElementById("painel-operacional"),
     "tab-analitico": document.getElementById("painel-analitico"),
     "tab-engenharia": document.getElementById("painel-engenharia"),
+    "tab-exceccoes": document.getElementById("painel-exceccoes"),
   };
 
   function ativarAba(abaAtiva) {
+    document.body.classList.toggle("is-cco-fullscreen-active", abaAtiva.id === "tab-exceccoes");
     abas.forEach((aba) => {
       const ativa = aba === abaAtiva;
       aba.classList.toggle("is-active", ativa);
@@ -385,7 +387,37 @@ function inicializarNavegacao() {
 
     if (abaAtiva.id === "tab-analitico") renderizarAnalises();
     if (abaAtiva.id === "tab-engenharia") renderizarEngenharia();
+    if (abaAtiva.id === "tab-exceccoes") {
+      window.veioDeAlertasCCO = false;
+      renderizarDashboardExceccoes();
+    }
   }
+
+  const btnMuralAlarmes = document.getElementById("btn-mural-alarmes");
+  if (btnMuralAlarmes) {
+    btnMuralAlarmes.addEventListener("click", () => {
+      const tabExceccoes = document.getElementById("tab-exceccoes");
+      if (tabExceccoes) tabExceccoes.click();
+    });
+  }
+
+  const btnVoltarPrincipal = document.getElementById("btn-voltar-tela-principal");
+  if (btnVoltarPrincipal) {
+    btnVoltarPrincipal.addEventListener("click", () => {
+      const tabOp = document.getElementById("tab-operacional");
+      if (tabOp) tabOp.click();
+    });
+  }
+
+  function atualizarRelogioCCO() {
+    const relogio = document.getElementById("cco-clock-display");
+    if (relogio) {
+      const agora = new Date();
+      relogio.textContent = agora.toLocaleDateString("pt-BR") + " " + agora.toLocaleTimeString("pt-BR");
+    }
+  }
+  setInterval(atualizarRelogioCCO, 1000);
+  atualizarRelogioCCO();
 
   abas.forEach((aba) => {
     aba.addEventListener("click", () => ativarAba(aba));
@@ -595,6 +627,10 @@ async function renderizarDashboard() {
     return;
   }
 
+  if (typeof atualizarBadgeAlarmes === "function") {
+    atualizarBadgeAlarmes();
+  }
+
   const lblBoletimDataHora = document.getElementById("lbl-boletim-data-hora");
   if (lblBoletimDataHora) {
     lblBoletimDataHora.textContent = dadosDoDia.ultimaAtualizacao || `${dataSelecionada} 05:15`;
@@ -638,6 +674,10 @@ async function renderizarDashboard() {
   const reservatorios = dadosDoDia.reservatorios || {};
   const horarios = dadosDoDia.horarios || [];
   const visaoGeral = filtroSelecionado === "TODOS";
+
+  if (typeof atualizarHeaderEnxutoInvestigacao === "function") {
+    atualizarHeaderEnxutoInvestigacao(painelOperacional, filtroSelecionado, reservatorios);
+  }
   const datas = banco.datasDisponiveis;
   const indiceData = datas.indexOf(dataSelecionada);
   const dataAnterior = indiceData > 0 ? datas[indiceData - 1] : null;
