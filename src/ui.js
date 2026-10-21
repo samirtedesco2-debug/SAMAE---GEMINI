@@ -590,12 +590,12 @@ function criarPainelAutonomiaPreditiva(
   const sinalDiff = Number(diffNivel) > 0 ? "+" : "";
 
   const conf = predAlvo.confiabilidade || "Média";
-  const corConf = conf === "Alta" ? "var(--status-normal-color)" : conf === "Média" ? "#d7a52b" : "var(--status-critico-color)";
+  const corConf = conf === "Alta" ? "var(--status-normal-color)" : conf === "Média" ? "#d7a52b" : "var(--status-critical-color)";
 
   let predicaoAlertHTML = "";
   if (predAlvo && predAlvo.statusPreditivo !== "Normal") {
     predicaoAlertHTML = `
-      <div style="background: rgba(227,93,106,0.1); border: 1px solid var(--status-critico-color, #e35d6a); border-radius: 8px; padding: 12px 16px; font-size: 0.9rem; color: var(--status-critico-color, #e35d6a); display: flex; align-items: center; gap: 8px;">
+      <div style="background: rgba(227,93,106,0.1); border: 1px solid var(--status-critical-color, #e35d6a); border-radius: 8px; padding: 12px 16px; font-size: 0.9rem; color: var(--status-critical-color, #e35d6a); display: flex; align-items: center; gap: 8px;">
         <span>⏳</span> <strong>Autonomia:</strong> ${predAlvo.mensagemPreditiva}
       </div>
     `;
@@ -647,7 +647,7 @@ function criarPainelAutonomiaPreditiva(
         <div style="background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; text-align: center;">
           <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent-color);">${nivelAlvo !== null ? nivelAlvo.toFixed(1) + '%' : 'N/A'}</div>
           <div style="font-size: 0.8rem; color: var(--muted-color); margin-top: 4px;">Nível Atual (Tendência: ${predAlvo?.tendencia || 'Estável'} ${predAlvo?.iconeTendencia || '→'})</div>
-          <div style="font-size: 0.8rem; color: ${Number(diffNivel) >= 0 ? 'var(--status-normal-color)' : 'var(--status-critico-color)'}; margin-top: 6px; font-weight: 600;">Saldo última hora: ${sinalDiff}${diffNivel}%</div>
+          <div style="font-size: 0.8rem; color: ${Number(diffNivel) >= 0 ? 'var(--status-normal-color)' : 'var(--status-critical-color)'}; margin-top: 6px; font-weight: 600;">Saldo última hora: ${sinalDiff}${diffNivel}%</div>
         </div>
       </div>
 
@@ -656,8 +656,9 @@ function criarPainelAutonomiaPreditiva(
         <h4 style="margin: 0; font-size: 1rem; color: var(--text-color);">Balanço Hidráulico (Net Flow)</h4>
         <span style="font-size: 0.85rem; color: var(--muted-color);">Taxa de variação entre entrada e saída</span>
         <div style="background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem;">
-          <div style="display: flex; justify-content: space-between;"><span style="color: var(--muted-color);">Vazão de Saída:</span> <strong style="color: var(--status-critico-color);">${vazaoAlvo} L/s</strong></div>
-          <div style="display: flex; justify-content: space-between;"><span style="color: var(--muted-color);">Vazão Líquida:</span> <strong style="color: ${predAlvo?.vazaoLiquidaLs > 0 ? 'var(--status-critico-color)' : 'var(--status-normal-color)'};">${predAlvo?.vazaoLiquidaLs !== undefined ? (predAlvo.vazaoLiquidaLs > 0 ? '+' : '') + predAlvo.vazaoLiquidaLs.toFixed(1) + ' L/s (~' + predAlvo.vazaoLiquidaM3h.toFixed(0) + ' m³/h)' : '0 L/s'}</strong></div>
+          <div style="display: flex; justify-content: space-between;"><span style="color: var(--muted-color);">Vazão de Entrada:</span> <strong style="color: var(--status-normal-color);">${predAlvo?.vazaoEntradaLs !== undefined && predAlvo?.vazaoEntradaLs !== null ? predAlvo.vazaoEntradaLs.toFixed(1) + ' L/s' : '0.0 L/s'}</strong></div>
+          <div style="display: flex; justify-content: space-between;"><span style="color: var(--muted-color);">Vazão de Saída:</span> <strong style="color: var(--status-critical-color);">${vazaoAlvo} L/s</strong></div>
+          <div style="display: flex; justify-content: space-between;"><span style="color: var(--muted-color);">Vazão Líquida:</span> <strong style="color: ${predAlvo?.vazaoLiquidaLs > 0 ? 'var(--status-critical-color)' : 'var(--status-normal-color)'};">${predAlvo?.vazaoLiquidaLs !== undefined ? (predAlvo.vazaoLiquidaLs > 0 ? '+' : '') + predAlvo.vazaoLiquidaLs.toFixed(1) + ' L/s (~' + predAlvo.vazaoLiquidaM3h.toFixed(0) + ' m³/h)' : '0 L/s'}</strong></div>
         </div>
       </div>
 
@@ -677,8 +678,8 @@ function criarPainelAutonomiaPreditiva(
             <strong style="color: #d7a52b;">${predAlvo?.minutosAteAtencao !== null && predAlvo?.minutosAteAtencao !== undefined ? '~ ' + predAlvo.minutosAteAtencao + ' min' : 'Estável'}</strong>
           </div>
           <div style="background: rgba(227,93,106,0.1); border: 1px solid rgba(227,93,106,0.3); border-radius: 6px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
-            <span style="color: var(--status-critico-color); font-weight: 600;">🔴 Crítico (&lt; ${configAlvo.nivelAlertaTempoCritico}%)</span>
-            <strong style="color: var(--status-critico-color);">${predAlvo?.minutosAteCritico !== null && predAlvo?.minutosAteCritico !== undefined ? '~ ' + predAlvo.minutosAteCritico + ' min' : 'Estável'}</strong>
+            <span style="color: var(--status-critical-color); font-weight: 600;">🔴 Crítico (&lt; ${configAlvo.nivelAlertaTempoCritico}%)</span>
+            <strong style="color: var(--status-critical-color);">${predAlvo?.minutosAteCritico !== null && predAlvo?.minutosAteCritico !== undefined ? '~ ' + predAlvo.minutosAteCritico + ' min' : 'Estável'}</strong>
           </div>
         </div>
       </div>
@@ -1755,8 +1756,8 @@ function renderizarBoletimOperacional({
     if (alertasPreditivos.length > 0) {
       bannerPreditivo.hidden = false;
       bannerPreditivo.innerHTML = `
-        <div title="Abrir Autonomia Preditiva" style="background: var(--surface-bg); border: 1px solid var(--status-critico-color, #e35d6a); border-radius: 8px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px;">
-          <div style="display: flex; align-items: center; justify-content: space-between; font-weight: 600; color: var(--status-critico-color, #e35d6a);">
+        <div title="Abrir Autonomia Preditiva" style="background: var(--surface-bg); border: 1px solid var(--status-critical-color, #e35d6a); border-radius: 8px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; font-weight: 600; color: var(--status-critical-color, #e35d6a);">
             <div style="display: flex; align-items: center; gap: 8px;">
               <span>⏳ Alerta Preditivo de Autonomia (CCO)</span>
               <span style="font-size: 0.8rem; background: rgba(227,93,106,0.15); padding: 2px 8px; border-radius: 12px;">${alertasPreditivos.length} reservatório(s) em risco</span>
@@ -1766,7 +1767,7 @@ function renderizarBoletimOperacional({
           <div style="display: flex; flex-wrap: wrap; gap: 8px;">
             ${alertasPreditivos.map(p => `
               <button type="button" data-detail-reservoir="${p.chave}" title="Abrir Autonomia Preditiva" style="background: var(--card-bg); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; font-size: 0.85rem; color: var(--text-color);">
-                <strong>${p.nome}</strong>: <span style="color: var(--status-critico-color, #e35d6a);">${p.mensagemPreditiva}</span>
+                <strong>${p.nome}</strong>: <span style="color: var(--status-critical-color, #e35d6a);">${p.mensagemPreditiva}</span>
               </button>
             `).join("")}
           </div>
@@ -1857,7 +1858,7 @@ function abrirModalAlertasPreditivos(alertas) {
           <div data-popup-reservoir="${p.chave}" title="Abrir Autonomia Preditiva" style="background: var(--card-bg, #2a2a2a); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: background 0.2s;">
             <div style="display: flex; justify-content: space-between; font-weight: 600; color: var(--text-color);">
               <span>${p.nome} (${p.chave})</span>
-              <span style="color: var(--status-critico-color, #e35d6a);">${p.statusPreditivo}</span>
+              <span style="color: var(--status-critical-color, #e35d6a);">${p.statusPreditivo}</span>
             </div>
             <div style="font-size: 0.85rem; color: var(--muted-color);">${p.mensagemPreditiva}</div>
           </div>

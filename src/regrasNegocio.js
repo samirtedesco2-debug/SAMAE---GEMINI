@@ -7,35 +7,128 @@ const LIMITE_CRITICO_VAZAO_PERCENTUAL = 35;
 
 function obterConfiguracaoReservatorio(idReservatorio) {
   try {
-    const salvos = JSON.parse(localStorage.getItem("samai_reservatorios_config") || "{}");
+    const salvos = JSON.parse(
+      localStorage.getItem("samai_reservatorios_config") || "{}",
+    );
     const arquivoConfig = window.bancoDeDados?.configuracoes || {};
-    const config = salvos[idReservatorio] !== undefined && salvos[idReservatorio] !== null && Object.keys(salvos[idReservatorio]).length > 0
-      ? salvos[idReservatorio]
-      : arquivoConfig[idReservatorio];
+    const config =
+      salvos[idReservatorio] !== undefined &&
+      salvos[idReservatorio] !== null &&
+      Object.keys(salvos[idReservatorio]).length > 0
+        ? salvos[idReservatorio]
+        : arquivoConfig[idReservatorio];
 
     return {
-      nivelAtencao: config?.nivelAtencao !== undefined && config?.nivelAtencao !== "" && !isNaN(config.nivelAtencao) ? Number(config.nivelAtencao) : LIMITE_ATENCAO_NIVEL_PERCENTUAL,
-      nivelCritico: config?.nivelCritico !== undefined && config?.nivelCritico !== "" && !isNaN(config.nivelCritico) ? Number(config.nivelCritico) : LIMITE_CRITICO_NIVEL_PERCENTUAL,
-      nivelMedioAtencao: config?.nivelMedioAtencao !== undefined && config?.nivelMedioAtencao !== "" && !isNaN(config.nivelMedioAtencao) ? Number(config.nivelMedioAtencao) : 15,
-      nivelMedioCritico: config?.nivelMedioCritico !== undefined && config?.nivelMedioCritico !== "" && !isNaN(config.nivelMedioCritico) ? Number(config.nivelMedioCritico) : 25,
-      vazaoEntradaAtencao: config?.vazaoEntradaAtencao !== undefined && config?.vazaoEntradaAtencao !== "" && !isNaN(config.vazaoEntradaAtencao) ? Number(config.vazaoEntradaAtencao) : LIMITE_ATENCAO_VAZAO_PERCENTUAL,
-      vazaoEntradaCritico: config?.vazaoEntradaCritico !== undefined && config?.vazaoEntradaCritico !== "" && !isNaN(config.vazaoEntradaCritico) ? Number(config.vazaoEntradaCritico) : LIMITE_CRITICO_VAZAO_PERCENTUAL,
-      vazaoSaidaAtencao: config?.vazaoSaidaAtencao !== undefined && config?.vazaoSaidaAtencao !== "" && !isNaN(config.vazaoSaidaAtencao) ? Number(config.vazaoSaidaAtencao) : LIMITE_ATENCAO_VAZAO_PERCENTUAL,
-      vazaoSaidaCritico: config?.vazaoSaidaCritico !== undefined && config?.vazaoSaidaCritico !== "" && !isNaN(config.vazaoSaidaCritico) ? Number(config.vazaoSaidaCritico) : LIMITE_CRITICO_VAZAO_PERCENTUAL,
-      vazaoMediaAtencao: config?.vazaoMediaAtencao !== undefined && config?.vazaoMediaAtencao !== "" && !isNaN(config.vazaoMediaAtencao) ? Number(config.vazaoMediaAtencao) : LIMITE_ATENCAO_VAZAO_PERCENTUAL,
-      vazaoMediaCritico: config?.vazaoMediaCritico !== undefined && config?.vazaoMediaCritico !== "" && !isNaN(config.vazaoMediaCritico) ? Number(config.vazaoMediaCritico) : LIMITE_CRITICO_VAZAO_PERCENTUAL,
-      alertaNivelAtivo: config?.alertaNivelAtivo !== undefined ? Boolean(config.alertaNivelAtivo) : true,
-      alertaNivelMedioAtivo: config?.alertaNivelMedioAtivo !== undefined ? Boolean(config.alertaNivelMedioAtivo) : true,
-      alertaVazaoEntradaAtivo: config?.alertaVazaoEntradaAtivo !== undefined ? Boolean(config.alertaVazaoEntradaAtivo) : true,
-      alertaVazaoSaidaAtivo: config?.alertaVazaoSaidaAtivo !== undefined ? Boolean(config.alertaVazaoSaidaAtivo) : true,
-      alertaVazaoMediaAtivo: config?.alertaVazaoMediaAtivo !== undefined ? Boolean(config.alertaVazaoMediaAtivo) : true,
-      possuiMedicaoVazao: config?.possuiMedicaoVazao !== undefined ? Boolean(config.possuiMedicaoVazao) : false,
+      nivelAtencao:
+        config?.nivelAtencao !== undefined &&
+        config?.nivelAtencao !== "" &&
+        !isNaN(config.nivelAtencao)
+          ? Number(config.nivelAtencao)
+          : LIMITE_ATENCAO_NIVEL_PERCENTUAL,
+      nivelCritico:
+        config?.nivelCritico !== undefined &&
+        config?.nivelCritico !== "" &&
+        !isNaN(config.nivelCritico)
+          ? Number(config.nivelCritico)
+          : LIMITE_CRITICO_NIVEL_PERCENTUAL,
+      nivelMedioAtencao:
+        config?.nivelMedioAtencao !== undefined &&
+        config?.nivelMedioAtencao !== "" &&
+        !isNaN(config.nivelMedioAtencao)
+          ? Number(config.nivelMedioAtencao)
+          : 15,
+      nivelMedioCritico:
+        config?.nivelMedioCritico !== undefined &&
+        config?.nivelMedioCritico !== "" &&
+        !isNaN(config.nivelMedioCritico)
+          ? Number(config.nivelMedioCritico)
+          : 25,
+      vazaoEntradaAtencao:
+        config?.vazaoEntradaAtencao !== undefined &&
+        config?.vazaoEntradaAtencao !== "" &&
+        !isNaN(config.vazaoEntradaAtencao)
+          ? Number(config.vazaoEntradaAtencao)
+          : LIMITE_ATENCAO_VAZAO_PERCENTUAL,
+      vazaoEntradaCritico:
+        config?.vazaoEntradaCritico !== undefined &&
+        config?.vazaoEntradaCritico !== "" &&
+        !isNaN(config.vazaoEntradaCritico)
+          ? Number(config.vazaoEntradaCritico)
+          : LIMITE_CRITICO_VAZAO_PERCENTUAL,
+      vazaoSaidaAtencao:
+        config?.vazaoSaidaAtencao !== undefined &&
+        config?.vazaoSaidaAtencao !== "" &&
+        !isNaN(config.vazaoSaidaAtencao)
+          ? Number(config.vazaoSaidaAtencao)
+          : LIMITE_ATENCAO_VAZAO_PERCENTUAL,
+      vazaoSaidaCritico:
+        config?.vazaoSaidaCritico !== undefined &&
+        config?.vazaoSaidaCritico !== "" &&
+        !isNaN(config.vazaoSaidaCritico)
+          ? Number(config.vazaoSaidaCritico)
+          : LIMITE_CRITICO_VAZAO_PERCENTUAL,
+      vazaoMediaAtencao:
+        config?.vazaoMediaAtencao !== undefined &&
+        config?.vazaoMediaAtencao !== "" &&
+        !isNaN(config.vazaoMediaAtencao)
+          ? Number(config.vazaoMediaAtencao)
+          : LIMITE_ATENCAO_VAZAO_PERCENTUAL,
+      vazaoMediaCritico:
+        config?.vazaoMediaCritico !== undefined &&
+        config?.vazaoMediaCritico !== "" &&
+        !isNaN(config.vazaoMediaCritico)
+          ? Number(config.vazaoMediaCritico)
+          : LIMITE_CRITICO_VAZAO_PERCENTUAL,
+      alertaNivelAtivo:
+        config?.alertaNivelAtivo !== undefined
+          ? Boolean(config.alertaNivelAtivo)
+          : true,
+      alertaNivelMedioAtivo:
+        config?.alertaNivelMedioAtivo !== undefined
+          ? Boolean(config.alertaNivelMedioAtivo)
+          : true,
+      alertaVazaoEntradaAtivo:
+        config?.alertaVazaoEntradaAtivo !== undefined
+          ? Boolean(config.alertaVazaoEntradaAtivo)
+          : true,
+      alertaVazaoSaidaAtivo:
+        config?.alertaVazaoSaidaAtivo !== undefined
+          ? Boolean(config.alertaVazaoSaidaAtivo)
+          : true,
+      alertaVazaoMediaAtivo:
+        config?.alertaVazaoMediaAtivo !== undefined
+          ? Boolean(config.alertaVazaoMediaAtivo)
+          : true,
+      possuiMedicaoVazao:
+        config?.possuiMedicaoVazao !== undefined
+          ? Boolean(config.possuiMedicaoVazao)
+          : false,
       capacidadeUtil: config?.capacidadeUtil ?? "",
       emManutencao: Boolean(config?.emManutencao),
-      tempoAtencaoMinutos: config?.tempoAtencaoMinutos !== undefined && config?.tempoAtencaoMinutos !== "" && !isNaN(config.tempoAtencaoMinutos) ? Number(config.tempoAtencaoMinutos) : 180,
-      tempoCriticoMinutos: config?.tempoCriticoMinutos !== undefined && config?.tempoCriticoMinutos !== "" && !isNaN(config.tempoCriticoMinutos) ? Number(config.tempoCriticoMinutos) : 180,
-      nivelAlertaTempoAtencao: config?.nivelAlertaTempoAtencao !== undefined && config?.nivelAlertaTempoAtencao !== "" && !isNaN(config.nivelAlertaTempoAtencao) ? Number(config.nivelAlertaTempoAtencao) : 40,
-      nivelAlertaTempoCritico: config?.nivelAlertaTempoCritico !== undefined && config?.nivelAlertaTempoCritico !== "" && !isNaN(config.nivelAlertaTempoCritico) ? Number(config.nivelAlertaTempoCritico) : 30
+      tempoAtencaoMinutos:
+        config?.tempoAtencaoMinutos !== undefined &&
+        config?.tempoAtencaoMinutos !== "" &&
+        !isNaN(config.tempoAtencaoMinutos)
+          ? Number(config.tempoAtencaoMinutos)
+          : 180,
+      tempoCriticoMinutos:
+        config?.tempoCriticoMinutos !== undefined &&
+        config?.tempoCriticoMinutos !== "" &&
+        !isNaN(config.tempoCriticoMinutos)
+          ? Number(config.tempoCriticoMinutos)
+          : 180,
+      nivelAlertaTempoAtencao:
+        config?.nivelAlertaTempoAtencao !== undefined &&
+        config?.nivelAlertaTempoAtencao !== "" &&
+        !isNaN(config.nivelAlertaTempoAtencao)
+          ? Number(config.nivelAlertaTempoAtencao)
+          : 40,
+      nivelAlertaTempoCritico:
+        config?.nivelAlertaTempoCritico !== undefined &&
+        config?.nivelAlertaTempoCritico !== "" &&
+        !isNaN(config.nivelAlertaTempoCritico)
+          ? Number(config.nivelAlertaTempoCritico)
+          : 30,
     };
   } catch (e) {
     return {
@@ -59,7 +152,7 @@ function obterConfiguracaoReservatorio(idReservatorio) {
       tempoAtencaoMinutos: 180,
       tempoCriticoMinutos: 180,
       nivelAlertaTempoAtencao: 40,
-      nivelAlertaTempoCritico: 30
+      nivelAlertaTempoCritico: 30,
     };
   }
 }
@@ -68,7 +161,12 @@ function obterUltimaLeituraValida(valores) {
   if (!Array.isArray(valores)) return null;
   for (let i = valores.length - 1; i >= 0; i--) {
     const v = valores[i];
-    if (v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v))) {
+    if (
+      v !== null &&
+      v !== undefined &&
+      v !== "" &&
+      Number.isFinite(Number(v))
+    ) {
       return Number(v);
     }
   }
@@ -91,19 +189,32 @@ function avaliarStatusNivel(valores, idReservatorio, referenciaMedia) {
   }
 
   let statusMedio = "Normal";
-  if (config.alertaNivelMedioAtivo && referenciaMedia !== null && referenciaMedia !== undefined && referenciaMedia > 0 && Array.isArray(valores)) {
-    const mediaAtual = calcularMediaValida(filtrarLeiturasNivelValidas(valores));
+  if (
+    config.alertaNivelMedioAtivo &&
+    referenciaMedia !== null &&
+    referenciaMedia !== undefined &&
+    referenciaMedia > 0 &&
+    Array.isArray(valores)
+  ) {
+    const mediaAtual = calcularMediaValida(
+      filtrarLeiturasNivelValidas(valores),
+    );
     if (mediaAtual !== null) {
-      const variacao = ((mediaAtual - referenciaMedia) / Math.abs(referenciaMedia)) * 100;
+      const variacao =
+        ((mediaAtual - referenciaMedia) / Math.abs(referenciaMedia)) * 100;
       const magnitude = Math.abs(variacao);
       if (magnitude > config.nivelMedioCritico + 1e-9) statusMedio = "Crítico";
-      else if (magnitude >= config.nivelMedioAtencao - 1e-9) statusMedio = "Atenção";
+      else if (magnitude >= config.nivelMedioAtencao - 1e-9)
+        statusMedio = "Atenção";
     }
   }
 
-  if (statusInstantaneo === "Crítico" || statusMedio === "Crítico") return "Crítico";
-  if (statusInstantaneo === "Atenção" || statusMedio === "Atenção") return "Atenção";
-  if (statusInstantaneo === "Sem Dados" && statusMedio === "Sem Dados") return "Sem Dados";
+  if (statusInstantaneo === "Crítico" || statusMedio === "Crítico")
+    return "Crítico";
+  if (statusInstantaneo === "Atenção" || statusMedio === "Atenção")
+    return "Atenção";
+  if (statusInstantaneo === "Sem Dados" && statusMedio === "Sem Dados")
+    return "Sem Dados";
   return "Normal";
 }
 
@@ -174,7 +285,12 @@ function resumirLeiturasEstruturadas(valores, horarios) {
   };
 }
 
-function avaliarAlertaVazao(leiturasAtuais, referencia, horarios, idReservatorio) {
+function avaliarAlertaVazao(
+  leiturasAtuais,
+  referencia,
+  horarios,
+  idReservatorio,
+) {
   const config = obterConfiguracaoReservatorio(idReservatorio);
   if (config.emManutencao) {
     return { status: "Manutenção", indicadores: [], referencia };
@@ -241,17 +357,18 @@ function avaliarAlertaVazao(leiturasAtuais, referencia, horarios, idReservatorio
       ativo = config.alertaVazaoEntradaAtivo;
     }
 
-    const status = !ativo || !indicador.classificaAlerta
-      ? "Normal"
-      : magnitude === null
-        ? "Sem comparação"
-        : indicador.somenteAcimaDaReferencia && variacao <= 0
-          ? "Normal"
-          : magnitude > limCritico + 1e-9
-            ? "Crítico"
-            : magnitude >= limAtencao - 1e-9
-              ? "Atenção"
-              : "Normal";
+    const status =
+      !ativo || !indicador.classificaAlerta
+        ? "Normal"
+        : magnitude === null
+          ? "Sem comparação"
+          : indicador.somenteAcimaDaReferencia && variacao <= 0
+            ? "Normal"
+            : magnitude > limCritico + 1e-9
+              ? "Crítico"
+              : magnitude >= limAtencao - 1e-9
+                ? "Atenção"
+                : "Normal";
     return { ...indicador, variacao, direcao, status };
   });
   const indicadoresClassificaveis = indicadores.filter(
@@ -268,10 +385,23 @@ function avaliarAlertaVazao(leiturasAtuais, referencia, horarios, idReservatorio
 function calcularMediaMovel(valores, janela = 3) {
   if (!Array.isArray(valores) || valores.length === 0) return [];
   return valores.map((val, idx, arr) => {
-    if (val === null || val === undefined || val === "" || !Number.isFinite(Number(val))) return null;
+    if (
+      val === null ||
+      val === undefined ||
+      val === "" ||
+      !Number.isFinite(Number(val))
+    )
+      return null;
     const inicio = Math.max(0, idx - janela + 1);
-    const sub = arr.slice(inicio, idx + 1)
-      .filter(v => v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v)))
+    const sub = arr
+      .slice(inicio, idx + 1)
+      .filter(
+        (v) =>
+          v !== null &&
+          v !== undefined &&
+          v !== "" &&
+          Number.isFinite(Number(v)),
+      )
       .map(Number);
     if (sub.length === 0) return Number(val);
     return sub.reduce((a, b) => a + b, 0) / sub.length;
@@ -280,17 +410,30 @@ function calcularMediaMovel(valores, janela = 3) {
 
 function calcularAutonomiaEProjecao(reservatorio, idReservatorio) {
   const config = obterConfiguracaoReservatorio(idReservatorio);
-  const capacidade = config.capacidadeUtil !== "" && !isNaN(config.capacidadeUtil) ? Number(config.capacidadeUtil) : 5000;
-  
+  const capacidade =
+    config.capacidadeUtil !== "" && !isNaN(config.capacidadeUtil)
+      ? Number(config.capacidadeUtil)
+      : 5000;
+
   const niveisRaw = reservatorio?.leituras?.nivel;
   const nivelAtual = obterUltimaLeituraValida(niveisRaw);
   if (nivelAtual === null || nivelAtual === undefined) {
-    return { statusPreditivo: "Normal", tendencia: "Sem Dados", iconeTendencia: "→", minutosAteCritico: null, minutosAteAtencao: null, minutosAteNormal: null, possuiMedicaoVazao: config.possuiMedicaoVazao, fallbackUsoApenasNivel: false, confiabilidade: "Baixa" };
+    return {
+      statusPreditivo: "Normal",
+      tendencia: "Sem Dados",
+      iconeTendencia: "→",
+      minutosAteCritico: null,
+      minutosAteAtencao: null,
+      minutosAteNormal: null,
+      possuiMedicaoVazao: config.possuiMedicaoVazao,
+      fallbackUsoApenasNivel: false,
+      confiabilidade: "Baixa",
+    };
   }
 
-  // Filtro de ruído temporal (Média Móvel) e tendência
-  const niveisSmoothed = calcularMediaMovel(niveisRaw, 3);
-  const niveisValidos = niveisSmoothed.filter(v => v !== null);
+  // TODO: [TEMPO_REAL] - Na transição para dados reais, avaliar ajuste da janela de média móvel (ex: voltar para 3)
+  const niveisSmoothed = calcularMediaMovel(niveisRaw, 1);
+  const niveisValidos = niveisSmoothed.filter((v) => v !== null);
 
   const totalSlots = Array.isArray(niveisRaw) ? niveisRaw.length : 0;
   const validosCount = niveisValidos.length;
@@ -318,7 +461,11 @@ function calcularAutonomiaEProjecao(reservatorio, idReservatorio) {
 
   const vazoes = reservatorio?.leituras?.vazao;
   const vazaoAtual = obterUltimaLeituraValida(vazoes);
-  const temDadosVazao = vazaoAtual !== null && vazaoAtual !== undefined && Array.isArray(vazoes) && vazoes.some(v => v !== null && v !== undefined && v !== "");
+  const temDadosVazao =
+    vazaoAtual !== null &&
+    vazaoAtual !== undefined &&
+    Array.isArray(vazoes) &&
+    vazoes.some((v) => v !== null && v !== undefined && v !== "");
 
   let fallbackUsoApenasNivel = false;
   let mensagemFallback = null;
@@ -327,18 +474,21 @@ function calcularAutonomiaEProjecao(reservatorio, idReservatorio) {
   let vazaoLiquidaLs = 0;
 
   if (config.possuiMedicaoVazao && temDadosVazao) {
-    const saida = vazaoAtual > 0 ? vazaoAtual : 0; 
+    const saida = vazaoAtual > 0 ? vazaoAtual : 0;
     const entrada = 0;
     vazaoLiquidaLs = saida - entrada; // Positivo = esvaziando, Negativo = enchendo
     vazaoLiquidaM3h = vazaoLiquidaLs * 3.6;
   } else {
     if (config.possuiMedicaoVazao && !temDadosVazao) {
       fallbackUsoApenasNivel = true;
-      mensagemFallback = "O cálculo passou a usar temporariamente somente o nível (dados de vazão ausentes).";
+      mensagemFallback =
+        "O cálculo passou a usar temporariamente somente o nível (dados de vazão ausentes).";
     }
     // Calculo baseado na variação percentual do nível ao longo do tempo em relação à capacidade útil
     if (niveisValidos.length >= 2) {
-      const deltaNivelPorHora = niveisValidos[niveisValidos.length - 1] - niveisValidos[niveisValidos.length - 2];
+      const deltaNivelPorHora =
+        niveisValidos[niveisValidos.length - 1] -
+        niveisValidos[niveisValidos.length - 2];
       const taxaVolumeM3h = capacidade * (Math.abs(deltaNivelPorHora) / 100);
       if (deltaNivelPorHora > 0) {
         vazaoLiquidaM3h = -taxaVolumeM3h;
@@ -359,7 +509,7 @@ function calcularAutonomiaEProjecao(reservatorio, idReservatorio) {
   let minutosAteNormal = null;
 
   if (vazaoLiquidaM3h < 0 && nivelAtual < 60) {
-    const volNormal = capacidade * (60 - nivelAtual) / 100;
+    const volNormal = (capacidade * (60 - nivelAtual)) / 100;
     const taxaEnchimentoM3h = Math.abs(vazaoLiquidaM3h);
     if (taxaEnchimentoM3h > 0) {
       const horasNormal = volNormal / taxaEnchimentoM3h;
@@ -370,8 +520,14 @@ function calcularAutonomiaEProjecao(reservatorio, idReservatorio) {
     const volAtencao = capacidade * (config.nivelAlertaTempoAtencao / 100);
     const volCritico = capacidade * (config.nivelAlertaTempoCritico / 100);
 
-    const horasAteAtencao = volumeAtualM3 > volAtencao ? (volumeAtualM3 - volAtencao) / vazaoLiquidaM3h : 0;
-    const horasAteCritico = volumeAtualM3 > volCritico ? (volumeAtualM3 - volCritico) / vazaoLiquidaM3h : 0;
+    const horasAteAtencao =
+      volumeAtualM3 > volAtencao
+        ? (volumeAtualM3 - volAtencao) / vazaoLiquidaM3h
+        : 0;
+    const horasAteCritico =
+      volumeAtualM3 > volCritico
+        ? (volumeAtualM3 - volCritico) / vazaoLiquidaM3h
+        : 0;
 
     minutosAteAtencao = Math.round(horasAteAtencao * 60);
     minutosAteCritico = Math.round(horasAteCritico * 60);
@@ -379,10 +535,16 @@ function calcularAutonomiaEProjecao(reservatorio, idReservatorio) {
     const limiteCriticoMin = config.tempoCriticoMinutos;
     const limiteAtencaoMin = config.tempoAtencaoMinutos;
 
-    if (minutosAteCritico <= limiteCriticoMin && nivelAtual >= config.nivelCritico) {
+    if (
+      minutosAteCritico <= limiteCriticoMin &&
+      nivelAtual >= config.nivelCritico
+    ) {
       statusPreditivo = "Crítico";
       mensagemPreditiva = `Risco de atingir nível crítico (<${config.nivelAlertaTempoCritico}%) em ~${minutosAteCritico} min (${iconeTendencia})`;
-    } else if (minutosAteAtencao <= limiteAtencaoMin && nivelAtual >= config.nivelAtencao) {
+    } else if (
+      minutosAteAtencao <= limiteAtencaoMin &&
+      nivelAtual >= config.nivelAtencao
+    ) {
       statusPreditivo = "Atenção";
       mensagemPreditiva = `Risco de atingir nível atenção (<${config.nivelAlertaTempoAtencao}%) em ~${minutosAteAtencao} min (${iconeTendencia})`;
     }
@@ -400,6 +562,6 @@ function calcularAutonomiaEProjecao(reservatorio, idReservatorio) {
     vazaoLiquidaM3h,
     possuiMedicaoVazao: config.possuiMedicaoVazao,
     fallbackUsoApenasNivel,
-    mensagemFallback
+    mensagemFallback,
   };
 }
