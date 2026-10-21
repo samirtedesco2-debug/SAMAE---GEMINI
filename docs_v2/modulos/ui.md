@@ -9,3 +9,8 @@ O arquivo `src/ui.js` é responsável por renderizar a interface de usuário (DO
   - Card 3: Projeção & Autonomia (Horizontes de alerta baseados em tempo).
 - Renderização de cartões de reservatórios na visão operacional.
 - Tabelas e paginação na visão de engenharia e formulários na visão de parametrização.
+- **Mural de Alertas CCO (`renderizarDashboardExceccoes` e `obterReservatoriosComAlertaOuExcecao`)**:
+  - Visão dedicada (fullscreen sem header principal) com relógio digital em tempo real.
+  - Filtros interativos por categoria (Totais, Críticos, Atenção, Incompletos) com contadores dinâmicos.
+  - Avaliação de nível e vazão baseada no momento atual (última leitura telemetrada).
+  - Header enxuto de investigação (`atualizarHeaderEnxutoInvestigacao`) para visualização focada e botão de retorno rápido.

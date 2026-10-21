@@ -64,3 +64,12 @@ HISTORICO DE MODIFICACOES - MONITORAMENTO DOS RESERVATORIOS
 - Leituras numericas fora das faixas de referencia permanecem visiveis e sao
   sinalizadas para revisao; esta visao nao aplica novos limites operacionais.
 - Incluidos resumos de cobertura, contagens de sinalizacoes e dias sem registro.
+
+7. MURAL DE ALERTAS CCO (VISÃO DEDICADA EM TEMPO REAL)
+
+- Implementada visão dedicada de Alertas CCO (tipo "nova janela", ocultando o header principal e as abas de navegação).
+- Adicionado relógio digital atualizado em tempo real no canto superior direito do painel de alarmes.
+- Adicionados botões de filtro interativos com contadores por categoria (Totais, Críticos, Atenção e Incompletos).
+- Ajustados os cálculos de nível e vazão do mural para se basearem estritamente no momento atual (última leitura telemetrada registrada), mantendo as abas de Análise e Engenharia inalteradas.
+- Enriquecidos os cards com explicações detalhadas de causa (desvios percentuais, direção da vazão e status dos limites).
+- Criado um header enxuto e focado de "Investigação de Alarme CCO" no painel operacional ao selecionar um reservatório a partir do mural, ocultando o boletim operacional padrão e oferecendo botão de retorno rápido "← Voltar para Alertas CCO".
