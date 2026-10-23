@@ -4,10 +4,13 @@ O arquivo `src/app.js` atua como o **controlador principal (orquestrador)** da a
 
 ## Responsabilidades
 - Inicialização da aplicação ao carregar a página e verificação de query parameters (`?view=exceccoes`).
-- **Arquitetura Reativa de 2 Telas ("Mente Unida")**:
-  - Instanciação do canal global `BroadcastChannel('samae_cco_link')`.
-  - Sincronização reativa instantânea de ações de reconhecimento de alarmes (`ACK_ALARM`, `REVOKE_ACK`) entre janelas operacionais e mural de exceções.
-  - Suporte a disparo em janela separada via `window.open('?view=exceccoes')` ao acionar modo CCO.
+- **Integração com Módulo CCO Sync (`src/ccoSync.js`)**:
+  - Delegação da inicialização do `BroadcastChannel('samae_cco_link')` e do modo CCO/Fullscreen.
+  - Gerenciamento de Janela Singleton (`ccoMuralWindow`) para o Mural de Alarmes CCO.
+- **Central de Notificações**:
+  - Gerenciamento do popover interativo em `btn-notificacoes` para exibição de logs de ocorrências e ações recentes.
+- **Tratamento Global de Erros**:
+  - Ouvinte global `unhandledrejection` para interceptação e registro de exceções assíncronas não tratadas.
 - **Escala para Telas Grandes (TV 55")**:
   - Injeção da propriedade `data-view-scale="large-tv"` no `body` ao entrar em tela cheia/modo CCO para dimensionamento proporcional de fontes, cards e elementos.
 - **Central de Exportação Manual Multiformato**:
@@ -17,7 +20,7 @@ O arquivo `src/app.js` atua como o **controlador principal (orquestrador)** da a
 - **Parametrização Bilateral e Master Sidebar**:
   - Filtros em cascata com busca em tempo real (`oninput`) para TAGs e dropdown de Grupos Hidráulicos.
   - Gerenciamento bilateral independente para Formulário I (Plantão) e Formulário II (Log de Erros e SLA Técnico).
-- Gerenciamento de eventos de navegação entre abas (Visão Operacional, Analítica, Engenharia, Configurações, Alertas CCO).
+- Gerenciamento de eventos de navegação entre abas (Visão Operacional, Analítica, Engenharia, Configurações, Mural de Alarmes CCO).
 - Sincronização de seletores de grupo, reservatório e data.
 - Inicialização do sistema de alarmes CCO e atualização periódica.
 

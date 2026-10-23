@@ -51,24 +51,40 @@ async function carregarMesPorData(dataStr) {
 document.addEventListener("DOMContentLoaded", () => {
   inicializarBancoAssincrono();
 
-  if (!window.ccoChannel) {
-    window.ccoChannel = new BroadcastChannel('samae_cco_link');
-    window.ccoReconhecidos = window.ccoReconhecidos || new Map();
-    window.ccoChannel.onmessage = (event) => {
-      const { type, chave, severidade } = event.data || {};
-      if (type === 'ACK_ALARM') {
-        window.ccoReconhecidos.set(chave, severidade);
-        if (typeof renderizarDashboardExceccoes === 'function') {
-          renderizarDashboardExceccoes();
-        }
-      } else if (type === 'REVOKE_ACK') {
-        window.ccoReconhecidos.delete(chave);
-        if (typeof renderizarDashboardExceccoes === 'function') {
-          renderizarDashboardExceccoes();
-        }
-      }
-    };
+  if (window.CcoSync) {
+    window.CcoSync.inicializarCanal();
+    window.CcoSync.inicializarModoCCO();
   }
+
+  // Central de Notificações Popover
+  const btnNotificacoes = document.getElementById("btn-notificacoes");
+  const popoverNotificacoes = document.getElementById("notificacoes-popover");
+  const btnFecharNotificacoes = document.getElementById("btn-fechar-notificacoes");
+
+  if (btnNotificacoes && popoverNotificacoes) {
+    btnNotificacoes.addEventListener("click", (e) => {
+      e.stopPropagation();
+      popoverNotificacoes.hidden = !popoverNotificacoes.hidden;
+      atualizarListaNotificacoes();
+    });
+  }
+
+  if (btnFecharNotificacoes && popoverNotificacoes) {
+    btnFecharNotificacoes.addEventListener("click", () => {
+      popoverNotificacoes.hidden = true;
+    });
+  }
+
+  document.addEventListener("click", (e) => {
+    if (popoverNotificacoes && !popoverNotificacoes.hidden && !popoverNotificacoes.contains(e.target) && e.target !== btnNotificacoes) {
+      popoverNotificacoes.hidden = true;
+    }
+  });
+
+  // Tratamento Global de Erros Assíncronos
+  window.addEventListener("unhandledrejection", (event) => {
+    console.warn("Aviso assíncrono capturado:", event.reason);
+  });
 
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('view') === 'exceccoes') {
@@ -78,6 +94,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 400);
   }
 });
+
+function atualizarListaNotificacoes() {
+  const lista = document.getElementById("notificacoes-lista");
+  if (!lista) return;
+
+  const logs = window.samaeIncidentsLog || [];
+  if (logs.length === 0) {
+    lista.innerHTML = `<p class="notificacao-vazia">Nenhuma notificação recente no sistema.</p>`;
+    return;
+  }
+
+  lista.innerHTML = logs.slice(-10).reverse().map(log => `
+    <div class="notificacao-item">
+      <span class="notificacao-item-time">${new Date(log.timestamp).toLocaleTimeString("pt-BR")}</span>
+      <strong>${log.nome || log.chave}</strong>
+      <span>Ação: ${log.acao} (${log.severidade || 'Info'})</span>
+    </div>
+  `).join("");
+}
 
 function inicializarTema() {
   const botaoTema = document.getElementById("theme-toggle");
@@ -523,17 +558,19 @@ function inicializarNavegacao() {
     }
   }
 
-  const btnMuralAlarmes = document.getElementById("btn-mural-alarmes");
-  if (btnMuralAlarmes) {
-    btnMuralAlarmes.addEventListener("click", () => {
-      const tabExceccoes = document.getElementById("tab-exceccoes");
-      if (tabExceccoes) tabExceccoes.click();
+  const btnNotificacoes = document.getElementById("btn-notificacoes");
+  if (btnNotificacoes) {
+    btnNotificacoes.addEventListener("click", () => {
+      // Reservado para Central de Notificações / futuras atualizações CCO
     });
   }
 
   const btnVoltarPrincipal = document.getElementById("btn-voltar-tela-principal");
   if (btnVoltarPrincipal) {
     btnVoltarPrincipal.addEventListener("click", () => {
+      try {
+        window.close();
+      } catch (e) {}
       const tabOp = document.getElementById("tab-operacional");
       if (tabOp) tabOp.click();
     });
@@ -550,7 +587,21 @@ function inicializarNavegacao() {
   atualizarRelogioCCO();
 
   abas.forEach((aba) => {
-    aba.addEventListener("click", () => ativarAba(aba));
+    aba.addEventListener("click", (e) => {
+      if (aba.id === "tab-exceccoes") {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('view') !== 'exceccoes') {
+          e.preventDefault();
+          if (window.ccoMuralWindow && !window.ccoMuralWindow.closed) {
+            window.ccoMuralWindow.focus();
+          } else {
+            window.ccoMuralWindow = window.open('?view=exceccoes', 'ccoMuralWindow', 'width=1200,height=800');
+          }
+          return;
+        }
+      }
+      ativarAba(aba);
+    });
     aba.addEventListener("keydown", (e) => {
       const index = abas.indexOf(aba);
       let proximoIndex;
@@ -1702,60 +1753,6 @@ function obterLeiturasAusentes(
   });
   return ausentes;
 }
-
-document.addEventListener("DOMContentLoaded", () => {
-  const btnCCO = document.getElementById("btn-modo-cco");
-
-  // Definição dos dois ícones em formato profissional de traço com namespace SVG correto
-  const iconeCCO = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 5H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z"/><path d="M12 18v4"/><path d="M8 22h8"/></svg>`;
-  const iconePadrao = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>`;
-
-  if (btnCCO) {
-    btnCCO.addEventListener("click", (e) => {
-      // Se pressionado com Shift ou Ctrl, abre em janela separada (Mente Unida / 2 telas)
-      if (e.shiftKey || e.ctrlKey) {
-        window.open('?view=exceccoes', '_blank', 'width=1200,height=800');
-        return;
-      }
-
-      document.body.classList.toggle("modo-cco-ativo");
-      const isLargeTV = document.body.classList.contains("modo-cco-ativo");
-      document.body.dataset.viewScale = isLargeTV ? "large-tv" : "";
-
-      if (isLargeTV) {
-        btnCCO.innerHTML = iconePadrao;
-        btnCCO.title = "Modo Padrão";
-        btnCCO.style.borderColor = "var(--accent-color)";
-        
-        if (document.documentElement.requestFullscreen) {
-          document.documentElement.requestFullscreen().catch(() => {});
-        }
-        const tabExceccoes = document.getElementById("tab-exceccoes");
-        if (tabExceccoes) tabExceccoes.click();
-      } else {
-        btnCCO.innerHTML = iconeCCO;
-        btnCCO.title = "Modo CCO";
-        btnCCO.style.borderColor = "var(--border-color)";
-        
-        if (document.exitFullscreen && document.fullscreenElement) {
-          document.exitFullscreen().catch(() => {});
-        }
-        const tabOp = document.getElementById("tab-operacional");
-        if (tabOp) tabOp.click();
-      }
-    });
-
-    document.addEventListener("fullscreenchange", () => {
-      if (!document.fullscreenElement) {
-        document.body.classList.remove("modo-cco-ativo");
-        document.body.dataset.viewScale = "";
-        btnCCO.innerHTML = iconeCCO;
-        btnCCO.style.borderColor = "var(--border-color)";
-        btnCCO.title = "Modo CCO";
-      }
-    });
-  }
-});
 
 let reservatorioConfigSelecionado = null;
 

@@ -2186,7 +2186,7 @@ function renderizarDashboardExceccoes() {
 
     gridExceccoes.append(card);
 
-    const btnFooterAck = card.querySelector(`#${btnFooterId}`);
+    const btnFooterAck = card.querySelector("button");
     if (btnFooterAck) {
       btnFooterAck.addEventListener("click", (e) => {
         e.stopPropagation();

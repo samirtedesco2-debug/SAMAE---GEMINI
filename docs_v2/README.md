@@ -13,6 +13,7 @@ Esta documentação foi estruturada em pastas e subpastas organizadas por áreas
 
 2. **Módulos do Sistema (`modulos/`)**:
    - [Orquestrador Principal (`app.js`)](./modulos/app.md)
+   - [Sincronização e Janela CCO (`ccoSync.js`)](./modulos/cco-sync.md)
    - [Interface de Usuário (`ui.js`)](./modulos/ui.md)
    - [Regras de Negócio & Motor Preditivo (`regrasNegocio.js`)](./modulos/regras-negocio.md)
    - [Gráficos & Visualização (`graficos.js`)](./modulos/graficos.md)
