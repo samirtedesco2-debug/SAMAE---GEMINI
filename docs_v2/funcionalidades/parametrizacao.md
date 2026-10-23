@@ -1,6 +1,6 @@
 # Parametrização e Regras de Alarme
 
-O módulo de parametrização permite configurar parâmetros operacionais granulares para cada reservatório do sistema.
+O módulo de parametrização permite configurar parâmetros operacionais granulares para cada reservatório e definições globais bilaterais do sistema.
 
 ## Parâmetros Disponíveis por Reservatório
 
@@ -16,3 +16,17 @@ O módulo de parametrização permite configurar parâmetros operacionais granul
 5. **Horizontes de Tempo (Minutos)**:
    - Limiar de tempo para alerta de atenção e crítico.
 6. **Modo Manutenção (`emManutencao`)**: Coloca o reservatório em estado de manutenção, suspendendo alertas operacionais.
+
+## Parametrização Bilateral Independente (Formulário I e Formulário II)
+
+- **FORMULÁRIO I (Resumo de Passagem de Plantão)**:
+  - E-mails de destino para plantão.
+  - Grade dinâmica em formato de Array de Timers para múltiplos disparos diários agendados.
+  - Caminho físico de diretório local.
+- **FORMULÁRIO II (Log de Erros e SLA Técnico)**:
+  - E-mails analíticos da manutenção.
+  - Seletores cronológicos de dia da semana e horário.
+  - Tempo limite de reação (SLA - padrão 15 min).
+  - Tolerância de ruído (%).
+  - Caminho de disco rígido alternativo (HDD).
+

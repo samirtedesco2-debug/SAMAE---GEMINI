@@ -2,6 +2,7 @@ import pandas as pd
 import json
 import os
 import re
+import csv
 from datetime import datetime, timedelta
 
 NOME_PASTA = "Monitoramento Diário dos Reservatórios"
@@ -12,6 +13,38 @@ RAIZ_PROJETO = os.path.dirname(DIRETORIO_ATUAL) if os.path.basename(DIRETORIO_AT
 
 PASTA_DADOS = os.path.join(RAIZ_PROJETO, "dados_historicos")
 CAMINHO_INDICE = os.path.join(RAIZ_PROJETO, "indice_datas.json")
+
+def arquivar_relatorio_incidentes_cron(incidentes_lista=None):
+    if incidentes_lista is None:
+        incidentes_lista = []
+    
+    agora = datetime.now()
+    ano = agora.strftime("%Y")
+    mes = agora.strftime("%m")
+    
+    pasta_destino = os.path.join(RAIZ_PROJETO, "relatorios_emitidos", "incidentes", ano, mes)
+    os.makedirs(pasta_destino, exist_ok=True)
+    
+    timestamp_str = agora.strftime("%Y-%m-%d_%H-%M")
+    nome_arquivo = f"relatorio_SLA_{timestamp_str}.csv"
+    caminho_arquivo = os.path.join(pasta_destino, nome_arquivo)
+    
+    try:
+        with open(caminho_arquivo, mode="w", newline="", encoding="utf-8-sig") as f:
+            writer = csv.writer(f, delimiter=";")
+            writer.writerow(["Timestamp", "Chave", "Nome", "Severidade", "Acao", "TempoRespostaMs"])
+            for inc in incidentes_lista:
+                writer.writerow([
+                    inc.get("timestamp", ""),
+                    inc.get("chave", ""),
+                    inc.get("nome", ""),
+                    inc.get("severidade", ""),
+                    inc.get("acao", ""),
+                    inc.get("tempoRespostaMs", "")
+                ])
+        print(f"📊 Relatório SLA de incidentes arquivado em: {caminho_arquivo}")
+    except Exception as e:
+        print(f"⚠️ Erro ao arquivar relatório de incidentes: {e}")
 
 def encontrar_pasta_raiz():
     for item in os.listdir(RAIZ_PROJETO):
@@ -76,6 +109,15 @@ def processar_pasta_planilhas():
 
     print(f"🔍 Processando {len(arquivos_excel)} planilha(s)...\n")
 
+    caminho_config = os.path.join(PASTA_DADOS, "config_reservatorios.json")
+    config_reservatorios = {}
+    if os.path.exists(caminho_config):
+        try:
+            with open(caminho_config, "r", encoding="utf-8") as f:
+                config_reservatorios = json.load(f)
+        except Exception as e:
+            print(f"⚠️ Erro ao carregar {caminho_config}: {e}")
+
     datas_encontradas = set()
     
     for caminho_excel in arquivos_excel:
@@ -126,11 +168,15 @@ def processar_pasta_planilhas():
             vazao_max = max(vazoes_validas) if vazoes_validas else None
             vazao_media = round(sum(vazoes_validas)/len(vazoes_validas), 1) if vazoes_validas else None
 
+            cfg_res = config_reservatorios.get(nome, {})
+            limite_critico = float(cfg_res.get("nivelCritico", 40))
+            limite_atencao = float(cfg_res.get("nivelAtencao", 60))
+
             status = "Normal"
             if nivel_atual is not None:
-                if nivel_atual < 40:
+                if nivel_atual < limite_critico:
                     status = "Crítico"
-                elif nivel_atual < 60:
+                elif nivel_atual < limite_atencao:
                     status = "Atenção"
             else:
                 status = "Sem Dados"

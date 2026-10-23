@@ -1488,7 +1488,7 @@ function formatarVariacaoAnalitica(variacao) {
 function obterClasseStatus(status) {
   if (status === "Atenção") return "status-atencao";
   if (status === "Crítico") return "status-critico";
-  if (status === "Sem Dados") return "status-sem-dados";
+  if (status === "Sem Dados" || status === "Inconsistente") return "status-sem-dados";
   if (status === "Sem comparação") return "status-sem-comparacao";
   if (status === "Manutenção") return "status-normal";
   return "status-normal";
@@ -1695,7 +1695,7 @@ function renderizarBoletimOperacional({
         : null;
     const vazaoSemComparacao =
       vazaoEsperada && registro.alertaVazao?.status === "Sem comparação";
-    const nivelSemDados = nivelAtivo && registro.statusNivel === "Sem Dados";
+    const nivelSemDados = nivelAtivo && (registro.statusNivel === "Sem Dados" || registro.statusNivel === "Inconsistente");
     const statusAtivos = [statusNivelAtivo, statusVazaoAtivo].filter(Boolean);
     if (statusAtivos.includes("Crítico")) contagens.critico.push(registro);
     else if (statusAtivos.includes("Atenção")) contagens.atencao.push(registro);
@@ -1969,7 +1969,7 @@ function obterReservatoriosComAlertaOuExcecao(banco, dataSelecionada) {
 
     const isCritico = statusNivelAtivo === "Crítico" || statusVazaoAtivo === "Crítico" || predicao?.statusPreditivo === "Crítico";
     const isAtencao = statusNivelAtivo === "Atenção" || statusVazaoAtivo === "Atenção" || predicao?.statusPreditivo === "Atenção";
-    const isIncompleto = ausentesSelecionadas.length > 0 || statusNivel === "Sem Dados";
+    const isIncompleto = ausentesSelecionadas.length > 0 || statusNivel === "Sem Dados" || statusNivel === "Inconsistente";
     const isPreditivo = predicao && predicao.statusPreditivo !== "Normal";
 
     if (isCritico || isAtencao || isIncompleto || isPreditivo) {
@@ -1995,12 +1995,15 @@ function obterReservatoriosComAlertaOuExcecao(banco, dataSelecionada) {
       }
 
       const mensagens = [];
-      if (statusNivel && statusNivel !== "Normal" && statusNivel !== "Sem Dados") {
+      if (statusNivel && statusNivel !== "Normal" && statusNivel !== "Sem Dados" && statusNivel !== "Inconsistente") {
         let detalheNivel = `Nível atual em ${nivelAtual}% (${statusNivel})`;
         if (nivelAtual !== null) {
           detalheNivel = `Nível atual em ${nivelAtual}% (${statusNivel}: ${nivelAtual < 50 ? 'abaixo do limite crítico' : 'abaixo do limite de atenção'})`;
         }
         mensagens.push(detalheNivel);
+      }
+      if (statusNivel === "Inconsistente") {
+        mensagens.push("Leituras de nível inconsistentes ou fora da faixa válida (0-110%)");
       }
       if (statusVazao !== "Normal") {
         const varAbs = variacaoVazao !== null ? Math.abs(variacaoVazao).toFixed(0) + "%" : "";
@@ -2010,7 +2013,7 @@ function obterReservatoriosComAlertaOuExcecao(banco, dataSelecionada) {
       if (isPreditivo) {
         mensagens.push(predicao.mensagemPreditiva);
       }
-      if (isIncompleto) {
+      if (isIncompleto && ausentesSelecionadas.length > 0) {
         mensagens.push(`${ausentesSelecionadas.length} leitura(s) ausente(s) por falha de telemetria`);
       }
 
@@ -2063,16 +2066,34 @@ function renderizarDashboardExceccoes() {
   const gridExceccoes = document.getElementById("grid-exceccoes");
   if (!banco || !banco.historico || !seletorData || !gridExceccoes) return;
 
+  window.ccoReconhecidos = window.ccoReconhecidos || new Map();
   const dataSelecionada = seletorData.value;
   gridExceccoes.innerHTML = "";
 
   const exceccoes = obterReservatoriosComAlertaOuExcecao(banco, dataSelecionada);
   atualizarBadgeAlarmes();
 
-  const totalCount = exceccoes.length;
-  const criticoCount = exceccoes.filter(e => e.severidade === "Crítico").length;
-  const atencaoCount = exceccoes.filter(e => e.severidade === "Atenção").length;
-  const incompletoCount = exceccoes.filter(e => e.severidade === "Incompleto").length;
+  // Auto-reset & Auto-debugging
+  const chavesAtuais = new Set(exceccoes.map(e => e.chave));
+  window.ccoReconhecidos.forEach((sevAntiga, chave) => {
+    if (!chavesAtuais.has(chave)) {
+      window.ccoReconhecidos.delete(chave);
+    } else {
+      const exc = exceccoes.find(e => e.chave === chave);
+      if (exc) {
+        const pesoSev = (s) => s === "Crítico" ? 1 : s === "Atenção" ? 2 : 3;
+        if (pesoSev(exc.severidade) < pesoSev(sevAntiga)) {
+          window.ccoReconhecidos.delete(chave);
+        }
+      }
+    }
+  });
+
+  const exceccoesAtivas = exceccoes.filter(e => !window.ccoReconhecidos.has(e.chave));
+  const totalCount = exceccoesAtivas.length;
+  const criticoCount = exceccoesAtivas.filter(e => e.severidade === "Crítico").length;
+  const atencaoCount = exceccoesAtivas.filter(e => e.severidade === "Atenção").length;
+  const incompletoCount = exceccoesAtivas.filter(e => e.severidade === "Incompleto").length;
 
   const elTotais = document.getElementById("count-filtro-totais");
   const elCriticos = document.getElementById("count-filtro-criticos");
@@ -2120,7 +2141,10 @@ function renderizarDashboardExceccoes() {
 
   exceccoesFiltradas.forEach(({ chave, nome, severidade, cor, bg, mensagens, predicao }) => {
     const card = document.createElement("article");
-    card.style.cssText = `background: var(--card-bg); border: 1px solid var(--border-color); border-left: 6px solid ${cor}; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;`;
+    const reconhecido = window.ccoReconhecidos.has(chave);
+
+    card.className = reconhecido ? "" : "animar-pulso";
+    card.style.cssText = `background: var(--card-bg); border: 1px solid var(--border-color); border-left: 6px solid ${cor}; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s; opacity: ${reconhecido ? '0.5' : '1'};`;
     card.title = "Clique para abrir detalhes operacionais e preditivos";
 
     card.addEventListener("mouseenter", () => {
@@ -2143,6 +2167,7 @@ function renderizarDashboardExceccoes() {
       }
     });
 
+    const btnFooterId = `btn-footer-ack-${chave}`;
     card.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <span style="font-weight: 700; font-size: 1rem; color: var(--text-color);">${nome} (${chave})</span>
@@ -2151,13 +2176,54 @@ function renderizarDashboardExceccoes() {
       <div style="font-size: 0.85rem; color: var(--muted-color); display: flex; flex-direction: column; gap: 4px;">
         ${mensagens.map(m => `<div>• ${m}</div>`).join("")}
       </div>
-      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 8px; font-size: 0.85rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 12px; font-size: 0.85rem; flex-wrap: wrap; gap: 8px;">
         <span style="color: var(--muted-color);">Tendência: <strong style="color: var(--text-color);">${predicao ? `${predicao.tendencia} ${predicao.iconeTendencia}` : 'N/A'}</strong></span>
-        <span style="color: var(--accent-color); font-weight: 600;">Ver detalhes →</span>
+        <button type="button" id="${btnFooterId}" style="padding: 6px 14px; background: ${reconhecido ? 'rgba(115,191,105,0.2)' : 'var(--accent-color)'}; color: ${reconhecido ? 'var(--status-normal-color)' : '#fff'}; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+          ${reconhecido ? '✓ Alarme Reconhecido' : '🚨 Reconhecer Alarme'}
+        </button>
       </div>
     `;
 
     gridExceccoes.append(card);
+
+    const btnFooterAck = card.querySelector(`#${btnFooterId}`);
+    if (btnFooterAck) {
+      btnFooterAck.addEventListener("click", (e) => {
+        e.stopPropagation();
+        window.samaeIncidentsLog = window.samaeIncidentsLog || [];
+        const tempoInicio = window.ccoAlarmTriggerTime?.[chave] || Date.now();
+        const tempoRespostaMs = Date.now() - tempoInicio;
+
+        if (reconhecido) {
+          window.ccoReconhecidos.delete(chave);
+          if (window.ccoChannel) {
+            window.ccoChannel.postMessage({ type: 'REVOKE_ACK', chave });
+          }
+          window.samaeIncidentsLog.push({
+            timestamp: new Date().toISOString(),
+            chave,
+            nome,
+            severidade,
+            acao: 'Revogado',
+            tempoRespostaMs
+          });
+        } else {
+          window.ccoReconhecidos.set(chave, severidade);
+          if (window.ccoChannel) {
+            window.ccoChannel.postMessage({ type: 'ACK_ALARM', chave, severidade });
+          }
+          window.samaeIncidentsLog.push({
+            timestamp: new Date().toISOString(),
+            chave,
+            nome,
+            severidade,
+            acao: 'Reconhecido',
+            tempoRespostaMs
+          });
+        }
+        renderizarDashboardExceccoes();
+      });
+    }
   });
 }
 

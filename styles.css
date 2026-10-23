@@ -2863,3 +2863,13 @@ body.is-cco-fullscreen-active .view-tabs {
   color: var(--status-critical-color);
   font-weight: 700;
 }
+
+body[data-view-scale="large-tv"] {
+  font-size: 1.35rem;
+}
+
+body[data-view-scale="large-tv"] .card,
+body[data-view-scale="large-tv"] article,
+body[data-view-scale="large-tv"] .kpi-box {
+  zoom: 1.15;
+}

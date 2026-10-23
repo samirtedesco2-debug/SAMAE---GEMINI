@@ -173,9 +173,114 @@ function obterUltimaLeituraValida(valores) {
   return null;
 }
 
+function auditarLeiturasNivel(valores) {
+  if (!Array.isArray(valores) || valores.length === 0) {
+    return { status: "Inconsistente", motivo: "Sem leituras" };
+  }
+
+  // c) TIMEOUT (QUEDA DE LINK / FALHA DE COMUNICAÇÃO): Varre de trás para frente.
+  // Se houver mais de 2 campos seguidos em branco (planilha), decrete "Falha de Comunicação".
+  let camposBrancosConsecutivos = 0;
+  for (let i = valores.length - 1; i >= 0; i--) {
+    const v = valores[i];
+    if (v === null || v === undefined || v === "") {
+      camposBrancosConsecutivos++;
+      if (camposBrancosConsecutivos > 2) {
+        return { status: "Inconsistente", motivo: "Falha de Comunicação (Timeout: > 2 campos em branco seguidos)" };
+      }
+    } else {
+      camposBrancosConsecutivos = 0;
+    }
+  }
+
+  /*
+    ESTRUTURA DE PREPARAÇÃO PARA TEMPO REAL - TIMEOUT (QUEDA DE LINK):
+    // Avaliação da diferença de Timestamp entre o CCO e o Sensor (Delta t >= 5 minutos)
+    // const DELTA_T_TIMEOUT_MS = 5 * 60 * 1000;
+    // const timestampCCO = Date.now();
+    // const timestampSensor = reservatorio?.ultimaLeituraTimestamp || timestampCCO;
+    // if ((timestampCCO - timestampSensor) >= DELTA_T_TIMEOUT_MS) {
+    //   return { status: "Inconsistente", motivo: "Timeout de Link / Queda de Comunicação em Tempo Real (Delta t >= 5 min)" };
+    // }
+  */
+
+  const numericos = [];
+  for (let i = 0; i < valores.length; i++) {
+    const v = valores[i];
+    if (v === null || v === undefined || v === "") {
+      numericos.push(null);
+    } else {
+      const num = Number(v);
+      if (Number.isFinite(num)) {
+        numericos.push(num);
+      } else {
+        numericos.push("INCONSISTENTE");
+      }
+    }
+  }
+
+  if (numericos.includes("INCONSISTENTE")) {
+    return { status: "Inconsistente", motivo: "Valor não numérico / inconsistente" };
+  }
+
+  const validosComIndice = numericos
+    .map((val, idx) => ({ val, idx }))
+    .filter(item => item.val !== null && item.val >= 0 && item.val <= 110);
+
+  for (let i = 0; i < validosComIndice.length; i++) {
+    // a) SENSOR TRAVADO: Se o desvio padrão ou variação entre 3 leituras consecutivas for zero.
+    if (i >= 2) {
+      const r1 = validosComIndice[i - 2].val;
+      const r2 = validosComIndice[i - 1].val;
+      const r3 = validosComIndice[i].val;
+      if (r1 === r2 && r2 === r3) {
+        return { status: "Inconsistente", motivo: "Sensor Travado (3 leituras consecutivas idênticas / desvio zero)" };
+      }
+    }
+
+    // b) DEGRAU IMPOSSÍVEL: Se a variação de nível entre duas horas consecutivas for maior que 25%.
+    if (i >= 1) {
+      const atual = validosComIndice[i].val;
+      const anterior = validosComIndice[i - 1].val;
+      const variacaoAbs = Math.abs(atual - anterior);
+      if (variacaoAbs > 25) {
+        return { status: "Inconsistente", motivo: "Degrau Impossível (Variação > 25% entre horas consecutivas)" };
+      }
+
+      /*
+        ESTRUTURA DE PREPARAÇÃO PARA TEMPO REAL - DEGRAU IMPOSSÍVEL:
+        // Cálculo estrito de variação de 10% entre duas leituras consecutivas em tempo real:
+        // const LIMITE_DEGRAU_TEMPO_REAL = 10;
+        // if (variacaoAbs > LIMITE_DEGRAU_TEMPO_REAL) {
+        //   return { status: "Inconsistente", motivo: "Degrau Impossível em Tempo Real (> 10% entre leituras)" };
+        // }
+      */
+    }
+  }
+
+  return { status: "Normal", motivo: "Auditoria contínua aprovada" };
+}
+
 function avaliarStatusNivel(valores, idReservatorio, referenciaMedia) {
   const config = obterConfiguracaoReservatorio(idReservatorio);
   if (config.emManutencao) return "Manutenção";
+
+  const auditoria = auditarLeiturasNivel(valores);
+  if (auditoria.status === "Inconsistente") {
+    return "Inconsistente";
+  }
+
+  if (!Array.isArray(valores) || valores.length === 0) {
+    return "Inconsistente";
+  }
+
+  const leiturasFiltradas = filtrarLeiturasNivelValidas(valores);
+  const temInconsistencia = leiturasFiltradas.includes("INCONSISTENTE");
+  const ausenciaTotal = leiturasFiltradas.every((v) => v === null);
+
+  if (temInconsistencia || ausenciaTotal) {
+    return "Inconsistente";
+  }
 
   let statusInstantaneo = "Normal";
   if (config.alertaNivelAtivo) {
@@ -184,7 +289,7 @@ function avaliarStatusNivel(valores, idReservatorio, referenciaMedia) {
       if (nivelAtual < config.nivelCritico) statusInstantaneo = "Crítico";
       else if (nivelAtual < config.nivelAtencao) statusInstantaneo = "Atenção";
     } else {
-      statusInstantaneo = "Sem Dados";
+      statusInstantaneo = "Inconsistente";
     }
   }
 
@@ -196,9 +301,7 @@ function avaliarStatusNivel(valores, idReservatorio, referenciaMedia) {
     referenciaMedia > 0 &&
     Array.isArray(valores)
   ) {
-    const mediaAtual = calcularMediaValida(
-      filtrarLeiturasNivelValidas(valores),
-    );
+    const mediaAtual = calcularMediaValida(leiturasFiltradas);
     if (mediaAtual !== null) {
       const variacao =
         ((mediaAtual - referenciaMedia) / Math.abs(referenciaMedia)) * 100;
@@ -213,8 +316,8 @@ function avaliarStatusNivel(valores, idReservatorio, referenciaMedia) {
     return "Crítico";
   if (statusInstantaneo === "Atenção" || statusMedio === "Atenção")
     return "Atenção";
-  if (statusInstantaneo === "Sem Dados" && statusMedio === "Sem Dados")
-    return "Sem Dados";
+  if (statusInstantaneo === "Inconsistente" || statusMedio === "Inconsistente")
+    return "Inconsistente";
   return "Normal";
 }
 
@@ -235,7 +338,7 @@ function filtrarLeiturasNivelValidas(valores) {
     const numero = Number(valor);
     return Number.isFinite(numero) && numero >= 0 && numero <= 110
       ? numero
-      : null;
+      : "INCONSISTENTE";
   });
 }
 
@@ -244,7 +347,9 @@ function filtrarLeiturasVazaoValidas(valores) {
   return valores.map((valor) => {
     if (valor === null || valor === undefined || valor === "") return null;
     const numero = Number(valor);
-    return Number.isFinite(numero) && numero >= 0 ? numero : null;
+    return Number.isFinite(numero) && numero > 0
+      ? numero
+      : "INCONSISTENTE";
   });
 }
 

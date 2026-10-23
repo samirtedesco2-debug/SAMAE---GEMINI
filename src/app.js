@@ -50,6 +50,33 @@ async function carregarMesPorData(dataStr) {
 }
 document.addEventListener("DOMContentLoaded", () => {
   inicializarBancoAssincrono();
+
+  if (!window.ccoChannel) {
+    window.ccoChannel = new BroadcastChannel('samae_cco_link');
+    window.ccoReconhecidos = window.ccoReconhecidos || new Map();
+    window.ccoChannel.onmessage = (event) => {
+      const { type, chave, severidade } = event.data || {};
+      if (type === 'ACK_ALARM') {
+        window.ccoReconhecidos.set(chave, severidade);
+        if (typeof renderizarDashboardExceccoes === 'function') {
+          renderizarDashboardExceccoes();
+        }
+      } else if (type === 'REVOKE_ACK') {
+        window.ccoReconhecidos.delete(chave);
+        if (typeof renderizarDashboardExceccoes === 'function') {
+          renderizarDashboardExceccoes();
+        }
+      }
+    };
+  }
+
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('view') === 'exceccoes') {
+    setTimeout(() => {
+      const tabExceccoes = document.getElementById("tab-exceccoes");
+      if (tabExceccoes) tabExceccoes.click();
+    }, 400);
+  }
 });
 
 function inicializarTema() {
@@ -257,102 +284,205 @@ function inicializarDashboard() {
   seletorEscopo.addEventListener("change", renderizarDashboard);
 
   const btnCopiarResumo = document.getElementById("btn-copiar-resumo");
+  const btnCopiarPlantaoCCO = document.getElementById("btn-copiar-plantao-cco");
+
+  const executarCopiaResumo = (botaoAlvo) => {
+    const dataSelecionada = document.getElementById("seletor-data").value;
+    const banco = window.bancoDeDados;
+    const dadosDoDia = banco?.historico?.[dataSelecionada];
+    if (!dadosDoDia) {
+      alert("Nenhum dado carregado para gerar o resumo.");
+      return;
+    }
+
+    const baseComparacao = document.getElementById("seletor-base-vazao")?.value || "same-weekday-4";
+    const escopoOperacional = document.getElementById("seletor-escopo-operacional")?.value || "ambos";
+
+    const criticos = [];
+    const atencao = [];
+    const incompletos = [];
+    const horarios = dadosDoDia.horarios || [];
+    const quantidadeSlots = horarios.length;
+
+    Object.entries(dadosDoDia.reservatorios || {}).forEach(([chave, res]) => {
+      const nomeRes = res.nome || chave;
+      const tagMatch = nomeRes.match(/\b(?:R\d{1,3}(?:-[A-Z])?|ES\d{2}|EAT\s+R\d{1,3}|ETA\s+[A-Z0-9\s-]+)\b/i);
+      const tagLimpa = tagMatch ? tagMatch[0].trim() : nomeRes.replace(/\s*\(.*?\)/g, '').split('-')[0].trim();
+      const restoNome = nomeRes.includes('-') ? nomeRes.split('-').slice(1).join('-').trim() : '';
+      const rotuloFormatado = restoNome ? `${tagLimpa} - ${restoNome}` : tagLimpa;
+
+      const nivelAtual = obterUltimaLeituraNivel(res.leituras?.nivel);
+      const qualidade = avaliarQualidadeLeituras(res.leituras?.nivel, res.leituras?.vazao, quantidadeSlots);
+      
+      const nivelAtencaoVal = escopoOperacional !== "vazao";
+      const vazaoAtivaVal = escopoOperacional !== "nivel";
+
+      const comparacaoNivel = obterComparacaoNivel(
+        banco,
+        chave,
+        dataSelecionada,
+        baseComparacao,
+        horarios,
+        nivelAtual,
+      );
+      const statusNivel = avaliarStatusNivel(res.leituras?.nivel, chave, comparacaoNivel?.referencia);
+      const alertaVazao = avaliarAlertaVazao(
+        res.leituras?.vazao,
+        obterReferenciaVazao(banco, chave, dataSelecionada, baseComparacao, horarios),
+        horarios,
+        chave,
+      );
+
+      const statusNivelAtivo = nivelAtencaoVal && ["Normal", "Atenção", "Crítico"].includes(statusNivel) ? statusNivel : null;
+      const statusVazaoAtivo = vazaoAtivaVal && ["Normal", "Atenção", "Crítico"].includes(alertaVazao?.status) ? alertaVazao.status : null;
+      const statusAtivos = [statusNivelAtivo, statusVazaoAtivo].filter(Boolean);
+
+      let statusGeral = "Normal";
+      if (statusAtivos.includes("Crítico")) statusGeral = "Crítico";
+      else if (statusAtivos.includes("Atenção")) statusGeral = "Atenção";
+
+      const diagTexto = statusNivel === "Crítico" ? `Nível Crítico (${nivelAtual !== null ? nivelAtual + '%' : 'N/A'})` : statusNivel === "Atenção" ? `Nível Atenção (${nivelAtual !== null ? nivelAtual + '%' : 'N/A'})` : `Vazão: ${alertaVazao?.status}`;
+      const info = `- ${rotuloFormatado}: Nível ${nivelAtual !== null ? nivelAtual + '%' : 'N/A'} [Diagnóstico: ${diagTexto}]`;
+
+      if (statusGeral === "Crítico") criticos.push(info);
+      else if (statusGeral === "Atenção") atencao.push(info);
+
+      if (qualidade.nivelAusente > 0 || qualidade.vazaoAusente > 0 || statusNivel === "Sem Dados" || statusNivel === "Inconsistente") {
+        const razaoIncompleto = statusNivel === "Inconsistente" ? "leitura(s) inconsistente(s)" : `${qualidade.nivelAusente + qualidade.vazaoAusente} leitura(s) ausente(s)`;
+        incompletos.push(`- ${rotuloFormatado}: ${razaoIncompleto} [Falha de Telemetria / Sem Dados]`);
+      }
+    });
+
+    let textoResumo = `📋 RESUMO DE PASSAGEM DE PLANTÃO - CCO SAMAE\n`;
+    textoResumo += `📅 Boletim: ${dataSelecionada} (${dadosDoDia.ultimaAtualizacao || '05:15'})\n\n`;
+
+    if (criticos.length > 0) {
+      textoResumo += `🔴 CRÍTICOS (${criticos.length}):\n` + criticos.join("\n") + `\n\n`;
+    } else {
+      textoResumo += `🔴 CRÍTICOS: Nenhum\n\n`;
+    }
+
+    if (atencao.length > 0) {
+      textoResumo += `🟡 ATENÇÃO (${atencao.length}):\n` + atencao.join("\n") + `\n\n`;
+    } else {
+      textoResumo += `🟡 ATENÇÃO: Nenhum\n\n`;
+    }
+
+    if (incompletos.length > 0) {
+      textoResumo += `⚠️ INCOMPLETOS / AUSENTES (${incompletos.length}):\n` + incompletos.join("\n") + `\n\n`;
+    } else {
+      textoResumo += `⚠️ INCOMPLETOS: Nenhum\n\n`;
+    }
+
+    textoResumo += `*(Gerado automaticamente pelo Sistema de Monitoramento CCO)*`;
+
+    navigator.clipboard.writeText(textoResumo).then(() => {
+      const alvo = botaoAlvo || btnCopiarResumo;
+      if (!alvo) return;
+      const textoOriginal = alvo.innerHTML;
+      alvo.innerHTML = `<span>✓ Resumo Copiado!</span>`;
+      setTimeout(() => {
+        alvo.innerHTML = textoOriginal;
+      }, 3000);
+    }).catch(err => {
+      console.error("Erro ao copiar resumo:", err);
+      alert("Não foi possível copiar o resumo para a área de transferência.");
+    });
+  };
+
   if (btnCopiarResumo) {
-    btnCopiarResumo.addEventListener("click", () => {
-      const dataSelecionada = document.getElementById("seletor-data").value;
+    btnCopiarResumo.addEventListener("click", () => executarCopiaResumo(btnCopiarResumo));
+  }
+  if (btnCopiarPlantaoCCO) {
+    btnCopiarPlantaoCCO.addEventListener("click", () => executarCopiaResumo(btnCopiarPlantaoCCO));
+  }
+
+  const btnExportarCSV = document.getElementById("btn-exportar-csv");
+  if (btnExportarCSV) {
+    btnExportarCSV.addEventListener("click", () => {
       const banco = window.bancoDeDados;
-      const dadosDoDia = banco?.historico?.[dataSelecionada];
-      if (!dadosDoDia) {
-        alert("Nenhum dado carregado para gerar o resumo.");
-        return;
-      }
-
-      const baseComparacao = document.getElementById("seletor-base-vazao")?.value || "same-weekday-4";
-      const escopoOperacional = document.getElementById("seletor-escopo-operacional")?.value || "ambos";
-
-      const criticos = [];
-      const atencao = [];
-      const incompletos = [];
-      const horarios = dadosDoDia.horarios || [];
-      const quantidadeSlots = horarios.length;
-
-      Object.entries(dadosDoDia.reservatorios || {}).forEach(([chave, res]) => {
-        const nomeRes = res.nome || chave;
-        const nivelAtual = obterUltimaLeituraNivel(res.leituras?.nivel);
-        const qualidade = avaliarQualidadeLeituras(res.leituras?.nivel, res.leituras?.vazao, quantidadeSlots);
-        
-        const nivelAtencaoVal = escopoOperacional !== "vazao";
-        const vazaoAtivaVal = escopoOperacional !== "nivel";
-
-        const comparacaoNivel = obterComparacaoNivel(
-          banco,
-          chave,
-          dataSelecionada,
-          baseComparacao,
-          horarios,
-          nivelAtual,
-        );
-        const statusNivel = avaliarStatusNivel(res.leituras?.nivel, chave, comparacaoNivel?.referencia);
-        const alertaVazao = avaliarAlertaVazao(
-          res.leituras?.vazao,
-          obterReferenciaVazao(banco, chave, dataSelecionada, baseComparacao, horarios),
-          horarios,
-          chave,
-        );
-
-        const statusNivelAtivo = nivelAtencaoVal && ["Normal", "Atenção", "Crítico"].includes(statusNivel) ? statusNivel : null;
-        const statusVazaoAtivo = vazaoAtivaVal && ["Normal", "Atenção", "Crítico"].includes(alertaVazao?.status) ? alertaVazao.status : null;
-        const statusAtivos = [statusNivelAtivo, statusVazaoAtivo].filter(Boolean);
-
-        let statusGeral = "Normal";
-        if (statusAtivos.includes("Crítico")) statusGeral = "Crítico";
-        else if (statusAtivos.includes("Atenção")) statusGeral = "Atenção";
-
-        const info = `- ${nomeRes} (${chave}): Nível ${nivelAtual !== null ? nivelAtual + '%' : 'N/A'} (Nível: ${statusNivel}, Vazão: ${alertaVazao?.status})`;
-
-        if (statusGeral === "Crítico") criticos.push(info);
-        else if (statusGeral === "Atenção") atencao.push(info);
-
-        if (qualidade.nivelAusente > 0 || qualidade.vazaoAusente > 0 || statusNivel === "Sem Dados") {
-          incompletos.push(`- ${nomeRes} (${chave}): ${qualidade.nivelAusente + qualidade.vazaoAusente} leitura(s) ausente(s)`);
-        }
+      const dataSelecionada = document.getElementById("seletor-data").value;
+      const exceccoes = typeof obterReservatoriosComAlertaOuExcecao === 'function' ? obterReservatoriosComAlertaOuExcecao(banco, dataSelecionada) : [];
+      
+      let csvContent = "\uFEFFData;Chave;Reservatório;Severidade;Diagnóstico;Tendência\n";
+      exceccoes.forEach(exc => {
+        const diag = (exc.mensagens || []).join(" | ").replace(/;/g, ",");
+        csvContent += `${dataSelecionada};${exc.chave};"${exc.nome}";${exc.severidade};"${diag}";"${exc.predicao?.tendencia || 'N/A'}"\n`;
       });
 
-      let textoResumo = `📋 RESUMO DE PASSAGEM DE PLANTÃO - CCO SAMAE\n`;
-      textoResumo += `📅 Boletim: ${dataSelecionada} (${dadosDoDia.ultimaAtualizacao || '05:15'})\n\n`;
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `relatorio_alarmes_cco_${dataSelecionada}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
 
-      if (criticos.length > 0) {
-        textoResumo += `🔴 CRÍTICOS (${criticos.length}):\n` + criticos.join("\n") + `\n\n`;
-      } else {
-        textoResumo += `🔴 CRÍTICOS: Nenhum\n\n`;
-      }
+  const btnExportarHTML = document.getElementById("btn-exportar-html");
+  if (btnExportarHTML) {
+    btnExportarHTML.addEventListener("click", () => {
+      const banco = window.bancoDeDados;
+      const dataSelecionada = document.getElementById("seletor-data").value;
+      const exceccoes = typeof obterReservatoriosComAlertaOuExcecao === 'function' ? obterReservatoriosComAlertaOuExcecao(banco, dataSelecionada) : [];
 
-      if (atencao.length > 0) {
-        textoResumo += `🟡 ATENÇÃO (${atencao.length}):\n` + atencao.join("\n") + `\n\n`;
-      } else {
-        textoResumo += `🟡 ATENÇÃO: Nenhum\n\n`;
-      }
+      const htmlContent = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Relatório de Alertas CCO - ${dataSelecionada}</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; color: #333; background: #fff; }
+  h1 { color: #0877b9; border-bottom: 2px solid #0877b9; padding-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 0.9rem; }
+  th { background: #f4f6f8; color: #17212b; }
+  .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; }
+  .critico { background: rgba(242,73,73,0.2); color: #b42318; border: 1px solid #b42318; }
+  .atencao { background: rgba(255,153,0,0.2); color: #8a4b00; border: 1px solid #8a4b00; }
+  .incompleto { background: rgba(59,130,246,0.2); color: #1d4ed8; border: 1px solid #1d4ed8; }
+</style>
+</head>
+<body>
+  <h1>Centro de Controle Operacional - Relatório de Alertas Ativos</h1>
+  <p><strong>Data de Referência:</strong> ${dataSelecionada}</p>
+  <p><strong>Total de Ocorrências:</strong> ${exceccoes.length}</p>
+  <table>
+    <thead>
+      <tr>
+        <th>TAG / Reservatório</th>
+        <th>Chave</th>
+        <th>Severidade</th>
+        <th>Diagnósticos e Mensagens</th>
+        <th>Tendência</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${exceccoes.map(exc => `
+        <tr>
+          <td><strong>${exc.nome}</strong></td>
+          <td>${exc.chave}</td>
+          <td><span class="badge ${exc.severidade === 'Crítico' ? 'critico' : exc.severidade === 'Atenção' ? 'atencao' : 'incompleto'}">${exc.severidade}</span></td>
+          <td>${(exc.mensagens || []).join("<br>")}</td>
+          <td>${exc.predicao?.tendencia || 'N/A'} (${exc.predicao?.iconeTendencia || '→'})</td>
+        </tr>
+      `).join("")}
+    </tbody>
+  </table>
+  <footer style="margin-top: 30px; font-size: 0.8rem; color: #666; border-top: 1px solid #ddd; padding-top: 10px;">
+    Gerado automaticamente pelo Sistema CCO SAMAE - Data/Hora: ${new Date().toLocaleString("pt-BR")}
+  </footer>
+</body>
+</html>`;
 
-      if (incompletos.length > 0) {
-        textoResumo += `⚠️ INCOMPLETOS / AUSENTES (${incompletos.length}):\n` + incompletos.join("\n") + `\n\n`;
-      } else {
-        textoResumo += `⚠️ INCOMPLETOS: Nenhum\n\n`;
-      }
-
-      textoResumo += `*(Gerado automaticamente pelo Sistema de Monitoramento CCO)*`;
-
-      navigator.clipboard.writeText(textoResumo).then(() => {
-        const textoOriginal = btnCopiarResumo.innerHTML;
-        btnCopiarResumo.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> <span>Resumo Copiado!</span>`;
-        btnCopiarResumo.style.borderColor = "var(--status-normal-color)";
-        setTimeout(() => {
-          btnCopiarResumo.innerHTML = textoOriginal;
-          btnCopiarResumo.style.borderColor = "var(--border-color)";
-        }, 2500);
-      }).catch(err => {
-        console.error("Erro ao copiar resumo:", err);
-        alert("Não foi possível copiar o resumo para a área de transferência.");
-      });
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `relatorio_cco_${dataSelecionada}.html`;
+      a.click();
+      URL.revokeObjectURL(url);
     });
   }
 
@@ -1576,36 +1706,49 @@ function obterLeiturasAusentes(
 document.addEventListener("DOMContentLoaded", () => {
   const btnCCO = document.getElementById("btn-modo-cco");
 
-  // Definição dos dois ícones em formato profissional de traço
-  const iconeCCO = `<svg xmlns="http://w3.org" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 5H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z"/><path d="M12 18v4"/><path d="M8 22h8"/></svg>`;
-  const iconePadrao = `<svg xmlns="http://w3.org" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>`;
+  // Definição dos dois ícones em formato profissional de traço com namespace SVG correto
+  const iconeCCO = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 5H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z"/><path d="M12 18v4"/><path d="M8 22h8"/></svg>`;
+  const iconePadrao = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>`;
 
   if (btnCCO) {
-    btnCCO.addEventListener("click", () => {
-      document.body.classList.toggle("modo-cco-ativo");
+    btnCCO.addEventListener("click", (e) => {
+      // Se pressionado com Shift ou Ctrl, abre em janela separada (Mente Unida / 2 telas)
+      if (e.shiftKey || e.ctrlKey) {
+        window.open('?view=exceccoes', '_blank', 'width=1200,height=800');
+        return;
+      }
 
-      if (document.body.classList.contains("modo-cco-ativo")) {
+      document.body.classList.toggle("modo-cco-ativo");
+      const isLargeTV = document.body.classList.contains("modo-cco-ativo");
+      document.body.dataset.viewScale = isLargeTV ? "large-tv" : "";
+
+      if (isLargeTV) {
         btnCCO.innerHTML = iconePadrao;
         btnCCO.title = "Modo Padrão";
-        btnCCO.style.borderColor = "var(--accent-color)"; // Dá um destaque sutil em azul quando ativo
+        btnCCO.style.borderColor = "var(--accent-color)";
         
         if (document.documentElement.requestFullscreen) {
-          document.documentElement.requestFullscreen();
+          document.documentElement.requestFullscreen().catch(() => {});
         }
+        const tabExceccoes = document.getElementById("tab-exceccoes");
+        if (tabExceccoes) tabExceccoes.click();
       } else {
         btnCCO.innerHTML = iconeCCO;
         btnCCO.title = "Modo CCO";
         btnCCO.style.borderColor = "var(--border-color)";
         
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
+        if (document.exitFullscreen && document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
         }
+        const tabOp = document.getElementById("tab-operacional");
+        if (tabOp) tabOp.click();
       }
     });
 
     document.addEventListener("fullscreenchange", () => {
       if (!document.fullscreenElement) {
         document.body.classList.remove("modo-cco-ativo");
+        document.body.dataset.viewScale = "";
         btnCCO.innerHTML = iconeCCO;
         btnCCO.style.borderColor = "var(--border-color)";
         btnCCO.title = "Modo CCO";
@@ -1788,7 +1931,6 @@ async function vincularArquivoConfiguracao() {
 function renderizarPainelConfiguracoes() {
   const listaContainer = document.getElementById("config-lista-reservatorios");
   if (!listaContainer) return;
-  listaContainer.innerHTML = "";
 
   const banco = window.bancoDeDados;
   if (!banco || !banco.datasDisponiveis || banco.datasDisponiveis.length === 0) return;
@@ -1797,10 +1939,52 @@ function renderizarPainelConfiguracoes() {
   const dadosDia = banco.historico[ultimaData];
   const reservatorios = dadosDia?.reservatorios || {};
 
-  const chaves = Object.keys(reservatorios);
-  if (chaves.length === 0) return;
+  let sidebarWrapper = listaContainer.parentElement;
+  let filtroBar = sidebarWrapper.querySelector(".config-sidebar-filters");
+  if (!filtroBar) {
+    filtroBar = document.createElement("div");
+    filtroBar.className = "config-sidebar-filters";
+    filtroBar.style.cssText = "margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;";
+    filtroBar.innerHTML = `
+      <input type="text" id="config-busca-tag" placeholder="Filtrar por TAG..." style="padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-bg); color: var(--text-color); font-size: 0.85rem;">
+      <select id="config-filtro-grupo" style="padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-bg); color: var(--text-color); font-size: 0.85rem;">
+        <option value="TODOS">Todos os Grupos Hidráulicos</option>
+      </select>
+    `;
+    sidebarWrapper.insertBefore(filtroBar, listaContainer);
 
-  if (!reservatorioConfigSelecionado || !reservatorios[reservatorioConfigSelecionado]) {
+    const inputBusca = filtroBar.querySelector("#config-busca-tag");
+    const selectGrupo = filtroBar.querySelector("#config-filtro-grupo");
+
+    const grupos = new Set();
+    Object.values(reservatorios).forEach(r => { if (r.grupo) grupos.add(r.grupo); });
+    grupos.forEach(g => {
+      selectGrupo.add(new Option(g, g));
+    });
+
+    inputBusca.oninput = () => renderizarPainelConfiguracoes();
+    selectGrupo.onchange = () => renderizarPainelConfiguracoes();
+  }
+
+  const filtroTexto = (sidebarWrapper.querySelector("#config-busca-tag")?.value || "").toLowerCase();
+  const grupoSelecionado = sidebarWrapper.querySelector("#config-filtro-grupo")?.value || "TODOS";
+
+  listaContainer.innerHTML = "";
+  const chaves = Object.keys(reservatorios).filter(chave => {
+    const res = reservatorios[chave];
+    const nome = (res.nome || chave).toLowerCase();
+    const grupo = res.grupo || "Geral";
+    const matchTexto = nome.includes(filtroTexto) || chave.toLowerCase().includes(filtroTexto);
+    const matchGrupo = grupoSelecionado === "TODOS" || grupo === grupoSelecionado;
+    return matchTexto && matchGrupo;
+  });
+
+  if (chaves.length === 0) {
+    listaContainer.innerHTML = `<p style="font-size: 0.85rem; color: var(--muted-color); padding: 10px;">Nenhum reservatório encontrado.</p>`;
+    return;
+  }
+
+  if (!reservatorioConfigSelecionado || !reservatorios[reservatorioConfigSelecionado] || !chaves.includes(reservatorioConfigSelecionado)) {
     reservatorioConfigSelecionado = chaves[0];
   }
 
@@ -1858,6 +2042,75 @@ function renderizarFormularioConfiguracao(chave, res) {
           </div>
         </div>
       </fieldset>
+
+      <!-- Seção Bilateral Independente: Formulário I & Formulário II -->
+      <div class="config-category-block" style="margin-top: 30px; border-top: 2px dashed var(--border-color); padding-top: 20px;">
+        <h4 class="config-category-title" style="color: var(--accent-color);">Parâmetros Globais Bilaterais (Automação & Relatórios)</h4>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-top: 16px;">
+          
+          <!-- FORMULÁRIO I (Resumo de Passagem de Plantão) -->
+          <fieldset class="config-fieldset" style="background: var(--surface-bg);">
+            <legend>FORMULÁRIO I (Passagem de Plantão)</legend>
+            <div class="config-field" style="margin-bottom: 12px;">
+              <label for="cfg-emails-plantao">E-mails de Destino (separados por vírgula)</label>
+              <input type="text" id="cfg-emails-plantao" value="${config.emailsPlantao || 'plantao.cco@samae.sc.gov.br'}" placeholder="cco@samae.sc.gov.br">
+            </div>
+            <div class="config-field" style="margin-bottom: 12px;">
+              <label>Grade de Timers (Disparos Diários Agendados)</label>
+              <div id="cfg-timers-grade-container" style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px;">
+                <div style="display: flex; gap: 8px;">
+                  <input type="time" class="cfg-timer-input" value="${config.timer1 || '05:00'}" style="flex: 1; padding: 6px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+                  <input type="time" class="cfg-timer-input" value="${config.timer2 || '13:00'}" style="flex: 1; padding: 6px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+                  <input type="time" class="cfg-timer-input" value="${config.timer3 || '21:00'}" style="flex: 1; padding: 6px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+                </div>
+              </div>
+            </div>
+            <div class="config-field">
+              <label for="cfg-caminho-local">Caminho Físico de Diretório Local</label>
+              <input type="text" id="cfg-caminho-local" value="${config.caminhoLocal || 'C:/Samae/Relatorios/Plantao'}" placeholder="C:/Samae/Relatorios/Plantao">
+            </div>
+          </fieldset>
+
+          <!-- FORMULÁRIO II (Log de Erros e SLA Técnico) -->
+          <fieldset class="config-fieldset" style="background: var(--surface-bg);">
+            <legend>FORMULÁRIO II (Log de Erros e SLA)</legend>
+            <div class="config-field" style="margin-bottom: 12px;">
+              <label for="cfg-emails-manutencao">E-mails Analíticos da Manutenção</label>
+              <input type="text" id="cfg-emails-manutencao" value="${config.emailsManutencao || 'manutencao.telemetria@samae.sc.gov.br'}" placeholder="manutencao@samae.sc.gov.br">
+            </div>
+            <div class="config-field-row" style="margin-bottom: 12px;">
+              <div class="config-field" style="flex: 1;">
+                <label for="cfg-cron-dia">Dia da Semana (Cron)</label>
+                <select id="cfg-cron-dia" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+                  <option value="diario" ${config.cronDia === 'diario' ? 'selected' : ''}>Diário (Todos os dias)</option>
+                  <option value="util" ${config.cronDia === 'util' ? 'selected' : ''}>Dias Úteis (Seg-Sex)</option>
+                  <option value="fimdesemana" ${config.cronDia === 'fimdesemana' ? 'selected' : ''}>Finais de Semana</option>
+                </select>
+              </div>
+              <div class="config-field" style="flex: 1;">
+                <label for="cfg-cron-hora">Horário Cron</label>
+                <input type="time" id="cfg-cron-hora" value="${config.cronHora || '05:30'}" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+              </div>
+            </div>
+            <div class="config-field-row" style="margin-bottom: 12px;">
+              <div class="config-field" style="flex: 1;">
+                <label for="cfg-sla-minutos">Tempo Limite SLA (min)</label>
+                <input type="number" id="cfg-sla-minutos" value="${config.slaMinutos !== undefined ? config.slaMinutos : 15}" min="1" max="120">
+              </div>
+              <div class="config-field" style="flex: 1;">
+                <label for="cfg-tolerancia-ruido">Tolerância de Ruído (%)</label>
+                <input type="number" step="any" id="cfg-tolerancia-ruido" value="${config.toleranciaRuido !== undefined ? config.toleranciaRuido : 2.5}" min="0">
+              </div>
+            </div>
+            <div class="config-field">
+              <label for="cfg-caminho-hdd">Caminho de Disco Rígido Alternativo (HDD)</label>
+              <input type="text" id="cfg-caminho-hdd" value="${config.caminhoHdd || 'D:/Backup_CCO/Incidentes'}" placeholder="D:/Backup_CCO/Incidentes">
+            </div>
+          </fieldset>
+
+        </div>
+      </div>
 
       <!-- Categoria: Nível -->
       <div class="config-category-block">
