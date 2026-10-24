@@ -88,10 +88,11 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('view') === 'exceccoes') {
+  const viewParam = urlParams.get('view');
+  if (viewParam === 'exceccoes' || viewParam === 'mural-alarmes') {
     setTimeout(() => {
-      const tabExceccoes = document.getElementById("tab-exceccoes");
-      if (tabExceccoes) tabExceccoes.click();
+      const tabMuralAlarmes = document.getElementById("tab-mural-alarmes");
+      if (tabMuralAlarmes) tabMuralAlarmes.click();
     }, 400);
   }
 });

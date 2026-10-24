@@ -434,8 +434,8 @@ function criarPainelInformativoAlarme(
     btnVoltarAlertas.textContent = "← Voltar para Alertas";
     btnVoltarAlertas.addEventListener("click", () => {
       window.veioDeAlertasCCO = false;
-      const tabExceccoes = document.getElementById("tab-exceccoes");
-      if (tabExceccoes) tabExceccoes.click();
+      const tabMuralAlarmes = document.getElementById("tab-mural-alarmes");
+      if (tabMuralAlarmes) tabMuralAlarmes.click();
     });
     cabecalho.append(btnVoltarAlertas);
   }
@@ -2046,8 +2046,8 @@ function atualizarBadgeAlarmes() {
   const totalExceccoes = exceccoes.length;
 
   const badge = document.getElementById("badge-alarmes-ativos");
-  const countTab = document.getElementById("count-tab-exceccoes");
-  const tabExceccoes = document.getElementById("tab-exceccoes");
+  const countTab = document.getElementById("count-tab-mural-alarmes");
+  const tabMuralAlarmes = document.getElementById("tab-mural-alarmes");
   if (badge) {
     badge.textContent = totalExceccoes;
     badge.style.display = totalExceccoes > 0 ? "inline-block" : "none";
@@ -2055,15 +2055,15 @@ function atualizarBadgeAlarmes() {
   if (countTab) {
     countTab.textContent = totalExceccoes;
   }
-  if (tabExceccoes) {
-    tabExceccoes.classList.toggle("animar-pulso-tab", totalExceccoes > 0);
+  if (tabMuralAlarmes) {
+    tabMuralAlarmes.classList.toggle("animar-pulso-tab", totalExceccoes > 0);
   }
 }
 
-function renderizarDashboardExceccoes() {
+function renderizarMuralAlarmes() {
   const banco = window.bancoDeDados;
   const seletorData = document.getElementById("seletor-data");
-  const gridExceccoes = document.getElementById("grid-exceccoes");
+  const gridExceccoes = document.getElementById("grid-mural-alarmes");
   if (!banco || !banco.historico || !seletorData || !gridExceccoes) return;
 
   window.ccoReconhecidos = window.ccoReconhecidos || new Map();
@@ -2109,18 +2109,18 @@ function renderizarDashboardExceccoes() {
     window.ccoFiltroAtual = "TODOS";
   }
 
-  const botoesFiltro = document.querySelectorAll(".cco-filter-btn");
+  const botoesFiltro = document.querySelectorAll(".btn-filtro-alarmes");
   botoesFiltro.forEach(btn => {
     const filtro = btn.getAttribute("data-filter");
     btn.classList.toggle("is-active", filtro === window.ccoFiltroAtual);
     btn.onclick = () => {
       window.ccoFiltroAtual = filtro;
-      renderizarDashboardExceccoes();
+      renderizarMuralAlarmes();
     };
   });
 
   window.ccoModoTabela = window.ccoModoTabela || false;
-  const btnViewToggle = document.getElementById("btn-mural-view-toggle");
+  const btnViewToggle = document.getElementById("btn-alternar-visualizacao");
   if (btnViewToggle) {
     const iconeTabela = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 9v12"/></svg>`;
     const iconeCards = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>`;
@@ -2129,7 +2129,7 @@ function renderizarDashboardExceccoes() {
     btnViewToggle.title = window.ccoModoTabela ? "Alternar para Modo Cards" : "Alternar para Modo Tabela Compacta";
     btnViewToggle.onclick = () => {
       window.ccoModoTabela = !window.ccoModoTabela;
-      renderizarDashboardExceccoes();
+      renderizarMuralAlarmes();
     };
   }
 
@@ -2347,8 +2347,8 @@ function atualizarHeaderEnxutoInvestigacao(painelOperacional, filtroSelecionado,
     if (btnVoltar) {
       btnVoltar.onclick = () => {
         window.veioDeAlertasCCO = false;
-        const tabExceccoes = document.getElementById("tab-exceccoes");
-        if (tabExceccoes) tabExceccoes.click();
+        const tabMuralAlarmes = document.getElementById("tab-mural-alarmes");
+        if (tabMuralAlarmes) tabMuralAlarmes.click();
       };
     }
   } else {

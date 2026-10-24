@@ -12,13 +12,13 @@ window.CcoSync = {
         const { type, chave, severidade } = event.data || {};
         if (type === 'ACK_ALARM') {
           window.ccoReconhecidos.set(chave, severidade);
-          if (typeof renderizarDashboardExceccoes === 'function') {
-            renderizarDashboardExceccoes();
+          if (typeof renderizarMuralAlarmes === 'function') {
+            renderizarMuralAlarmes();
           }
         } else if (type === 'REVOKE_ACK') {
           window.ccoReconhecidos.delete(chave);
-          if (typeof renderizarDashboardExceccoes === 'function') {
-            renderizarDashboardExceccoes();
+          if (typeof renderizarMuralAlarmes === 'function') {
+            renderizarMuralAlarmes();
           }
         }
       };
@@ -29,7 +29,7 @@ window.CcoSync = {
     if (window.ccoMuralWindow && !window.ccoMuralWindow.closed) {
       window.ccoMuralWindow.focus();
     } else {
-      window.ccoMuralWindow = window.open('?view=exceccoes', 'ccoMuralWindow', 'width=1200,height=800');
+      window.ccoMuralWindow = window.open('?view=mural-alarmes', 'ccoMuralWindow', 'width=1200,height=800');
     }
   },
 
@@ -58,8 +58,8 @@ window.CcoSync = {
         if (document.documentElement.requestFullscreen) {
           document.documentElement.requestFullscreen().catch(() => {});
         }
-        const tabExceccoes = document.getElementById("tab-exceccoes");
-        if (tabExceccoes) tabExceccoes.click();
+        const tabMuralAlarmes = document.getElementById("tab-mural-alarmes");
+        if (tabMuralAlarmes) tabMuralAlarmes.click();
       } else {
         btnCCO.innerHTML = iconeCCO;
         btnCCO.title = "Modo CCO";

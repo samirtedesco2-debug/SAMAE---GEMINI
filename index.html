@@ -200,15 +200,15 @@
         Engenharia (em produção)
       </button>
       <button
-        id="tab-exceccoes"
+        id="tab-mural-alarmes"
         class="view-tab"
         type="button"
         role="tab"
         aria-selected="false"
-        aria-controls="painel-exceccoes"
+        aria-controls="painel-mural-alarmes"
         tabindex="-1"
       >
-        🚨 Mural de Alarmes CCO (<span id="count-tab-exceccoes">0</span>)
+        🚨 Mural de Alarmes CCO (<span id="count-tab-mural-alarmes">0</span>)
       </button>
     </nav>
 
@@ -342,16 +342,16 @@
           <p class="analysis-eyebrow">CENTRO DE CONTROLE OPERACIONAL</p>
           <h2 style="margin-bottom: 8px;">Mural de Alertas Ativos</h2>
           <div class="cco-filter-buttons" style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button type="button" class="cco-filter-btn is-active" data-filter="TODOS" style="padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-inset); color: var(--text-color); font-weight: 600; cursor: pointer;">
+            <button type="button" class="btn-filtro-alarmes is-active" data-filter="TODOS" style="padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-inset); color: var(--text-color); font-weight: 600; cursor: pointer;">
               📊 Totais (<span id="count-filtro-totais">0</span>)
             </button>
-            <button type="button" class="cco-filter-btn" data-filter="Crítico" style="padding: 6px 14px; border-radius: 6px; border: 1px solid var(--status-critical-color); background: var(--status-critical-background); color: var(--status-critical-color); font-weight: 600; cursor: pointer;">
+            <button type="button" class="btn-filtro-alarmes" data-filter="Crítico" style="padding: 6px 14px; border-radius: 6px; border: 1px solid var(--status-critical-color); background: var(--status-critical-background); color: var(--status-critical-color); font-weight: 600; cursor: pointer;">
               🔴 Críticos (<span id="count-filtro-criticos">0</span>)
             </button>
-            <button type="button" class="cco-filter-btn" data-filter="Atenção" style="padding: 6px 14px; border-radius: 6px; border: 1px solid var(--status-attention-color); background: var(--status-attention-background); color: var(--status-attention-color); font-weight: 600; cursor: pointer;">
+            <button type="button" class="btn-filtro-alarmes" data-filter="Atenção" style="padding: 6px 14px; border-radius: 6px; border: 1px solid var(--status-attention-color); background: var(--status-attention-background); color: var(--status-attention-color); font-weight: 600; cursor: pointer;">
               🟡 Atenção (<span id="count-filtro-atencao">0</span>)
             </button>
-            <button type="button" class="cco-filter-btn" data-filter="Inconsistente" style="padding: 6px 14px; border-radius: 6px; border: 1px solid #3b82f6; background: rgba(59, 130, 246, 0.15); color: #3b82f6; font-weight: 600; cursor: pointer;">
+            <button type="button" class="btn-filtro-alarmes" data-filter="Inconsistente" style="padding: 6px 14px; border-radius: 6px; border: 1px solid #3b82f6; background: rgba(59, 130, 246, 0.15); color: #3b82f6; font-weight: 600; cursor: pointer;">
               🔵 Inconsistentes (<span id="count-filtro-incompletos">0</span>)
             </button>
           </div>
@@ -374,7 +374,7 @@
           <div style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;">
             <button
               type="button"
-              id="btn-mural-view-toggle"
+              id="btn-alternar-visualizacao"
               class="btn-operacional-quadrado"
               style="width: 36px; height: 36px;"
               title="Alternar entre Cards e Tabela"

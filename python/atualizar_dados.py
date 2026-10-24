@@ -14,9 +14,9 @@ RAIZ_PROJETO = os.path.dirname(DIRETORIO_ATUAL) if os.path.basename(DIRETORIO_AT
 PASTA_DADOS = os.path.join(RAIZ_PROJETO, "dados_historicos")
 CAMINHO_INDICE = os.path.join(RAIZ_PROJETO, "indice_datas.json")
 
-def arquivar_relatorio_incidentes_cron(incidentes_lista=None):
-    if incidentes_lista is None:
-        incidentes_lista = []
+def arquivar_relatorio_incidentes_cron(lista_ocorrencias_operacionais=None):
+    if lista_ocorrencias_operacionais is None:
+        lista_ocorrencias_operacionais = []
     
     agora = datetime.now()
     ano = agora.strftime("%Y")
@@ -32,8 +32,8 @@ def arquivar_relatorio_incidentes_cron(incidentes_lista=None):
     try:
         with open(caminho_arquivo, mode="w", newline="", encoding="utf-8-sig") as f:
             writer = csv.writer(f, delimiter=";")
-            writer.writerow(["Timestamp", "Chave", "Nome", "Severidade", "Acao", "TempoRespostaMs"])
-            for inc in incidentes_lista:
+            writer.writerow(["Timestamp", "Chave", "Nome", "Severidade", "Acao", "Tempo_Resposta_Ms"])
+            for inc in lista_ocorrencias_operacionais:
                 writer.writerow([
                     inc.get("timestamp", ""),
                     inc.get("chave", ""),

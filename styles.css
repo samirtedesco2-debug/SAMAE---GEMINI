@@ -2829,17 +2829,17 @@ body.is-cco-fullscreen-active .view-tabs {
   display: none !important;
 }
 
-.cco-filter-btn {
+.btn-filtro-alarmes {
   transition: all 0.2s ease;
   opacity: 0.75;
 }
 
-.cco-filter-btn:hover {
+.btn-filtro-alarmes:hover {
   opacity: 1;
   transform: translateY(-1px);
 }
 
-.cco-filter-btn.is-active {
+.btn-filtro-alarmes.is-active {
   opacity: 1;
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
   border-width: 2px !important;
@@ -2857,7 +2857,7 @@ body.is-cco-fullscreen-active .view-tabs {
   }
 }
 
-.view-tab#tab-exceccoes.animar-pulso-tab {
+.view-tab#tab-mural-alarmes.animar-pulso-tab {
   animation: pulsarAlertaTab 1.6s infinite ease-in-out;
   border-color: var(--status-critical-color);
   color: var(--status-critical-color);
