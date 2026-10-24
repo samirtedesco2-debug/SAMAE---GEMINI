@@ -1989,7 +1989,7 @@ function obterReservatoriosComAlertaOuExcecao(banco, dataSelecionada) {
         cor = predicao.statusPreditivo === "Crítico" ? "var(--status-critical-color)" : "#d7a52b";
         bg = predicao.statusPreditivo === "Crítico" ? "var(--status-critical-background)" : "rgba(215, 165, 43, 0.15)";
       } else if (isIncompleto) {
-        severidade = "Incompleto";
+        severidade = "Inconsistente";
         cor = "#3b82f6";
         bg = "rgba(59, 130, 246, 0.15)";
       }
@@ -2093,7 +2093,7 @@ function renderizarDashboardExceccoes() {
   const totalCount = exceccoesAtivas.length;
   const criticoCount = exceccoesAtivas.filter(e => e.severidade === "Crítico").length;
   const atencaoCount = exceccoesAtivas.filter(e => e.severidade === "Atenção").length;
-  const incompletoCount = exceccoesAtivas.filter(e => e.severidade === "Incompleto").length;
+  const inconsistenteCount = exceccoesAtivas.filter(e => e.severidade === "Inconsistente").length;
 
   const elTotais = document.getElementById("count-filtro-totais");
   const elCriticos = document.getElementById("count-filtro-criticos");
@@ -2103,7 +2103,7 @@ function renderizarDashboardExceccoes() {
   if (elTotais) elTotais.textContent = totalCount;
   if (elCriticos) elCriticos.textContent = criticoCount;
   if (elAtencao) elAtencao.textContent = atencaoCount;
-  if (elIncompletos) elIncompletos.textContent = incompletoCount;
+  if (elIncompletos) elIncompletos.textContent = inconsistenteCount;
 
   if (window.ccoFiltroAtual === undefined) {
     window.ccoFiltroAtual = "TODOS";
@@ -2118,6 +2118,20 @@ function renderizarDashboardExceccoes() {
       renderizarDashboardExceccoes();
     };
   });
+
+  window.ccoModoTabela = window.ccoModoTabela || false;
+  const btnViewToggle = document.getElementById("btn-mural-view-toggle");
+  if (btnViewToggle) {
+    const iconeTabela = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 9v12"/></svg>`;
+    const iconeCards = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>`;
+
+    btnViewToggle.innerHTML = window.ccoModoTabela ? iconeCards : iconeTabela;
+    btnViewToggle.title = window.ccoModoTabela ? "Alternar para Modo Cards" : "Alternar para Modo Tabela Compacta";
+    btnViewToggle.onclick = () => {
+      window.ccoModoTabela = !window.ccoModoTabela;
+      renderizarDashboardExceccoes();
+    };
+  }
 
   const exceccoesFiltradas = exceccoes.filter(e => {
     if (window.ccoFiltroAtual === "TODOS") return true;
@@ -2135,17 +2149,89 @@ function renderizarDashboardExceccoes() {
   }
 
   exceccoesFiltradas.sort((a, b) => {
-    const peso = (sev) => sev === "Crítico" ? 1 : sev === "Atenção" ? 2 : sev === "Incompleto" ? 3 : 4;
+    const peso = (sev) => sev === "Crítico" ? 1 : sev === "Atenção" ? 2 : sev === "Inconsistente" ? 3 : 4;
     return peso(a.severidade) - peso(b.severidade);
   });
+
+  if (window.ccoModoTabela) {
+    gridExceccoes.style.display = "block";
+    gridExceccoes.innerHTML = `
+      <div style="overflow-x: auto; background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 8px;">
+        <table class="comparison-table" style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="background: var(--surface-inset);">
+              <th style="padding: 10px; text-align: left;">Reservatório</th>
+              <th style="padding: 10px; text-align: left;">Severidade</th>
+              <th style="padding: 10px; text-align: left;">Mensagem / Diagnóstico</th>
+              <th style="padding: 10px; text-align: left;">Tendência</th>
+              <th style="padding: 10px; text-align: center;">Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${exceccoesFiltradas.map(({ chave, nome, severidade, cor, bg, mensagens, predicao }) => {
+              const reconhecido = window.ccoReconhecidos.has(chave);
+              return `
+                <tr style="border-top: 1px solid var(--border-color); opacity: ${reconhecido ? '0.5' : '1'};">
+                  <td style="padding: 10px; font-weight: 700;">${nome} (${chave})</td>
+                  <td style="padding: 10px;"><span style="background: ${bg}; color: ${cor}; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${severidade}</span></td>
+                  <td style="padding: 10px; font-size: 0.85rem; color: var(--muted-color);">${mensagens.join(" | ")}</td>
+                  <td style="padding: 10px; font-size: 0.85rem;">${predicao ? `${predicao.tendencia} ${predicao.iconeTendencia}` : 'N/A'}</td>
+                  <td style="padding: 10px; text-align: center;">
+                    <button type="button" class="btn-tabela-ack" data-chave="${chave}" style="padding: 4px 10px; background: ${reconhecido ? 'rgba(115,191,105,0.2)' : 'var(--accent-color)'}; color: ${reconhecido ? 'var(--status-normal-color)' : '#fff'}; border: none; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">
+                      ${reconhecido ? 'Reconhecido' : 'Reconhecer'}
+                    </button>
+                  </td>
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+    gridExceccoes.querySelectorAll(".btn-tabela-ack").forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const chave = btn.dataset.chave;
+        const exc = exceccoes.find(e => e.chave === chave);
+        if (!exc) return;
+        const reconhecido = window.ccoReconhecidos.has(chave);
+        if (reconhecido) {
+          window.ccoReconhecidos.delete(chave);
+          if (window.ccoChannel) window.ccoChannel.postMessage({ type: 'REVOKE_ACK', chave });
+        } else {
+          window.ccoReconhecidos.set(chave, exc.severidade);
+          if (window.ccoChannel) window.ccoChannel.postMessage({ type: 'ACK_ALARM', chave, severidade: exc.severidade });
+        }
+        renderizarDashboardExceccoes();
+      };
+    });
+    return;
+  } else {
+    gridExceccoes.style.display = "grid";
+  }
 
   exceccoesFiltradas.forEach(({ chave, nome, severidade, cor, bg, mensagens, predicao }) => {
     const card = document.createElement("article");
     const reconhecido = window.ccoReconhecidos.has(chave);
 
     card.className = reconhecido ? "" : "animar-pulso";
-    card.style.cssText = `background: var(--card-bg); border: 1px solid var(--border-color); border-left: 6px solid ${cor}; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s; opacity: ${reconhecido ? '0.5' : '1'};`;
-    card.title = "Clique para abrir detalhes operacionais e preditivos";
+    card.setAttribute("tabindex", "0");
+    card.style.cssText = `background: var(--card-bg); border: 1px solid var(--border-color); border-left: 6px solid ${cor}; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s; opacity: ${reconhecido ? '0.5' : '1'}; outline: none;`;
+    card.title = "Clique ou pressione Enter para abrir detalhes operacionais";
+
+    card.addEventListener("focus", () => {
+      card.style.boxShadow = "0 0 0 2px var(--accent-color)";
+    });
+    card.addEventListener("blur", () => {
+      card.style.boxShadow = "none";
+    });
+
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        card.click();
+      }
+    });
 
     card.addEventListener("mouseenter", () => {
       card.style.transform = "translateY(-2px)";

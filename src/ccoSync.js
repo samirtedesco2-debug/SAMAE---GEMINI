@@ -82,5 +82,47 @@ window.CcoSync = {
         btnCCO.title = "Modo CCO";
       }
     });
+  },
+
+  inicializarModoCCOMural(btnId = 'btn-modo-cco-mural') {
+    const btnMural = document.getElementById(btnId);
+    if (!btnMural) return;
+
+    const iconeCCO = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M20 5H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z"/><path d="M12 18v4"/><path d="M8 22h8"/></svg>`;
+    const iconePadrao = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>`;
+
+    btnMural.addEventListener("click", () => {
+      document.body.classList.toggle("modo-cco-ativo");
+      const isLargeTV = document.body.classList.contains("modo-cco-ativo");
+      document.body.dataset.viewScale = isLargeTV ? "large-tv" : "";
+
+      if (isLargeTV) {
+        btnMural.innerHTML = iconePadrao;
+        btnMural.title = "Modo Padrão";
+        btnMural.style.borderColor = "var(--accent-color)";
+        
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } else {
+        btnMural.innerHTML = iconeCCO;
+        btnMural.title = "Modo CCO";
+        btnMural.style.borderColor = "var(--border-color)";
+        
+        if (document.exitFullscreen && document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    });
+
+    document.addEventListener("fullscreenchange", () => {
+      if (!document.fullscreenElement) {
+        document.body.classList.remove("modo-cco-ativo");
+        document.body.dataset.viewScale = "";
+        btnMural.innerHTML = iconeCCO;
+        btnMural.style.borderColor = "var(--border-color)";
+        btnMural.title = "Modo CCO";
+      }
+    });
   }
 };

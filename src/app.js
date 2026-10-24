@@ -54,6 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (window.CcoSync) {
     window.CcoSync.inicializarCanal();
     window.CcoSync.inicializarModoCCO();
+    window.CcoSync.inicializarModoCCOMural();
   }
 
   // Central de Notificações Popover
@@ -580,7 +581,12 @@ function inicializarNavegacao() {
     const relogio = document.getElementById("cco-clock-display");
     if (relogio) {
       const agora = new Date();
-      relogio.textContent = agora.toLocaleDateString("pt-BR") + " " + agora.toLocaleTimeString("pt-BR");
+      const dataStr = agora.toLocaleDateString("pt-BR");
+      const horaStr = agora.toLocaleTimeString("pt-BR");
+      relogio.innerHTML = `
+        <div style="font-size: 0.75rem; opacity: 0.85; line-height: 1.2;">${dataStr}</div>
+        <div style="font-size: 0.85rem; line-height: 1.2;">${horaStr}</div>
+      `;
     }
   }
   setInterval(atualizarRelogioCCO, 1000);
