@@ -14,6 +14,9 @@ O arquivo `src/ui.js` é responsável por renderizar a interface de usuário (DO
   - Classificação visual (`obterClasseStatus`) atribuindo classes adequadas (`status-sem-dados`) para leituras fora da faixa válida (0-110%) ou ausentes.
 - **Mural de Alertas CCO (`renderizarDashboardExceccoes` e `obterReservatoriosComAlertaOuExcecao`)**:
   - Visão dedicada (fullscreen sem header principal) com relógio digital em tempo real.
+  - **Alternância de Visualização (Cards vs. Tabela):** Suporte a dois modos de visualização no Mural CCO:
+    - *Modo Cards (Padrão CCO):* Cartões operacionais com borda lateral colorida por severidade, indicação de tendência e botões de ACK instantâneo.
+    - *Modo Tabela (Engenharia):* Visão tabular densa contendo colunas para TAG/Reservatório, Severidade, Diagnósticos, Tendência e Ação (ACK), otimizada para monitoramento em massa.
   - Filtros interativos por categoria (Totais, Críticos, Atenção, Incompletos) com contadores dinâmicos.
   - Avaliação de nível e vazão baseada no momento atual (última leitura telemetrada).
   - Header enxuto de investigação (`atualizarHeaderEnxutoInvestigacao`) para visualização focada e botão de retorno rápido.
