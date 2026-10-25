@@ -2119,12 +2119,23 @@ function renderizarDashboardExceccoes() {
     };
   });
 
+  const btnViewToggle = document.getElementById("btn-mural-view-toggle");
+  if (btnViewToggle && !btnViewToggle.dataset.bound) {
+    btnViewToggle.dataset.bound = "true";
+    window.ccoMuralModoTabela = window.ccoMuralModoTabela || false;
+    btnViewToggle.addEventListener("click", () => {
+      window.ccoMuralModoTabela = !window.ccoMuralModoTabela;
+      renderizarDashboardExceccoes();
+    });
+  }
+
   const exceccoesFiltradas = exceccoes.filter(e => {
     if (window.ccoFiltroAtual === "TODOS") return true;
     return e.severidade === window.ccoFiltroAtual;
   });
 
   if (exceccoesFiltradas.length === 0) {
+    gridExceccoes.style.display = "grid";
     gridExceccoes.innerHTML = `
       <div style="grid-column: 1 / -1; background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;">
         <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--status-normal-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
@@ -2139,93 +2150,179 @@ function renderizarDashboardExceccoes() {
     return peso(a.severidade) - peso(b.severidade);
   });
 
-  exceccoesFiltradas.forEach(({ chave, nome, severidade, cor, bg, mensagens, predicao }) => {
-    const card = document.createElement("article");
-    const reconhecido = window.ccoReconhecidos.has(chave);
-
-    card.className = reconhecido ? "" : "animar-pulso";
-    card.style.cssText = `background: var(--card-bg); border: 1px solid var(--border-color); border-left: 6px solid ${cor}; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s; opacity: ${reconhecido ? '0.5' : '1'};`;
-    card.title = "Clique para abrir detalhes operacionais e preditivos";
-
-    card.addEventListener("mouseenter", () => {
-      card.style.transform = "translateY(-2px)";
-      card.style.boxShadow = "0 6px 16px rgba(0,0,0,0.15)";
-    });
-    card.addEventListener("mouseleave", () => {
-      card.style.transform = "translateY(0)";
-      card.style.boxShadow = "none";
-    });
-
-    card.addEventListener("click", () => {
-      window.veioDeAlertasCCO = true;
-      const tabOp = document.getElementById("tab-operacional");
-      if (tabOp) tabOp.click();
-      const seletorFiltro = document.getElementById("seletor-filtro");
-      if (seletorFiltro) {
-        seletorFiltro.value = `reservatorio:${chave}`;
-        seletorFiltro.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-    });
-
-    const btnFooterId = `btn-footer-ack-${chave}`;
-    card.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: 700; font-size: 1rem; color: var(--text-color);">${nome} (${chave})</span>
-        <span style="background: ${bg}; color: ${cor}; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${severidade}</span>
-      </div>
-      <div style="font-size: 0.85rem; color: var(--muted-color); display: flex; flex-direction: column; gap: 4px;">
-        ${mensagens.map(m => `<div>• ${m}</div>`).join("")}
-      </div>
-      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 12px; font-size: 0.85rem; flex-wrap: wrap; gap: 8px;">
-        <span style="color: var(--muted-color);">Tendência: <strong style="color: var(--text-color);">${predicao ? `${predicao.tendencia} ${predicao.iconeTendencia}` : 'N/A'}</strong></span>
-        <button type="button" id="${btnFooterId}" style="padding: 6px 14px; background: ${reconhecido ? 'rgba(115,191,105,0.2)' : 'var(--accent-color)'}; color: ${reconhecido ? 'var(--status-normal-color)' : '#fff'}; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
-          ${reconhecido ? '✓ Alarme Reconhecido' : '🚨 Reconhecer Alarme'}
-        </button>
+  if (window.ccoMuralModoTabela) {
+    gridExceccoes.style.display = "block";
+    gridExceccoes.innerHTML = `
+      <div class="engineering-table-wrap" style="background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 12px; overflow-x: auto;">
+        <table class="comparison-table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+          <thead>
+            <tr style="background: var(--surface-inset); text-align: left;">
+              <th style="padding: 12px;">TAG / Reservatório</th>
+              <th style="padding: 12px;">Severidade</th>
+              <th style="padding: 12px;">Diagnósticos / Mensagens</th>
+              <th style="padding: 12px;">Tendência</th>
+              <th style="padding: 12px; text-align: center;">Ação (ACK)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${exceccoesFiltradas.map(({ chave, nome, severidade, cor, bg, mensagens, predicao }) => {
+              const reconhecido = window.ccoReconhecidos.has(chave);
+              return `
+                <tr style="border-top: 1px solid var(--border-color); opacity: ${reconhecido ? '0.6' : '1'}; cursor: pointer;" onclick="abrirReservatorioMural('${chave}')">
+                  <td style="padding: 12px; font-weight: 700; color: var(--text-color);">${nome} (${chave})</td>
+                  <td style="padding: 12px;"><span style="background: ${bg}; color: ${cor}; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${severidade}</span></td>
+                  <td style="padding: 12px; color: var(--muted-color);">${mensagens.join(" | ")}</td>
+                  <td style="padding: 12px; font-weight: 600; color: var(--text-color);">${predicao ? `${predicao.tendencia} ${predicao.iconeTendencia}` : 'N/A'}</td>
+                  <td style="padding: 12px; text-align: center;" onclick="event.stopPropagation()">
+                    <button type="button" onclick="toggleAckMural('${chave}', '${severidade}', '${nome}')" style="padding: 6px 12px; background: ${reconhecido ? 'rgba(115,191,105,0.2)' : 'var(--accent-color)'}; color: ${reconhecido ? 'var(--status-normal-color)' : '#fff'}; border: none; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">
+                      ${reconhecido ? '✓ Reconhecido' : '🚨 Reconhecer'}
+                    </button>
+                  </td>
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
+        </table>
       </div>
     `;
+  } else {
+    gridExceccoes.style.display = "grid";
+    exceccoesFiltradas.forEach(({ chave, nome, severidade, cor, bg, mensagens, predicao }) => {
+      const card = document.createElement("article");
+      const reconhecido = window.ccoReconhecidos.has(chave);
 
-    gridExceccoes.append(card);
+      card.className = reconhecido ? "" : "animar-pulso";
+      card.style.cssText = `background: var(--card-bg); border: 1px solid var(--border-color); border-left: 6px solid ${cor}; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s; opacity: ${reconhecido ? '0.5' : '1'};`;
+      card.title = "Clique para abrir detalhes operacionais e preditivos";
 
-    const btnFooterAck = card.querySelector("button");
-    if (btnFooterAck) {
-      btnFooterAck.addEventListener("click", (e) => {
-        e.stopPropagation();
-        window.samaeIncidentsLog = window.samaeIncidentsLog || [];
-        const tempoInicio = window.ccoAlarmTriggerTime?.[chave] || Date.now();
-        const tempoRespostaMs = Date.now() - tempoInicio;
-
-        if (reconhecido) {
-          window.ccoReconhecidos.delete(chave);
-          if (window.ccoChannel) {
-            window.ccoChannel.postMessage({ type: 'REVOKE_ACK', chave });
-          }
-          window.samaeIncidentsLog.push({
-            timestamp: new Date().toISOString(),
-            chave,
-            nome,
-            severidade,
-            acao: 'Revogado',
-            tempoRespostaMs
-          });
-        } else {
-          window.ccoReconhecidos.set(chave, severidade);
-          if (window.ccoChannel) {
-            window.ccoChannel.postMessage({ type: 'ACK_ALARM', chave, severidade });
-          }
-          window.samaeIncidentsLog.push({
-            timestamp: new Date().toISOString(),
-            chave,
-            nome,
-            severidade,
-            acao: 'Reconhecido',
-            tempoRespostaMs
-          });
-        }
-        renderizarDashboardExceccoes();
+      card.addEventListener("mouseenter", () => {
+        card.style.transform = "translateY(-2px)";
+        card.style.boxShadow = "0 6px 16px rgba(0,0,0,0.15)";
       });
-    }
-  });
+      card.addEventListener("mouseleave", () => {
+        card.style.transform = "translateY(0)";
+        card.style.boxShadow = "none";
+      });
+
+      card.addEventListener("click", () => {
+        window.veioDeAlertasCCO = true;
+        const tabOp = document.getElementById("tab-operacional");
+        if (tabOp) tabOp.click();
+        const seletorFiltro = document.getElementById("seletor-filtro");
+        if (seletorFiltro) {
+          seletorFiltro.value = `reservatorio:${chave}`;
+          seletorFiltro.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      });
+
+      const btnFooterId = `btn-footer-ack-${chave}`;
+      card.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: 700; font-size: 1rem; color: var(--text-color);">${nome} (${chave})</span>
+          <span style="background: ${bg}; color: ${cor}; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${severidade}</span>
+        </div>
+        <div style="font-size: 0.85rem; color: var(--muted-color); display: flex; flex-direction: column; gap: 4px;">
+          ${mensagens.map(m => `<div>• ${m}</div>`).join("")}
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 12px; font-size: 0.85rem; flex-wrap: wrap; gap: 8px;">
+          <span style="color: var(--muted-color);">Tendência: <strong style="color: var(--text-color);">${predicao ? `${predicao.tendencia} ${predicao.iconeTendencia}` : 'N/A'}</strong></span>
+          <button type="button" id="${btnFooterId}" style="padding: 6px 14px; background: ${reconhecido ? 'rgba(115,191,105,0.2)' : 'var(--accent-color)'}; color: ${reconhecido ? 'var(--status-normal-color)' : '#fff'}; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+            ${reconhecido ? '✓ Alarme Reconhecido' : '🚨 Reconhecer Alarme'}
+          </button>
+        </div>
+      `;
+
+      gridExceccoes.append(card);
+
+      const btnFooterAck = card.querySelector("button");
+      if (btnFooterAck) {
+        btnFooterAck.addEventListener("click", (e) => {
+          e.stopPropagation();
+          window.samaeIncidentsLog = window.samaeIncidentsLog || [];
+          const tempoInicio = window.ccoAlarmTriggerTime?.[chave] || Date.now();
+          const tempoRespostaMs = Date.now() - tempoInicio;
+
+          if (reconhecido) {
+            window.ccoReconhecidos.delete(chave);
+            if (window.ccoChannel) {
+              window.ccoChannel.postMessage({ type: 'REVOKE_ACK', chave });
+            }
+            window.samaeIncidentsLog.push({
+              timestamp: new Date().toISOString(),
+              chave,
+              nome,
+              severidade,
+              acao: 'Revogado',
+              tempoRespostaMs
+            });
+          } else {
+            window.ccoReconhecidos.set(chave, severidade);
+            if (window.ccoChannel) {
+              window.ccoChannel.postMessage({ type: 'ACK_ALARM', chave, severidade });
+            }
+            window.samaeIncidentsLog.push({
+              timestamp: new Date().toISOString(),
+              chave,
+              nome,
+              severidade,
+              acao: 'Reconhecido',
+              tempoRespostaMs
+            });
+          }
+          renderizarDashboardExceccoes();
+        });
+      }
+    });
+  }
 }
+
+window.abrirReservatorioMural = function(chave) {
+  window.veioDeAlertasCCO = true;
+  const tabOp = document.getElementById("tab-operacional");
+  if (tabOp) tabOp.click();
+  const seletorFiltro = document.getElementById("seletor-filtro");
+  if (seletorFiltro) {
+    seletorFiltro.value = `reservatorio:${chave}`;
+    seletorFiltro.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+};
+
+window.toggleAckMural = function(chave, severidade, nome) {
+  window.ccoReconhecidos = window.ccoReconhecidos || new Map();
+  const reconhecido = window.ccoReconhecidos.has(chave);
+  window.samaeIncidentsLog = window.samaeIncidentsLog || [];
+  const tempoInicio = window.ccoAlarmTriggerTime?.[chave] || Date.now();
+  const tempoRespostaMs = Date.now() - tempoInicio;
+
+  if (reconhecido) {
+    window.ccoReconhecidos.delete(chave);
+    if (window.ccoChannel) {
+      window.ccoChannel.postMessage({ type: 'REVOKE_ACK', chave });
+    }
+    window.samaeIncidentsLog.push({
+      timestamp: new Date().toISOString(),
+      chave,
+      nome,
+      severidade,
+      acao: 'Revogado',
+      tempoRespostaMs
+    });
+  } else {
+    window.ccoReconhecidos.set(chave, severidade);
+    if (window.ccoChannel) {
+      window.ccoChannel.postMessage({ type: 'ACK_ALARM', chave, severidade });
+    }
+    window.samaeIncidentsLog.push({
+      timestamp: new Date().toISOString(),
+      chave,
+      nome,
+      severidade,
+      acao: 'Reconhecido',
+      tempoRespostaMs
+    });
+  }
+  renderizarDashboardExceccoes();
+};
 
 function atualizarHeaderEnxutoInvestigacao(painelOperacional, filtroSelecionado, reservatorios) {
   let headerEnxuto = document.getElementById("cco-lean-investigation-header");
