@@ -2188,10 +2188,9 @@ function renderizarDashboardExceccoes() {
       </div>
     `;
     return;
-  } else {
-    gridExceccoes.style.display = "grid";
   }
 
+  gridExceccoes.style.display = "grid";
   exceccoesFiltradas.forEach(({ chave, nome, severidade, cor, bg, mensagens, predicao }) => {
     const card = document.createElement("article");
     const reconhecido = window.ccoReconhecidos.has(chave);
@@ -2249,99 +2248,50 @@ function renderizarDashboardExceccoes() {
         <button type="button" id="${btnFooterId}" style="padding: 6px 14px; background: ${reconhecido ? 'rgba(115,191,105,0.2)' : 'var(--accent-color)'}; color: ${reconhecido ? 'var(--status-normal-color)' : '#fff'}; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
           ${reconhecido ? '✓ Alarme Reconhecido' : '🚨 Reconhecer Alarme'}
         </button>
-=======
->>>>>>> recuperado-testes-cco
       </div>
     `;
-  } else {
-    gridExceccoes.style.display = "grid";
-    exceccoesFiltradas.forEach(({ chave, nome, severidade, cor, bg, mensagens, predicao }) => {
-      const card = document.createElement("article");
-      const reconhecido = window.ccoReconhecidos.has(chave);
 
-      card.className = reconhecido ? "" : "animar-pulso";
-      card.style.cssText = `background: var(--card-bg); border: 1px solid var(--border-color); border-left: 6px solid ${cor}; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s; opacity: ${reconhecido ? '0.5' : '1'};`;
-      card.title = "Clique para abrir detalhes operacionais e preditivos";
+    gridExceccoes.append(card);
 
-      card.addEventListener("mouseenter", () => {
-        card.style.transform = "translateY(-2px)";
-        card.style.boxShadow = "0 6px 16px rgba(0,0,0,0.15)";
-      });
-      card.addEventListener("mouseleave", () => {
-        card.style.transform = "translateY(0)";
-        card.style.boxShadow = "none";
-      });
+    const btnFooterAck = card.querySelector(`#${CSS.escape(btnFooterId)}`);
+    if (btnFooterAck) {
+      btnFooterAck.addEventListener("click", (e) => {
+        e.stopPropagation();
+        window.samaeIncidentsLog = window.samaeIncidentsLog || [];
+        const tempoInicio = window.ccoAlarmTriggerTime?.[chave] || Date.now();
+        const tempoRespostaMs = Date.now() - tempoInicio;
 
-      card.addEventListener("click", () => {
-        window.veioDeAlertasCCO = true;
-        const tabOp = document.getElementById("tab-operacional");
-        if (tabOp) tabOp.click();
-        const seletorFiltro = document.getElementById("seletor-filtro");
-        if (seletorFiltro) {
-          seletorFiltro.value = `reservatorio:${chave}`;
-          seletorFiltro.dispatchEvent(new Event("change", { bubbles: true }));
-        }
-      });
-
-      const btnFooterId = `btn-footer-ack-${chave}`;
-      card.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-weight: 700; font-size: 1rem; color: var(--text-color);">${nome} (${chave})</span>
-          <span style="background: ${bg}; color: ${cor}; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${severidade}</span>
-        </div>
-        <div style="font-size: 0.85rem; color: var(--muted-color); display: flex; flex-direction: column; gap: 4px;">
-          ${mensagens.map(m => `<div>• ${m}</div>`).join("")}
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 12px; font-size: 0.85rem; flex-wrap: wrap; gap: 8px;">
-          <span style="color: var(--muted-color);">Tendência: <strong style="color: var(--text-color);">${predicao ? `${predicao.tendencia} ${predicao.iconeTendencia}` : 'N/A'}</strong></span>
-          <button type="button" id="${btnFooterId}" style="padding: 6px 14px; background: ${reconhecido ? 'rgba(115,191,105,0.2)' : 'var(--accent-color)'}; color: ${reconhecido ? 'var(--status-normal-color)' : '#fff'}; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
-            ${reconhecido ? '✓ Alarme Reconhecido' : '🚨 Reconhecer Alarme'}
-          </button>
-        </div>
-      `;
-
-      gridExceccoes.append(card);
-
-      const btnFooterAck = card.querySelector("button");
-      if (btnFooterAck) {
-        btnFooterAck.addEventListener("click", (e) => {
-          e.stopPropagation();
-          window.samaeIncidentsLog = window.samaeIncidentsLog || [];
-          const tempoInicio = window.ccoAlarmTriggerTime?.[chave] || Date.now();
-          const tempoRespostaMs = Date.now() - tempoInicio;
-
-          if (reconhecido) {
-            window.ccoReconhecidos.delete(chave);
-            if (window.ccoChannel) {
-              window.ccoChannel.postMessage({ type: 'REVOKE_ACK', chave });
-            }
-            window.samaeIncidentsLog.push({
-              timestamp: new Date().toISOString(),
-              chave,
-              nome,
-              severidade,
-              acao: 'Revogado',
-              tempoRespostaMs
-            });
-          } else {
-            window.ccoReconhecidos.set(chave, severidade);
-            if (window.ccoChannel) {
-              window.ccoChannel.postMessage({ type: 'ACK_ALARM', chave, severidade });
-            }
-            window.samaeIncidentsLog.push({
-              timestamp: new Date().toISOString(),
-              chave,
-              nome,
-              severidade,
-              acao: 'Reconhecido',
-              tempoRespostaMs
-            });
+        if (reconhecido) {
+          window.ccoReconhecidos.delete(chave);
+          if (window.ccoChannel) {
+            window.ccoChannel.postMessage({ type: 'REVOKE_ACK', chave });
           }
-          renderizarDashboardExceccoes();
-        });
-      }
-    });
-  }
+          window.samaeIncidentsLog.push({
+            timestamp: new Date().toISOString(),
+            chave,
+            nome,
+            severidade,
+            acao: 'Revogado',
+            tempoRespostaMs
+          });
+        } else {
+          window.ccoReconhecidos.set(chave, severidade);
+          if (window.ccoChannel) {
+            window.ccoChannel.postMessage({ type: 'ACK_ALARM', chave, severidade });
+          }
+          window.samaeIncidentsLog.push({
+            timestamp: new Date().toISOString(),
+            chave,
+            nome,
+            severidade,
+            acao: 'Reconhecido',
+            tempoRespostaMs
+          });
+        }
+        renderizarDashboardExceccoes();
+      });
+    }
+  });
 }
 
 window.abrirReservatorioMural = function(chave) {

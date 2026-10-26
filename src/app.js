@@ -27,6 +27,7 @@ async function inicializarBancoAssincrono() {
   try {
     window.bancoDeDados = await window.ApiClient.inicializarBanco();
     inicializarTema();
+    if (typeof inicializarControleAudioCCO === 'function') inicializarControleAudioCCO();
     inicializarDashboard();
   } catch (erro) {
     console.error("Erro ao inicializar dados:", erro);
@@ -107,6 +108,21 @@ document.addEventListener("DOMContentLoaded", () => {
       if (tabExceccoes) tabExceccoes.click();
     }, 400);
   }
+
+  const seletorRelatorios = document.getElementById("seletor-relatorios-cco");
+  if (seletorRelatorios) {
+    seletorRelatorios.addEventListener("change", (e) => {
+      const val = e.target.value;
+      if (val === "copiar-plantao") {
+        document.getElementById("btn-copiar-plantao-cco")?.click();
+      } else if (val === "exportar-csv") {
+        document.getElementById("btn-exportar-csv")?.click();
+      } else if (val === "exportar-html") {
+        document.getElementById("btn-exportar-html")?.click();
+      }
+      e.target.value = "";
+    });
+  }
 });
 
 function inicializarNotificacoesExternas() {
@@ -149,6 +165,57 @@ function inicializarNotificacoesExternas() {
     }
   }
 }
+
+function tocarAlertaSonoroCCO() {
+  const somAtivo = localStorage.getItem("samai_cco_sound_enabled") !== "false";
+  if (!somAtivo) return;
+
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+
+    const playTone = (freq, time, duration) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.2, ctx.currentTime + time);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + time + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + time);
+      osc.stop(ctx.currentTime + time + duration);
+    };
+
+    playTone(880, 0, 0.15);
+    playTone(1320, 0.2, 0.2);
+  } catch (e) {}
+}
+window.tocarAlertaSonoroCCO = tocarAlertaSonoroCCO;
+
+function inicializarControleAudioCCO() {
+  const btnAudioToggle = document.getElementById("btn-cco-audio-toggle");
+  const lblAudioIcon = document.getElementById("lbl-audio-icon");
+  if (btnAudioToggle) {
+    let somLigado = localStorage.getItem("samai_cco_sound_enabled") !== "false";
+    if (lblAudioIcon) lblAudioIcon.textContent = somLigado ? "🔊" : "🔇";
+    btnAudioToggle.title = somLigado ? "Alerta Sonoro Ativo (Clique para silenciar)" : "Alerta Sonoro Silenciado (Clique para ativar)";
+
+    if (!btnAudioToggle.dataset.bound) {
+      btnAudioToggle.dataset.bound = "true";
+      btnAudioToggle.addEventListener("click", () => {
+        somLigado = localStorage.getItem("samai_cco_sound_enabled") !== "false";
+        somLigado = !somLigado;
+        localStorage.setItem("samai_cco_sound_enabled", String(somLigado));
+        if (lblAudioIcon) lblAudioIcon.textContent = somLigado ? "🔊" : "🔇";
+        btnAudioToggle.title = somLigado ? "Alerta Sonoro Ativo (Clique para silenciar)" : "Alerta Sonoro Silenciado (Clique para ativar)";
+        if (somLigado) tocarAlertaSonoroCCO();
+      });
+    }
+  }
+}
+window.inicializarControleAudioCCO = inicializarControleAudioCCO;
 
 function atualizarListaNotificacoes() {
   inicializarNotificacoesExternas();
