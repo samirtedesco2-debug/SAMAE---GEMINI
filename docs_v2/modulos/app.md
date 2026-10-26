@@ -7,8 +7,10 @@ O arquivo `src/app.js` atua como o **controlador principal (orquestrador)** da a
 - **Integração com Módulo CCO Sync (`src/ccoSync.js`)**:
   - Delegação da inicialização do `BroadcastChannel('samae_cco_link')` e do modo CCO/Fullscreen.
   - Gerenciamento de Janela Singleton (`ccoMuralWindow`) para o Mural de Alarmes CCO.
-- **Central de Notificações**:
-  - Gerenciamento do popover interativo em `btn-notificacoes` para exibição de logs de ocorrências e ações recentes.
+- **Central de Notificações Externa**:
+  - Popover dedicado (`#btn-notificacoes`) transformado em feed de avisos e notificações externas/sistêmicas (separado dos logs internos de ACK).
+  - Suporte a categorias operacionais: `UPDATE` (atualizações de sistema), `MAINTENANCE` (manutenção de sensores), `ANNOUNCE` (comunicados da engenharia/criador) e `SYSTEM` (infraestrutura SCADA/WebSocket).
+  - Persistência em `localStorage` (chave `samai_cco_external_notifications`) e ações rápidas ("Marcar todas como lidas", contagem de não lidas com badge dinâmico).
 - **Tratamento Global de Erros**:
   - Ouvinte global `unhandledrejection` para interceptação e registro de exceções assíncronas não tratadas.
 - **Escala para Telas Grandes (TV 55")**:

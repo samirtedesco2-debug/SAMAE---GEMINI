@@ -61,6 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnNotificacoes = document.getElementById("btn-notificacoes");
   const popoverNotificacoes = document.getElementById("notificacoes-popover");
   const btnFecharNotificacoes = document.getElementById("btn-fechar-notificacoes");
+  const btnMarcarTodasLidas = document.getElementById("btn-marcar-todas-lidas");
 
   if (btnNotificacoes && popoverNotificacoes) {
     btnNotificacoes.addEventListener("click", (e) => {
@@ -73,6 +74,18 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnFecharNotificacoes && popoverNotificacoes) {
     btnFecharNotificacoes.addEventListener("click", () => {
       popoverNotificacoes.hidden = true;
+    });
+  }
+
+  if (btnMarcarTodasLidas) {
+    btnMarcarTodasLidas.addEventListener("click", () => {
+      if (window.samaeExternalNotifications) {
+        window.samaeExternalNotifications.forEach(n => n.lida = true);
+        try {
+          localStorage.setItem("samai_cco_external_notifications", JSON.stringify(window.samaeExternalNotifications));
+        } catch(e) {}
+        atualizarListaNotificacoes();
+      }
     });
   }
 
@@ -96,24 +109,107 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+function inicializarNotificacoesExternas() {
+  if (!window.samaeExternalNotifications) {
+    try {
+      const salvos = localStorage.getItem("samai_cco_external_notifications");
+      if (salvos) {
+        window.samaeExternalNotifications = JSON.parse(salvos);
+      } else {
+        window.samaeExternalNotifications = [
+          {
+            id: 'notif-1',
+            tipo: 'UPDATE',
+            titulo: 'Atualização do Sistema CCO',
+            mensagem: 'Painel CCO v2.6 atualizado com Central de Notificações externa e Mural Singleton.',
+            timestamp: new Date().toISOString(),
+            lida: false
+          },
+          {
+            id: 'notif-2',
+            tipo: 'MAINTENANCE',
+            titulo: 'Manutenção de Sensores',
+            mensagem: 'Calibração programada dos sensores de telemetria no Reservatório R-02.',
+            timestamp: new Date(Date.now() - 3600000).toISOString(),
+            lida: false
+          },
+          {
+            id: 'notif-3',
+            tipo: 'ANNOUNCE',
+            titulo: 'Comunicado da Engenharia',
+            mensagem: 'Verifique os relatórios de plantão e exportações de turnos ao final de cada período.',
+            timestamp: new Date(Date.now() - 7200000).toISOString(),
+            lida: false
+          }
+        ];
+        localStorage.setItem("samai_cco_external_notifications", JSON.stringify(window.samaeExternalNotifications));
+      }
+    } catch (e) {
+      window.samaeExternalNotifications = [];
+    }
+  }
+}
+
 function atualizarListaNotificacoes() {
+  inicializarNotificacoesExternas();
   const lista = document.getElementById("notificacoes-lista");
+  const badgeNotif = document.getElementById("badge-alarmes-ativos");
   if (!lista) return;
 
-  const logs = window.samaeIncidentsLog || [];
-  if (logs.length === 0) {
-    lista.innerHTML = `<p class="notificacao-vazia">Nenhuma notificação recente no sistema.</p>`;
+  const notifs = window.samaeExternalNotifications || [];
+  
+  const naoLidas = notifs.filter(n => !n.lida).length;
+  if (badgeNotif) {
+    badgeNotif.textContent = naoLidas;
+    badgeNotif.style.display = naoLidas > 0 ? "inline-block" : "none";
+  }
+
+  if (notifs.length === 0) {
+    lista.innerHTML = `<p class="notificacao-vazia">Nenhuma notificação externa no momento.</p>`;
     return;
   }
 
-  lista.innerHTML = logs.slice(-10).reverse().map(log => `
-    <div class="notificacao-item">
-      <span class="notificacao-item-time">${new Date(log.timestamp).toLocaleTimeString("pt-BR")}</span>
-      <strong>${log.nome || log.chave}</strong>
-      <span>Ação: ${log.acao} (${log.severidade || 'Info'})</span>
+  const iconePorTipo = {
+    UPDATE: '🔄',
+    MAINTENANCE: '🛠️',
+    ANNOUNCE: '📢',
+    SYSTEM: '📡'
+  };
+
+  const corPorTipo = {
+    UPDATE: 'var(--accent-color)',
+    MAINTENANCE: 'var(--status-attention-color)',
+    ANNOUNCE: 'var(--status-critical-color)',
+    SYSTEM: 'var(--status-normal-color)'
+  };
+
+  lista.innerHTML = notifs.slice(-15).reverse().map(n => `
+    <div class="notificacao-item" style="border-left-color: ${corPorTipo[n.tipo] || 'var(--accent-color)'}; opacity: ${n.lida ? '0.7' : '1'}; background: var(--surface-inset); padding: 10px; border-radius: 6px; border-left-width: 4px; display: flex; flex-direction: column; gap: 4px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <span style="font-weight: 700; color: var(--text-color); font-size: 0.85rem;">${iconePorTipo[n.tipo] || '📌'} ${n.titulo}</span>
+        <span style="font-size: 0.7rem; color: var(--muted-color);">${new Date(n.timestamp).toLocaleTimeString("pt-BR", {hour: '2-digit', minute:'2-digit'})}</span>
+      </div>
+      <p style="margin: 0; color: var(--muted-color); font-size: 0.8rem; line-height: 1.3;">${n.mensagem}</p>
+      <div style="display: flex; justify-content: flex-end; margin-top: 2px;">
+        <button type="button" onclick="marcarNotificacaoLida('${n.id}')" style="background: none; border: none; font-size: 0.75rem; color: var(--accent-color); cursor: pointer; padding: 0; font-weight: 600;">
+          ${n.lida ? '✓ Lida' : 'Marcar como lida'}
+        </button>
+      </div>
     </div>
   `).join("");
 }
+
+window.marcarNotificacaoLida = function(id) {
+  if (!window.samaeExternalNotifications) return;
+  const n = window.samaeExternalNotifications.find(item => item.id === id);
+  if (n) {
+    n.lida = !n.lida;
+    try {
+      localStorage.setItem("samai_cco_external_notifications", JSON.stringify(window.samaeExternalNotifications));
+    } catch(e) {}
+    atualizarListaNotificacoes();
+  }
+};
 
 function inicializarTema() {
   const botaoTema = document.getElementById("theme-toggle");

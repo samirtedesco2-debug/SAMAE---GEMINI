@@ -12,11 +12,13 @@ O arquivo `src/ui.js` é responsável por renderizar a interface de usuário (DO
 - **Aba de Registros Inconsistentes / Incompletos (`incompletos`)**:
   - Tratamento robusto e unificado para status `"Inconsistente"` e `"Sem Dados"`.
   - Classificação visual (`obterClasseStatus`) atribuindo classes adequadas (`status-sem-dados`) para leituras fora da faixa válida (0-110%) ou ausentes.
-- **Mural de Alertas Ativos (`renderizarDashboardExceccoes` e `obterReservatoriosComAlertaOuExcecao`)**:
-  - Visão dedicada com cabeçalho compacto (`analysis-intro`) otimizado para salas de controle.
-  - Filtros interativos por categoria (Totais, Críticos, Atenção, Inconsistentes) com contadores dinâmicos.
-  - **Cabeçalho Compacto e Ergonômico**:
-    - Botão Fechar minimalista sem borda (`✕`) posicionado de forma isolada e discreta no canto superior direito.
-    - Barra de ferramentas operacional unificada com botões em formato de ícone quadrado (`btn-operacional-quadrado`): Alternância dinâmica entre Cards Visuais e Tabela Compacta (`btn-mural-view-toggle`), Modo CCO (`btn-modo-cco-mural`) e relógio vertical (`cco-clock-display` com data na linha superior e hora na inferior).
-    - Barra de ferramentas de exportação semântica (`#cco-export-toolbar`) com rótulo "Relatórios & Exportação" e ações de cópia de plantão, CSV e HTML.
+- **Mural de Alertas CCO (`renderizarDashboardExceccoes` e `obterReservatoriosComAlertaOuExcecao`)**:
+  - Visão dedicada (fullscreen sem header principal) com relógio digital em tempo real e cabeçalho compacto (`analysis-intro`) otimizado para salas de controle.
+  - **Alternância de Visualização (Cards vs. Tabela):** Suporte a dois modos de visualização no Mural CCO:
+    - *Modo Cards (Padrão CCO):* Cartões operacionais com borda lateral colorida por severidade, indicação de tendência e botões de ACK instantâneo.
+    - *Modo Tabela (Engenharia):* Visão tabular densa contendo colunas para TAG/Reservatório, Severidade, Diagnósticos, Tendência e Ação (ACK), otimizada para monitoramento em massa.
+  - Filtros interativos por categoria (Totais, Críticos, Atenção, Incompletos) com contadores dinâmicos.
+  - Avaliação de nível e vazão baseada no momento atual (última leitura telemetrada).
+  - Header enxuto de investigação (`atualizarHeaderEnxutoInvestigacao`) para visualização focada e botão de retorno rápido.
+  - Barra de ferramentas operacional unificada e barra de exportação semântica (`#cco-export-toolbar`) com ações de cópia de plantão, CSV e HTML.
   - Suporte completo a navegação por teclado (`tabindex`, setas, `Enter`, `Espaço`).
