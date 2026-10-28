@@ -50,6 +50,10 @@ async function carregarMesPorData(dataStr) {
   }
 }
 document.addEventListener("DOMContentLoaded", () => {
+  if (window.AuthUI) {
+    window.AuthUI.verificarSessaoOuExibirLogin();
+  }
+
   inicializarBancoAssincrono();
 
   if (window.CcoSync) {
@@ -2150,8 +2154,32 @@ function renderizarPainelConfiguracoes() {
     return;
   }
 
-  if (!reservatorioConfigSelecionado || !reservatorios[reservatorioConfigSelecionado] || !chaves.includes(reservatorioConfigSelecionado)) {
+  if (!reservatorioConfigSelecionado || (!reservatorios[reservatorioConfigSelecionado] && reservatorioConfigSelecionado !== "usuarios") || !chaves.includes(reservatorioConfigSelecionado)) {
     reservatorioConfigSelecionado = chaves[0];
+  }
+
+  const sessionStr = localStorage.getItem("samae_cco_session");
+  let isAdmin = false;
+  if (sessionStr) {
+    try {
+      isAdmin = (JSON.parse(sessionStr).role === "ADMIN");
+    } catch(e){}
+  }
+
+  if (isAdmin) {
+    const btnUserAdmin = document.createElement("button");
+    btnUserAdmin.type = "button";
+    btnUserAdmin.className = `config-reservoir-item ${reservatorioConfigSelecionado === "usuarios" ? "is-active" : ""}`;
+    btnUserAdmin.style.borderColor = "var(--accent-color)";
+    btnUserAdmin.innerHTML = `
+      <strong>👥 Gerenciar Usuários</strong>
+      <span>Cadastrar novos operadores (ADMIN)</span>
+    `;
+    btnUserAdmin.addEventListener("click", () => {
+      reservatorioConfigSelecionado = "usuarios";
+      renderizarPainelConfiguracoes();
+    });
+    listaContainer.appendChild(btnUserAdmin);
   }
 
   chaves.forEach((chave) => {
@@ -2170,7 +2198,101 @@ function renderizarPainelConfiguracoes() {
     listaContainer.appendChild(item);
   });
 
-  renderizarFormularioConfiguracao(reservatorioConfigSelecionado, reservatorios[reservatorioConfigSelecionado]);
+  if (reservatorioConfigSelecionado === "usuarios") {
+    renderizarFormularioCriacaoUsuario();
+  } else {
+    renderizarFormularioConfiguracao(reservatorioConfigSelecionado, reservatorios[reservatorioConfigSelecionado]);
+  }
+}
+
+function renderizarFormularioCriacaoUsuario() {
+  const container = document.getElementById("config-detalhe-container");
+  if (!container) return;
+
+  const sessionStr = localStorage.getItem("samae_cco_session");
+  let currentAdmin = "admin.samae";
+  if (sessionStr) {
+    try {
+      currentAdmin = JSON.parse(sessionStr).username;
+    } catch(e){}
+  }
+
+  container.innerHTML = `
+    <div class="config-detail-form" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div class="config-form-header">
+        <h3>👥 Gerenciamento de Operadores e Usuários</h3>
+        <span class="config-reservoir-badge">Painel Restrito ADMIN</span>
+      </div>
+
+      <p style="color: var(--muted-color); font-size: 0.9rem; margin-bottom: 20px; line-height: 1.5;">
+        Cadastre novos operadores ou administradores no sistema CCO SAMAE. <strong>O preenchimento do e-mail corporativo é obrigatório.</strong> A senha inicial provisória será gerada automaticamente como o primeiro nome em minúsculas, exigindo a alteração no primeiro acesso.
+      </p>
+
+      <form id="form-cadastrar-usuario" style="display: flex; flex-direction: column; gap: 18px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-color);">Nome de Usuário / Login (Ex: carlos.silva)</label>
+          <input type="text" id="novo-username" required placeholder="carlos.silva" style="
+            background: var(--surface-bg); border: 1px solid var(--border-color); color: var(--text-color);
+            padding: 12px; border-radius: 8px; font-size: 0.95rem; outline: none;
+          ">
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-color);">E-mail Corporativo (Obrigatório)</label>
+          <input type="email" id="novo-email" required placeholder="carlos.silva@samae.sc.gov.br" style="
+            background: var(--surface-bg); border: 1px solid var(--border-color); color: var(--text-color);
+            padding: 12px; border-radius: 8px; font-size: 0.95rem; outline: none;
+          ">
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-color);">Perfil de Acesso (Role)</label>
+          <select id="novo-role" style="
+            background: var(--surface-bg); border: 1px solid var(--border-color); color: var(--text-color);
+            padding: 12px; border-radius: 8px; font-size: 0.95rem; outline: none;
+          ">
+            <option value="Agent">Agent (Operador de Plantão - Restrito)</option>
+            <option value="ADMIN">ADMIN (Administrador - Acesso Total)</option>
+          </select>
+        </div>
+
+        <div id="cadastro-user-msg" style="display: none; padding: 10px 14px; border-radius: 6px; font-size: 0.85rem;"></div>
+
+        <button type="submit" style="
+          background: var(--accent-color); color: #fff; border: none; padding: 12px;
+          border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer;
+          transition: background 0.2s; margin-top: 10px;
+        ">
+          Cadastrar Novo Usuário
+        </button>
+      </form>
+    </div>
+  `;
+
+  document.getElementById("form-cadastrar-usuario").onsubmit = async (e) => {
+    e.preventDefault();
+    const u = document.getElementById("novo-username").value.trim();
+    const email = document.getElementById("novo-email").value.trim();
+    const role = document.getElementById("novo-role").value;
+    const msgEl = document.getElementById("cadastro-user-msg");
+    msgEl.style.display = "none";
+
+    try {
+      await window.AuthRepository.cadastrarUsuario(currentAdmin, u, role, email);
+      msgEl.style.display = "block";
+      msgEl.style.background = "var(--status-normal-background)";
+      msgEl.style.color = "var(--status-normal-color)";
+      msgEl.style.border = "1px solid var(--status-normal-color)";
+      msgEl.textContent = `Sucesso! Usuário '${u}' cadastrado com o e-mail corporativo '${email}'.`;
+      document.getElementById("form-cadastrar-usuario").reset();
+    } catch (err) {
+      msgEl.style.display = "block";
+      msgEl.style.background = "var(--status-critical-background)";
+      msgEl.style.color = "var(--status-critical-color)";
+      msgEl.style.border = "1px solid var(--status-critical-color)";
+      msgEl.textContent = err.message;
+    }
+  };
 }
 
 function renderizarFormularioConfiguracao(chave, res) {

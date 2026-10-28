@@ -2131,9 +2131,26 @@ function renderizarDashboardExceccoes() {
   }
   window.ccoMuralModoTabela = window.ccoMuralModoTabela || window.ccoModoTabela || false;
 
+  const searchInput = document.getElementById("cco-search-input");
+  if (searchInput && !searchInput.dataset.bound) {
+    searchInput.dataset.bound = "true";
+    searchInput.addEventListener("input", () => {
+      renderizarDashboardExceccoes();
+    });
+  }
+  const searchQuery = (searchInput?.value || "").toLowerCase().trim();
+
   const exceccoesFiltradas = exceccoes.filter(e => {
-    if (window.ccoFiltroAtual === "TODOS") return true;
-    return e.severidade === window.ccoFiltroAtual;
+    const matchFiltro = window.ccoFiltroAtual === "TODOS" || e.severidade === window.ccoFiltroAtual;
+    if (!matchFiltro) return false;
+
+    if (searchQuery) {
+      const nomeMatch = (e.nome || "").toLowerCase().includes(searchQuery);
+      const chaveMatch = (e.chave || "").toLowerCase().includes(searchQuery);
+      const msgMatch = (e.mensagens || []).some(m => m.toLowerCase().includes(searchQuery));
+      return nomeMatch || chaveMatch || msgMatch;
+    }
+    return true;
   });
 
   if (exceccoesFiltradas.length === 0) {
