@@ -58,25 +58,34 @@ Todas as ações críticas de segurança geram registros persistidos na store `a
 
 ---
 
-## 4. Fluxos de Autenticação e Recuperação
+## 4. Fluxos de Autenticação, Recuperação e Painel ADMIN
 
 1. **Tela de Login:**
-   * Overlay em tela cheia com fundo cinza-escuro (`#0d0e12`), desfoque jateado (`backdrop-filter`) e card grafite (`#14161d`).
-   * Tipografia em azul-ciano (`#33a2e5`) e inputs pretos foscos.
-2. **Primeiro Acesso:**
-   * Exibido quando `primeiroAcesso: true`. O operador insere a senha definitiva validada por complexidade.
-3. **Esqueceu a Senha / Recuperação:**
-   * Ao clicar em "Esqueceu a senha?", o operador informa o e-mail corporativo.
-   * Se o e-mail for localizado, a conta recebe `requerRedefinicao: true`, e o sistema dispara o link nativo (`mailto:...`).
-   * Ao retornar, o sistema exige obrigatoriamente o cadastro de uma nova senha forte antes de liberar o painel CCO.
+   * Overlay com imagem vetorial imponente de reservatório industrial em alta resolução convertida em Base64 (`btoa`), com desfoque atmosférico de fundo e vinheta noturna (`backdrop-filter: blur(14px)`).
+   * Exigência obrigatória de login no carregamento inicial (`DOMContentLoaded`).
+2. **Primeiro Acesso & Redefinição:**
+   * Exibido quando `primeiroAcesso: true` ou `requerRedefinicao: true`. O operador insere a senha definitiva validada por complexidade estrita.
+3. **Gerenciamento de Usuários (Painel ADMIN):**
+   * Acessível exclusivamente para administradores através do botão dedicado **`#btn-gerenciar-usuarios`** no menu lateral do painel de configurações (`⚙️`).
+   * Permite cadastrar novos operadores (`Agent`) ou administradores (`ADMIN`) informando obrigatoriamente o e-mail corporativo individual (sem geração automática de e-mail).
+4. **Isolamento de Bancos IndexedDB:**
+   * **`SamaeAuthDB` (Versão 1):** Gerencia exclusivamente as stores de `usuarios` e `auditoria`.
+   * **`SamaeHandlesDB` (Versão 1):** Gerencia exclusivamente os *handles* de arquivos do File System Access API, eliminando qualquer conflito de versão (*VersionError*).
 
 ---
 
-## 5. Travas de Privilégios na Interface (RBAC)
+## 5. Parâmetros Globais Dedicados
+
+* Acessíveis através do botão dedicado **`#btn-config-parametros-globais`** no painel de configurações, separados dos formulários individuais de reservatórios.
+* Contém o **Formulário I** (Passagem de plantão, e-mails de destino e grade de Timers de disparos automáticos) e o **Formulário II** (E-mails da manutenção, logs de erro, SLA e Cron).
+
+---
+
+## 6. Travas de Privilégios na Interface (RBAC)
 
 * **Perfil `AGENT` (Operador de Plantão):**
-  * **Configurações:** Campos de parametrização e limites de reservatórios bloqueados em modo `readonly`/`disabled`. Botão de salvar e vinculação de disco ocultos.
+  * **Configurações:** Campos de parametrização, gerenciamento de usuários e parâmetros globais ocultos ou bloqueados.
   * **Engenharia:** Aba de relatórios históricos de SLA e auditoria oculta.
   * **Mural de Alertas:** O botão de reconhecimento (*ACK*) opera em modo de clique único com restrição de confirmação (`✓ Ciência Dada`).
 * **Perfil `ADMIN` (Administrador):**
-  * Acesso irrestrito a todas as configurações, cadastros, relatórios de engenharia, painéis de auditoria e ferramentas operacionais.
+  * Acesso irrestrito a todas as configurações, cadastro de novos usuários com e-mail corporativo obrigatório, relatórios de engenharia, painéis de auditoria e ferramentas operacionais.

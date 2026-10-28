@@ -1980,7 +1980,7 @@ let configFileHandle = null;
 
 async function salvarHandleNoIndexedDB(handle) {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("SamaeConfigDB", 1);
+    const request = indexedDB.open("SamaeHandlesDB", 1);
     request.onupgradeneeded = (e) => {
       const db = e.target.result;
       if (!db.objectStoreNames.contains("handles")) {
@@ -2001,7 +2001,7 @@ async function salvarHandleNoIndexedDB(handle) {
 
 async function carregarHandleDoIndexedDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("SamaeConfigDB", 1);
+    const request = indexedDB.open("SamaeHandlesDB", 1);
     request.onupgradeneeded = (e) => {
       const db = e.target.result;
       if (!db.objectStoreNames.contains("handles")) {
@@ -2154,8 +2154,10 @@ function renderizarPainelConfiguracoes() {
     return;
   }
 
-  if (!reservatorioConfigSelecionado || (!reservatorios[reservatorioConfigSelecionado] && reservatorioConfigSelecionado !== "usuarios") || !chaves.includes(reservatorioConfigSelecionado)) {
-    reservatorioConfigSelecionado = chaves[0];
+  if (reservatorioConfigSelecionado !== "usuarios" && reservatorioConfigSelecionado !== "parametros_globais") {
+    if (!reservatorioConfigSelecionado || !reservatorios[reservatorioConfigSelecionado] || !chaves.includes(reservatorioConfigSelecionado)) {
+      reservatorioConfigSelecionado = chaves[0];
+    }
   }
 
   const sessionStr = localStorage.getItem("samae_cco_session");
@@ -2169,6 +2171,7 @@ function renderizarPainelConfiguracoes() {
   if (isAdmin) {
     const btnUserAdmin = document.createElement("button");
     btnUserAdmin.type = "button";
+    btnUserAdmin.id = "btn-gerenciar-usuarios";
     btnUserAdmin.className = `config-reservoir-item ${reservatorioConfigSelecionado === "usuarios" ? "is-active" : ""}`;
     btnUserAdmin.style.borderColor = "var(--accent-color)";
     btnUserAdmin.innerHTML = `
@@ -2180,12 +2183,29 @@ function renderizarPainelConfiguracoes() {
       renderizarPainelConfiguracoes();
     });
     listaContainer.appendChild(btnUserAdmin);
+
+    const btnGlobalConfig = document.createElement("button");
+    btnGlobalConfig.type = "button";
+    btnGlobalConfig.id = "btn-config-parametros-globais";
+    btnGlobalConfig.className = `config-reservoir-item ${reservatorioConfigSelecionado === "parametros_globais" ? "is-active" : ""}`;
+    btnGlobalConfig.style.borderColor = "var(--accent-color)";
+    btnGlobalConfig.innerHTML = `
+      <strong>🌐 Parâmetros Globais</strong>
+      <span>Automação, Relatórios & Timers</span>
+    `;
+    btnGlobalConfig.addEventListener("click", () => {
+      reservatorioConfigSelecionado = "parametros_globais";
+      renderizarPainelConfiguracoes();
+    });
+    listaContainer.appendChild(btnGlobalConfig);
   }
 
   chaves.forEach((chave) => {
     const res = reservatorios[chave];
     const item = document.createElement("button");
     item.type = "button";
+    item.id = `config-res-${chave}`;
+    item.dataset.reservoirKey = chave;
     item.className = `config-reservoir-item ${chave === reservatorioConfigSelecionado ? "is-active" : ""}`;
     item.innerHTML = `
       <strong>${res.nome || chave}</strong>
@@ -2200,6 +2220,8 @@ function renderizarPainelConfiguracoes() {
 
   if (reservatorioConfigSelecionado === "usuarios") {
     renderizarFormularioCriacaoUsuario();
+  } else if (reservatorioConfigSelecionado === "parametros_globais") {
+    renderizarFormularioParametrosGlobais();
   } else {
     renderizarFormularioConfiguracao(reservatorioConfigSelecionado, reservatorios[reservatorioConfigSelecionado]);
   }
@@ -2295,6 +2317,106 @@ function renderizarFormularioCriacaoUsuario() {
   };
 }
 
+function renderizarFormularioParametrosGlobais() {
+  const container = document.getElementById("config-detalhe-container");
+  if (!container) return;
+
+  const globalConfig = JSON.parse(localStorage.getItem("samai_global_config") || "{}");
+
+  container.innerHTML = `
+    <form id="form-parametros-globais" class="config-detail-form" style="max-width: 800px; margin: 0 auto; padding: 20px;">
+      <div class="config-form-header">
+        <h3>🌐 Parâmetros Globais Bilaterais (Automação & Relatórios)</h3>
+        <span class="config-reservoir-badge">Configuração do Sistema CCO</span>
+      </div>
+
+      <p style="color: var(--muted-color); font-size: 0.9rem; margin-bottom: 20px; line-height: 1.5;">
+        Defina as configurações globais de envio de relatórios de plantão, agendamento de disparos automáticos (Timers) e caminhos de diretórios locais.
+      </p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 24px;">
+        
+        <!-- FORMULÁRIO I (Passagem de Plantão) -->
+        <fieldset class="config-fieldset" style="background: var(--surface-bg);">
+          <legend>FORMULÁRIO I (Passagem de Plantão)</legend>
+          <div class="config-field" style="margin-bottom: 12px;">
+            <label for="cfg-emails-plantao">E-mails de Destino (separados por vírgula)</label>
+            <input type="text" id="cfg-emails-plantao" value="${globalConfig.emailsPlantao || 'plantao.cco@samae.sc.gov.br'}" placeholder="cco@samae.sc.gov.br" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+          </div>
+          <div class="config-field" style="margin-bottom: 12px;">
+            <label>Grade de Timers (Disparos Diários Agendados)</label>
+            <div style="display: flex; gap: 8px; margin-top: 4px;">
+              <input type="time" id="cfg-timer-1" value="${globalConfig.timer1 || '05:00'}" style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+              <input type="time" id="cfg-timer-2" value="${globalConfig.timer2 || '13:00'}" style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+              <input type="time" id="cfg-timer-3" value="${globalConfig.timer3 || '21:00'}" style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+            </div>
+          </div>
+          <div class="config-field">
+            <label for="cfg-caminho-local">Caminho Físico de Diretório Local</label>
+            <input type="text" id="cfg-caminho-local" value="${globalConfig.caminhoLocal || 'C:/Samae/Relatorios/Plantao'}" placeholder="C:/Samae/Relatorios/Plantao" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+          </div>
+        </fieldset>
+
+        <!-- FORMULÁRIO II (Log de Erros e SLA Técnico) -->
+        <fieldset class="config-fieldset" style="background: var(--surface-bg);">
+          <legend>FORMULÁRIO II (Log de Erros e SLA)</legend>
+          <div class="config-field" style="margin-bottom: 12px;">
+            <label for="cfg-emails-manutencao">E-mails Analíticos da Manutenção</label>
+            <input type="text" id="cfg-emails-manutencao" value="${globalConfig.emailsManutencao || 'manutencao.telemetria@samae.sc.gov.br'}" placeholder="manutencao@samae.sc.gov.br" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+          </div>
+          <div class="config-field-row" style="margin-bottom: 12px;">
+            <div class="config-field" style="flex: 1;">
+              <label for="cfg-cron-dia">Dia da Semana (Cron)</label>
+              <select id="cfg-cron-dia" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+                <option value="diario" ${globalConfig.cronDia === 'diario' ? 'selected' : ''}>Diário (Todos os dias)</option>
+                <option value="util" ${globalConfig.cronDia === 'util' ? 'selected' : ''}>Dias Úteis (Seg-Sex)</option>
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
+      </div>
+
+      <div id="global-config-msg" style="display: none; padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 16px;"></div>
+
+      <button type="submit" class="btn-guardar-config" style="background: var(--accent-color); color: #fff; border: none; padding: 14px 24px; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer;">
+        Salvar Parâmetros Globais
+      </button>
+    </form>
+  `;
+
+  document.getElementById("form-parametros-globais").onsubmit = (e) => {
+    e.preventDefault();
+    const emailsPlantao = document.getElementById("cfg-emails-plantao").value;
+    const timer1 = document.getElementById("cfg-timer-1").value;
+    const timer2 = document.getElementById("cfg-timer-2").value;
+    const timer3 = document.getElementById("cfg-timer-3").value;
+    const caminhoLocal = document.getElementById("cfg-caminho-local").value;
+    const emailsManutencao = document.getElementById("cfg-emails-manutencao").value;
+    const cronDia = document.getElementById("cfg-cron-dia").value;
+
+    const novaGlobal = {
+      emailsPlantao,
+      timer1,
+      timer2,
+      timer3,
+      caminhoLocal,
+      emailsManutencao,
+      cronDia
+    };
+
+    localStorage.setItem("samai_global_config", JSON.stringify(novaGlobal));
+
+    const msgEl = document.getElementById("global-config-msg");
+    msgEl.style.display = "block";
+    msgEl.style.background = "var(--status-normal-background)";
+    msgEl.style.color = "var(--status-normal-color)";
+    msgEl.style.border = "1px solid var(--status-normal-color)";
+    msgEl.textContent = "Parâmetros globais salvos com sucesso!";
+    setTimeout(() => { msgEl.style.display = "none"; }, 4000);
+  };
+}
+
 function renderizarFormularioConfiguracao(chave, res) {
   const container = document.getElementById("config-detalhe-container");
   if (!container || !res) return;
@@ -2330,75 +2452,6 @@ function renderizarFormularioConfiguracao(chave, res) {
           </div>
         </div>
       </fieldset>
-
-      <!-- Seção Bilateral Independente: Formulário I & Formulário II -->
-      <div class="config-category-block" style="margin-top: 30px; border-top: 2px dashed var(--border-color); padding-top: 20px;">
-        <h4 class="config-category-title" style="color: var(--accent-color);">Parâmetros Globais Bilaterais (Automação & Relatórios)</h4>
-        
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-top: 16px;">
-          
-          <!-- FORMULÁRIO I (Resumo de Passagem de Plantão) -->
-          <fieldset class="config-fieldset" style="background: var(--surface-bg);">
-            <legend>FORMULÁRIO I (Passagem de Plantão)</legend>
-            <div class="config-field" style="margin-bottom: 12px;">
-              <label for="cfg-emails-plantao">E-mails de Destino (separados por vírgula)</label>
-              <input type="text" id="cfg-emails-plantao" value="${config.emailsPlantao || 'plantao.cco@samae.sc.gov.br'}" placeholder="cco@samae.sc.gov.br">
-            </div>
-            <div class="config-field" style="margin-bottom: 12px;">
-              <label>Grade de Timers (Disparos Diários Agendados)</label>
-              <div id="cfg-timers-grade-container" style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px;">
-                <div style="display: flex; gap: 8px;">
-                  <input type="time" class="cfg-timer-input" value="${config.timer1 || '05:00'}" style="flex: 1; padding: 6px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
-                  <input type="time" class="cfg-timer-input" value="${config.timer2 || '13:00'}" style="flex: 1; padding: 6px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
-                  <input type="time" class="cfg-timer-input" value="${config.timer3 || '21:00'}" style="flex: 1; padding: 6px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
-                </div>
-              </div>
-            </div>
-            <div class="config-field">
-              <label for="cfg-caminho-local">Caminho Físico de Diretório Local</label>
-              <input type="text" id="cfg-caminho-local" value="${config.caminhoLocal || 'C:/Samae/Relatorios/Plantao'}" placeholder="C:/Samae/Relatorios/Plantao">
-            </div>
-          </fieldset>
-
-          <!-- FORMULÁRIO II (Log de Erros e SLA Técnico) -->
-          <fieldset class="config-fieldset" style="background: var(--surface-bg);">
-            <legend>FORMULÁRIO II (Log de Erros e SLA)</legend>
-            <div class="config-field" style="margin-bottom: 12px;">
-              <label for="cfg-emails-manutencao">E-mails Analíticos da Manutenção</label>
-              <input type="text" id="cfg-emails-manutencao" value="${config.emailsManutencao || 'manutencao.telemetria@samae.sc.gov.br'}" placeholder="manutencao@samae.sc.gov.br">
-            </div>
-            <div class="config-field-row" style="margin-bottom: 12px;">
-              <div class="config-field" style="flex: 1;">
-                <label for="cfg-cron-dia">Dia da Semana (Cron)</label>
-                <select id="cfg-cron-dia" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
-                  <option value="diario" ${config.cronDia === 'diario' ? 'selected' : ''}>Diário (Todos os dias)</option>
-                  <option value="util" ${config.cronDia === 'util' ? 'selected' : ''}>Dias Úteis (Seg-Sex)</option>
-                  <option value="fimdesemana" ${config.cronDia === 'fimdesemana' ? 'selected' : ''}>Finais de Semana</option>
-                </select>
-              </div>
-              <div class="config-field" style="flex: 1;">
-                <label for="cfg-cron-hora">Horário Cron</label>
-                <input type="time" id="cfg-cron-hora" value="${config.cronHora || '05:30'}" style="width: 100%; padding: 6px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
-              </div>
-            </div>
-            <div class="config-field-row" style="margin-bottom: 12px;">
-              <div class="config-field" style="flex: 1;">
-                <label for="cfg-sla-minutos">Tempo Limite SLA (min)</label>
-                <input type="number" id="cfg-sla-minutos" value="${config.slaMinutos !== undefined ? config.slaMinutos : 15}" min="1" max="120">
-              </div>
-              <div class="config-field" style="flex: 1;">
-                <label for="cfg-tolerancia-ruido">Tolerância de Ruído (%)</label>
-                <input type="number" step="any" id="cfg-tolerancia-ruido" value="${config.toleranciaRuido !== undefined ? config.toleranciaRuido : 2.5}" min="0">
-              </div>
-            </div>
-            <div class="config-field">
-              <label for="cfg-caminho-hdd">Caminho de Disco Rígido Alternativo (HDD)</label>
-              <input type="text" id="cfg-caminho-hdd" value="${config.caminhoHdd || 'D:/Backup_CCO/Incidentes'}" placeholder="D:/Backup_CCO/Incidentes">
-            </div>
-          </fieldset>
-
-        </div>
-      </div>
 
       <!-- Categoria: Nível -->
       <div class="config-category-block">
