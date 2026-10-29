@@ -112,6 +112,22 @@ class AuthRepository {
     });
   }
 
+  async obterLogsAuditoria() {
+    try {
+      const db = await this.abrirDB();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction("auditoria", "readonly");
+        const store = transaction.objectStore("auditoria");
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    } catch (e) {
+      console.warn("Erro ao carregar auditoria do IndexedDB:", e);
+      return window.samaeSecurityLog || [];
+    }
+  }
+
   async registrarAuditoria(acao, usuario, detalhes) {
     const logEntry = {
       timestamp: new Date().toISOString(),

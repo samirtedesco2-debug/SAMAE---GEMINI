@@ -12,8 +12,25 @@ class RBACManager {
       return;
     }
 
-    const role = session.role;
-    const isAgent = role === "Agent" || role === "AGENT";
+    const role = session.role || 'Operador';
+    const isAgent = role === "Agent" || role === "AGENT" || role === "operador" || role === "Operator";
+
+    // Exibir identificação do usuário logado e configurar botão Sair no header
+    const userDisplay = document.getElementById("logged-username-display");
+    if (userDisplay) {
+      userDisplay.textContent = `${session.username} (${role})`;
+    }
+
+    const btnLogout = document.getElementById("btn-global-logout");
+    if (btnLogout && !btnLogout.dataset.bound) {
+      btnLogout.dataset.bound = "true";
+      btnLogout.onclick = () => {
+        if (confirm("Deseja realmente encerrar a sessão atual?")) {
+          localStorage.removeItem("samae_cco_session");
+          window.location.reload();
+        }
+      };
+    }
 
     // 1. Configurações de Reservatórios (Aba Configurações)
     const painelConfig = document.getElementById("painel-configuracoes");

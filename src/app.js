@@ -111,6 +111,23 @@ document.addEventListener("DOMContentLoaded", () => {
       const tabExceccoes = document.getElementById("tab-exceccoes");
       if (tabExceccoes) tabExceccoes.click();
     }, 400);
+  } else if (urlParams.get('view') === 'configuracoes') {
+    document.body.classList.add("is-config-window-active");
+    setTimeout(() => {
+      const painelConfig = document.getElementById("painel-configuracoes");
+      const paineis = [
+        document.getElementById("painel-operacional"),
+        document.getElementById("painel-analitico"),
+        document.getElementById("painel-engenharia"),
+      ];
+      paineis.forEach((p) => { if (p) p.hidden = true; });
+      if (painelConfig) painelConfig.hidden = false;
+      document.querySelectorAll(".view-tab").forEach((aba) => {
+        aba.classList.remove("is-active");
+        aba.setAttribute("aria-selected", "false");
+      });
+      renderizarPainelConfiguracoes();
+    }, 400);
   }
 
   const seletorRelatorios = document.getElementById("seletor-relatorios-cco");
@@ -1941,7 +1958,17 @@ function inicializarConfiguracoes() {
 
   if (!btnConfig || !painelConfig) return;
 
-  btnConfig.addEventListener("click", () => {
+  btnConfig.addEventListener("click", (e) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('view') !== 'configuracoes') {
+      e.preventDefault();
+      if (window.samaeConfigWindow && !window.samaeConfigWindow.closed) {
+        window.samaeConfigWindow.focus();
+      } else {
+        window.samaeConfigWindow = window.open('?view=configuracoes', 'samaeConfigWindow', 'width=1100,height=800');
+      }
+      return;
+    }
     const estaAtivo = !painelConfig.hidden;
     if (estaAtivo) {
       painelConfig.hidden = true;
@@ -2111,54 +2138,11 @@ function renderizarPainelConfiguracoes() {
 
   let sidebarWrapper = listaContainer.parentElement;
   let filtroBar = sidebarWrapper.querySelector(".config-sidebar-filters");
-  if (!filtroBar) {
-    filtroBar = document.createElement("div");
-    filtroBar.className = "config-sidebar-filters";
-    filtroBar.style.cssText = "margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;";
-    filtroBar.innerHTML = `
-      <input type="text" id="config-busca-tag" placeholder="Filtrar por TAG..." style="padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-bg); color: var(--text-color); font-size: 0.85rem;">
-      <select id="config-filtro-grupo" style="padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-bg); color: var(--text-color); font-size: 0.85rem;">
-        <option value="TODOS">Todos os Grupos Hidráulicos</option>
-      </select>
-    `;
-    sidebarWrapper.insertBefore(filtroBar, listaContainer);
-
-    const inputBusca = filtroBar.querySelector("#config-busca-tag");
-    const selectGrupo = filtroBar.querySelector("#config-filtro-grupo");
-
-    const grupos = new Set();
-    Object.values(reservatorios).forEach(r => { if (r.grupo) grupos.add(r.grupo); });
-    grupos.forEach(g => {
-      selectGrupo.add(new Option(g, g));
-    });
-
-    inputBusca.oninput = () => renderizarPainelConfiguracoes();
-    selectGrupo.onchange = () => renderizarPainelConfiguracoes();
+  if (filtroBar) {
+    filtroBar.remove();
   }
-
-  const filtroTexto = (sidebarWrapper.querySelector("#config-busca-tag")?.value || "").toLowerCase();
-  const grupoSelecionado = sidebarWrapper.querySelector("#config-filtro-grupo")?.value || "TODOS";
 
   listaContainer.innerHTML = "";
-  const chaves = Object.keys(reservatorios).filter(chave => {
-    const res = reservatorios[chave];
-    const nome = (res.nome || chave).toLowerCase();
-    const grupo = res.grupo || "Geral";
-    const matchTexto = nome.includes(filtroTexto) || chave.toLowerCase().includes(filtroTexto);
-    const matchGrupo = grupoSelecionado === "TODOS" || grupo === grupoSelecionado;
-    return matchTexto && matchGrupo;
-  });
-
-  if (chaves.length === 0) {
-    listaContainer.innerHTML = `<p style="font-size: 0.85rem; color: var(--muted-color); padding: 10px;">Nenhum reservatório encontrado.</p>`;
-    return;
-  }
-
-  if (reservatorioConfigSelecionado !== "usuarios" && reservatorioConfigSelecionado !== "parametros_globais") {
-    if (!reservatorioConfigSelecionado || !reservatorios[reservatorioConfigSelecionado] || !chaves.includes(reservatorioConfigSelecionado)) {
-      reservatorioConfigSelecionado = chaves[0];
-    }
-  }
 
   const sessionStr = localStorage.getItem("samae_cco_session");
   let isAdmin = false;
@@ -2168,10 +2152,25 @@ function renderizarPainelConfiguracoes() {
     } catch(e){}
   }
 
+  const isReservatorioMode = reservatorioConfigSelecionado === "reservatorios_lista" || (reservatorios[reservatorioConfigSelecionado] !== undefined);
+
+  const btnReservatorios = document.createElement("button");
+  btnReservatorios.type = "button";
+  btnReservatorios.className = `config-reservoir-item ${isReservatorioMode ? "is-active" : ""}`;
+  btnReservatorios.style.borderColor = "var(--accent-color)";
+  btnReservatorios.innerHTML = `
+    <strong>💧 Configuração de Reservatórios</strong>
+    <span>Limites, alarmes & telemetria</span>
+  `;
+  btnReservatorios.addEventListener("click", () => {
+    reservatorioConfigSelecionado = "reservatorios_lista";
+    renderizarPainelConfiguracoes();
+  });
+  listaContainer.appendChild(btnReservatorios);
+
   if (isAdmin) {
     const btnUserAdmin = document.createElement("button");
     btnUserAdmin.type = "button";
-    btnUserAdmin.id = "btn-gerenciar-usuarios";
     btnUserAdmin.className = `config-reservoir-item ${reservatorioConfigSelecionado === "usuarios" ? "is-active" : ""}`;
     btnUserAdmin.style.borderColor = "var(--accent-color)";
     btnUserAdmin.innerHTML = `
@@ -2186,7 +2185,6 @@ function renderizarPainelConfiguracoes() {
 
     const btnGlobalConfig = document.createElement("button");
     btnGlobalConfig.type = "button";
-    btnGlobalConfig.id = "btn-config-parametros-globais";
     btnGlobalConfig.className = `config-reservoir-item ${reservatorioConfigSelecionado === "parametros_globais" ? "is-active" : ""}`;
     btnGlobalConfig.style.borderColor = "var(--accent-color)";
     btnGlobalConfig.innerHTML = `
@@ -2198,33 +2196,136 @@ function renderizarPainelConfiguracoes() {
       renderizarPainelConfiguracoes();
     });
     listaContainer.appendChild(btnGlobalConfig);
-  }
 
-  chaves.forEach((chave) => {
-    const res = reservatorios[chave];
-    const item = document.createElement("button");
-    item.type = "button";
-    item.id = `config-res-${chave}`;
-    item.dataset.reservoirKey = chave;
-    item.className = `config-reservoir-item ${chave === reservatorioConfigSelecionado ? "is-active" : ""}`;
-    item.innerHTML = `
-      <strong>${res.nome || chave}</strong>
-      <span>Grupo: ${res.grupo || "Geral"} (${chave})</span>
+    const btnLogsAdmin = document.createElement("button");
+    btnLogsAdmin.type = "button";
+    btnLogsAdmin.className = `config-reservoir-item ${reservatorioConfigSelecionado === "logs_auditoria" ? "is-active" : ""}`;
+    btnLogsAdmin.style.borderColor = "var(--accent-color)";
+    btnLogsAdmin.innerHTML = `
+      <strong>📊 Logs de Auditoria & Sistema</strong>
+      <span>Trilha de segurança & ocorrências</span>
     `;
-    item.addEventListener("click", () => {
-      reservatorioConfigSelecionado = chave;
+    btnLogsAdmin.addEventListener("click", () => {
+      reservatorioConfigSelecionado = "logs_auditoria";
       renderizarPainelConfiguracoes();
     });
-    listaContainer.appendChild(item);
-  });
+    listaContainer.appendChild(btnLogsAdmin);
+  }
+
+  if (!reservatorioConfigSelecionado) {
+    reservatorioConfigSelecionado = "reservatorios_lista";
+  }
 
   if (reservatorioConfigSelecionado === "usuarios") {
     renderizarFormularioCriacaoUsuario();
   } else if (reservatorioConfigSelecionado === "parametros_globais") {
     renderizarFormularioParametrosGlobais();
+  } else if (reservatorioConfigSelecionado === "logs_auditoria") {
+    renderizarPainelLogsAuditoria();
+  } else if (reservatorioConfigSelecionado === "reservatorios_lista") {
+    renderizarSeletorReservatoriosConfig(reservatorios);
   } else {
     renderizarFormularioConfiguracao(reservatorioConfigSelecionado, reservatorios[reservatorioConfigSelecionado]);
   }
+}
+
+function renderizarSeletorReservatoriosConfig(reservatorios) {
+  const container = document.getElementById("config-detalhe-container");
+  if (!container) return;
+
+  const gruposMap = new Map();
+  Object.keys(reservatorios).forEach((chave) => {
+    const res = reservatorios[chave];
+    const grupo = res.grupo || "Geral";
+    if (!gruposMap.has(grupo)) {
+      gruposMap.set(grupo, []);
+    }
+    gruposMap.get(grupo).push({ chave, res });
+  });
+
+  container.innerHTML = `
+    <div style="padding: 24px; max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
+      <div>
+        <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-color); margin-bottom: 6px;">💧 Configuração de Reservatórios</h3>
+        <p style="color: var(--muted-color); font-size: 0.9rem;">Selecione abaixo o reservatório que deseja configurar os limites operacionais, alarmes e parâmetros de telemetria.</p>
+      </div>
+
+      <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+        <input type="text" id="picker-busca-tag" placeholder="Filtrar por nome ou TAG..." style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-bg); color: var(--text-color); font-size: 0.9rem; flex: 1; min-width: 240px;">
+        <select id="picker-filtro-grupo" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-bg); color: var(--text-color); font-size: 0.9rem;">
+          <option value="TODOS">Todos os Grupos</option>
+          ${Array.from(gruposMap.keys()).map(g => `<option value="${g}">${g}</option>`).join("")}
+        </select>
+      </div>
+
+      <div id="picker-grid-container" style="display: flex; flex-direction: column; gap: 24px;">
+        <!-- Preenchido dinamicamente -->
+      </div>
+    </div>
+  `;
+
+  const inputBusca = container.querySelector("#picker-busca-tag");
+  const selectGrupo = container.querySelector("#picker-filtro-grupo");
+  const gridContainer = container.querySelector("#picker-grid-container");
+
+  function filtrarE1RenderizarGrid() {
+    const termo = (inputBusca.value || "").toLowerCase();
+    const grupoSel = selectGrupo.value;
+
+    gridContainer.innerHTML = "";
+    let totalEncontrados = 0;
+
+    gruposMap.forEach((itens, grupo) => {
+      if (grupoSel !== "TODOS" && grupo !== grupoSel) return;
+
+      const itensFiltrados = itens.filter(({ chave, res }) => {
+        const nome = (res.nome || chave).toLowerCase();
+        return nome.includes(termo) || chave.toLowerCase().includes(termo);
+      });
+
+      if (itensFiltrados.length === 0) return;
+      totalEncontrados += itensFiltrados.length;
+
+      const section = document.createElement("div");
+      section.style.cssText = "display: flex; flex-direction: column; gap: 10px;";
+      section.innerHTML = `
+        <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--accent-color); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin: 0;">Grupo: ${grupo}</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px;"></div>
+      `;
+
+      const cardsGrid = section.querySelector("div > div");
+      itensFiltrados.forEach(({ chave, res }) => {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.style.cssText = "text-align: left; padding: 14px; background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; gap: 4px;";
+        card.onmouseover = () => { card.style.borderColor = "var(--accent-color)"; card.style.transform = "translateY(-2px)"; };
+        card.onmouseout = () => { card.style.borderColor = "var(--border-color)"; card.style.transform = "none"; };
+        
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="color: var(--text-color); font-size: 0.95rem; font-weight: 700;">${res.nome || chave}</strong>
+            <span style="font-size: 0.7rem; background: var(--surface-inset); padding: 2px 6px; border-radius: 4px; color: var(--muted-color); font-weight: 600;">${chave}</span>
+          </div>
+          <span style="font-size: 0.8rem; color: var(--muted-color);">Grupo Hidráulico: ${res.grupo || "Geral"}</span>
+        `;
+        card.addEventListener("click", () => {
+          reservatorioConfigSelecionado = chave;
+          renderizarPainelConfiguracoes();
+        });
+        cardsGrid.appendChild(card);
+      });
+
+      gridContainer.appendChild(section);
+    });
+
+    if (totalEncontrados === 0) {
+      gridContainer.innerHTML = `<p style="color: var(--muted-color); text-align: center; padding: 30px;">Nenhum reservatório encontrado com os filtros informados.</p>`;
+    }
+  }
+
+  inputBusca.oninput = filtrarE1RenderizarGrid;
+  selectGrupo.onchange = filtrarE1RenderizarGrid;
+  filtrarE1RenderizarGrid();
 }
 
 function renderizarFormularioCriacaoUsuario() {
@@ -2789,3 +2890,307 @@ async function salvarConfiguracaoReservatorio(chave) {
     }, 4000);
   }
 }
+
+async function renderizarPainelLogsAuditoria() {
+  const container = document.getElementById("config-detalhe-container");
+  if (!container) return;
+
+  container.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--muted-color);">Carregando trilha de auditoria do banco de dados...</div>`;
+
+  let logs = [];
+  if (window.AuthRepository && typeof window.AuthRepository.obterLogsAuditoria === 'function') {
+    try {
+      logs = await window.AuthRepository.obterLogsAuditoria();
+    } catch (e) {
+      logs = window.samaeSecurityLog || [];
+    }
+  } else {
+    logs = window.samaeSecurityLog || [];
+  }
+
+  const incidentes = (window.samaeIncidentsLog || []).map(inc => ({
+    timestamp: inc.timestamp,
+    usuario: inc.admin || inc.operador || inc.usuario || 'Operador CCO',
+    acao: `MURAL_${(inc.acao || '').toUpperCase()}`,
+    detalhes: `Alarme em ${inc.nome || ''} (${inc.chave || ''}) - Severidade: ${inc.severidade || ''}`
+  }));
+
+  const todosLogs = [...logs, ...incidentes].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  container.innerHTML = `
+    <div class="config-detail-form" style="max-width: 950px; margin: 0 auto; padding: 20px;">
+      <div class="config-form-header">
+        <h3>📊 Logs de Auditoria & Erros do Sistema (Trilha de Segurança)</h3>
+        <span class="config-reservoir-badge">Painel Restrito ADMIN</span>
+      </div>
+
+      <p style="color: var(--muted-color); font-size: 0.9rem; margin-bottom: 16px; line-height: 1.5;">
+        Consulte e filtre o histórico completo por intervalo de datas (Data Início até Data Fim), termo ou categoria.
+      </p>
+
+      <!-- Barra de Filtros Avançados com Intervalo de Datas -->
+      <div style="background: var(--surface-inset); padding: 14px; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; align-items: flex-end;">
+        <div style="flex: 1; min-width: 180px;">
+          <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--muted-color); margin-bottom: 4px;">Termo / Detalhe</label>
+          <input type="text" id="filtro-log-busca" placeholder="Ex: admin, R-01..." style="width: 100%; padding: 6px 10px; background: var(--surface-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 6px; font-size: 0.85rem;" />
+        </div>
+        <div style="width: 150px;">
+          <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--muted-color); margin-bottom: 4px;">Categoria</label>
+          <select id="filtro-log-categoria" style="width: 100%; padding: 6px 10px; background: var(--surface-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 6px; font-size: 0.85rem;">
+            <option value="TODOS">Todas</option>
+            <option value="LOGIN">Login / Auth</option>
+            <option value="MURAL">Mural / Alertas</option>
+            <option value="ERRO">Erros / Segurança</option>
+          </select>
+        </div>
+        <div style="width: 135px;">
+          <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--muted-color); margin-bottom: 4px;">Data Início</label>
+          <input type="date" id="filtro-log-inicio" style="width: 100%; padding: 6px 10px; background: var(--surface-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 6px; font-size: 0.85rem;" />
+        </div>
+        <div style="width: 135px;">
+          <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--muted-color); margin-bottom: 4px;">Data Fim</label>
+          <input type="date" id="filtro-log-fim" style="width: 100%; padding: 6px 10px; background: var(--surface-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 6px; font-size: 0.85rem;" />
+        </div>
+        <div>
+          <button type="button" id="btn-limpar-filtros-logs" class="btn-guardar-config" style="background: var(--surface-bg); color: var(--text-color); border: 1px solid var(--border-color); padding: 7px 12px; font-size: 0.8rem;">
+            Limpar
+          </button>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;">
+        <button type="button" id="btn-atualizar-logs-view" class="btn-guardar-config" style="background: var(--surface-inset); color: var(--text-color); border: 1px solid var(--border-color);">
+          🔄 Atualizar Logs
+        </button>
+        <button type="button" id="btn-baixar-logs-view" class="btn-guardar-config" style="background: var(--accent-color); color: #fff; border: none;">
+          📥 Baixar CSV
+        </button>
+        <button type="button" id="btn-baixar-pdf-view" class="btn-guardar-config" style="background: #e11d48; color: #fff; border: none;">
+          📄 Baixar Relatório PDF / Imprimir
+        </button>
+      </div>
+
+      <div class="engineering-table-wrap" style="background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 10px; max-height: 450px; overflow-y: auto;">
+        <table class="comparison-table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+          <thead>
+            <tr style="background: var(--surface-inset); text-align: left;">
+              <th style="padding: 12px;">Timestamp</th>
+              <th style="padding: 12px;">Usuário</th>
+              <th style="padding: 12px;">Ação</th>
+              <th style="padding: 12px;">Detalhes / Ocorrência</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-logs-auditoria-view">
+            <!-- Renderizado dinamicamente -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  const tbody = document.getElementById("tabela-logs-auditoria-view");
+  const inputBusca = document.getElementById("filtro-log-busca");
+  const selectCat = document.getElementById("filtro-log-categoria");
+  const inputInicio = document.getElementById("filtro-log-inicio");
+  const inputFim = document.getElementById("filtro-log-fim");
+
+  function filtrarE1Renderizar() {
+    const termo = (inputBusca.value || "").toLowerCase();
+    const cat = selectCat.value;
+    const dataInicio = inputInicio.value; // YYYY-MM-DD
+    const dataFim = inputFim.value; // YYYY-MM-DD
+
+    const filtrados = todosLogs.filter(l => {
+      const dataStr = l.timestamp ? l.timestamp.slice(0, 10) : "";
+      if (dataInicio && dataStr < dataInicio) return false;
+      if (dataFim && dataStr > dataFim) return false;
+
+      if (cat === "LOGIN" && !l.acao.includes("LOGIN") && !l.acao.includes("SENHA")) return false;
+      if (cat === "MURAL" && !l.acao.includes("MURAL")) return false;
+      if (cat === "ERRO" && !l.acao.includes("ERRO") && !l.acao.includes("BLOQUEIO")) return false;
+
+      if (termo) {
+        const txt = `${l.usuario || ''} ${l.acao || ''} ${l.detalhes || ''}`.toLowerCase();
+        if (!txt.includes(termo)) return false;
+      }
+      return true;
+    });
+
+    if (filtrados.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" style="padding: 24px; text-align: center; color: var(--muted-color);">Nenhum log encontrado com os filtros aplicados.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtrados.map(l => `
+      <tr style="border-top: 1px solid var(--border-color);">
+        <td style="padding: 12px; white-space: nowrap; color: var(--muted-color);">${new Date(l.timestamp).toLocaleString("pt-BR")}</td>
+        <td style="padding: 12px; font-weight: 600; color: var(--text-color);">${l.usuario || l.admin || 'sistema'}</td>
+        <td style="padding: 12px;"><span style="background: var(--surface-inset); padding: 3px 8px; border-radius: 4px; font-weight: 700; color: var(--accent-color); font-size: 0.75rem;">${l.acao}</span></td>
+        <td style="padding: 12px; color: var(--text-color);">${l.detalhes || ''}</td>
+      </tr>
+    `).join("");
+  }
+
+  inputBusca.oninput = filtrarE1Renderizar;
+  selectCat.onchange = filtrarE1Renderizar;
+  inputInicio.onchange = filtrarE1Renderizar;
+  inputFim.onchange = filtrarE1Renderizar;
+
+  document.getElementById("btn-limpar-filtros-logs").onclick = () => {
+    inputBusca.value = "";
+    selectCat.value = "TODOS";
+    inputInicio.value = "";
+    inputFim.value = "";
+    filtrarE1Renderizar();
+  };
+
+  filtrarE1Renderizar();
+
+  document.getElementById("btn-atualizar-logs-view").onclick = () => {
+    renderizarPainelLogsAuditoria();
+  };
+
+  document.getElementById("btn-baixar-logs-view").onclick = () => {
+    if (typeof window.baixarLogsAuditoriaAdmin === 'function') {
+      window.baixarLogsAuditoriaAdmin();
+    }
+  };
+
+  document.getElementById("btn-baixar-pdf-view").onclick = () => {
+    if (typeof window.baixarLogsAuditoriaPDF === 'function') {
+      window.baixarLogsAuditoriaPDF();
+    }
+  };
+}
+
+window.baixarLogsFiltradosCSV = function(dados) {
+  if (!dados || dados.length === 0) {
+    alert("Nenhum dado para exportar. Clique em 'Gerar / Visualizar' primeiro.");
+    return;
+  }
+  let csvContent = "\uFEFFTimestamp;Usuário;Ação;Detalhes\n";
+  dados.forEach(l => {
+    const dataFmt = new Date(l.timestamp).toLocaleString("pt-BR");
+    const user = l.usuario || l.admin || 'sistema';
+    const acao = l.acao || '';
+    const det = (l.detalhes || '').replace(/;/g, ",");
+    csvContent += `"${dataFmt}";"${user}";"${acao}";"${det}"\n`;
+  });
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `trilha_auditoria_cco_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+window.baixarLogsFiltradosPDF = function(dados) {
+  if (!dados || dados.length === 0) {
+    alert("Nenhum dado para exportar. Clique em 'Gerar / Visualizar' primeiro.");
+    return;
+  }
+
+  const win = window.open('', '_blank');
+  if (!win) {
+    alert("Permita pop-ups no navegador para gerar o relatório em PDF.");
+    return;
+  }
+
+  win.document.write(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Relatório de Trilha de Auditoria - CCO SAMAE</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 30px; color: #222; background: #fff; }
+  h1 { color: #0877b9; border-bottom: 2px solid #0877b9; padding-bottom: 8px; font-size: 1.4rem; }
+  .meta { font-size: 0.85rem; color: #555; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; font-size: 0.8rem; }
+  th { background: #f1f5f9; color: #0f172a; font-weight: bold; }
+  tr:nth-child(even) { background: #f8fafc; }
+  footer { margin-top: 40px; font-size: 0.75rem; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 10px; text-align: right; }
+</style>
+</head>
+<body>
+  <h1>Centro de Controle Operacional - Trilha de Auditoria & Segurança</h1>
+  <div class="meta">
+    <p><strong>Emitido em:</strong> ${new Date().toLocaleString("pt-BR")}</p>
+    <p><strong>Total de Registros no Relatório:</strong> ${dados.length}</p>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>Usuário</th>
+        <th>Ação / Evento</th>
+        <th>Detalhes</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${dados.map(l => `
+        <tr>
+          <td style="white-space: nowrap;">${new Date(l.timestamp).toLocaleString("pt-BR")}</td>
+          <td><strong>${l.usuario || l.admin || 'sistema'}</strong></td>
+          <td><code>${l.acao}</code></td>
+          <td>${l.detalhes || ''}</td>
+        </tr>
+      `).join("")}
+    </tbody>
+  </table>
+  <footer>
+    Sistema CCO SAMAE - Documento Oficial de Auditoria Interna
+  </footer>
+  <script>
+    window.onload = function() {
+      window.print();
+    };
+  </script>
+</body>
+</html>`);
+  win.document.close();
+};
+
+window.baixarLogsAuditoriaAdmin = async function() {
+  let logs = [];
+  if (window.AuthRepository && typeof window.AuthRepository.obterLogsAuditoria === 'function') {
+    try {
+      logs = await window.AuthRepository.obterLogsAuditoria();
+    } catch (e) {
+      logs = window.samaeSecurityLog || [];
+    }
+  } else {
+    logs = window.samaeSecurityLog || [];
+  }
+  const incidentes = (window.samaeIncidentsLog || []).map(inc => ({
+    timestamp: inc.timestamp,
+    usuario: inc.admin || inc.operador || inc.usuario || 'Operador CCO',
+    acao: `MURAL_${(inc.acao || '').toUpperCase()}`,
+    detalhes: `Alarme em ${inc.nome || ''} (${inc.chave || ''}) - Severidade: ${inc.severidade || ''}`
+  }));
+  const todosLogs = [...logs, ...incidentes].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  window.baixarLogsFiltradosCSV(todosLogs);
+};
+
+window.baixarLogsAuditoriaPDF = async function() {
+  let logs = [];
+  if (window.AuthRepository && typeof window.AuthRepository.obterLogsAuditoria === 'function') {
+    try {
+      logs = await window.AuthRepository.obterLogsAuditoria();
+    } catch (e) {
+      logs = window.samaeSecurityLog || [];
+    }
+  } else {
+    logs = window.samaeSecurityLog || [];
+  }
+  const incidentes = (window.samaeIncidentsLog || []).map(inc => ({
+    timestamp: inc.timestamp,
+    usuario: inc.admin || inc.operador || inc.usuario || 'Operador CCO',
+    acao: `MURAL_${(inc.acao || '').toUpperCase()}`,
+    detalhes: `Alarme em ${inc.nome || ''} (${inc.chave || ''}) - Severidade: ${inc.severidade || ''}`
+  }));
+  const todosLogs = [...logs, ...incidentes].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  window.baixarLogsFiltradosPDF(todosLogs);
+};

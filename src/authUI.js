@@ -9,67 +9,14 @@ class AuthUI {
       document.body.appendChild(overlay);
     }
 
-    const svgString = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
-        <defs>
-          <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stop-color="#0b1329"/>
-            <stop offset="60%" stop-color="#16223b"/>
-            <stop offset="100%" stop-color="#1e293b"/>
-          </linearGradient>
-          <linearGradient id="concreteGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#1e293b"/>
-            <stop offset="50%" stop-color="#334155"/>
-            <stop offset="100%" stop-color="#0f172a"/>
-          </linearGradient>
-          <linearGradient id="waterGlow" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.8"/>
-            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.2"/>
-          </linearGradient>
-          <filter id="reservoirBlur">
-            <feGaussianBlur stdDeviation="35"/>
-          </filter>
-        </defs>
-
-        <rect width="1200" height="800" fill="url(#skyGrad)"/>
-
-        <circle cx="950" cy="200" r="180" fill="rgba(56, 189, 248, 0.08)" filter="url(#reservoirBlur)"/>
-        <circle cx="300" cy="400" r="220" fill="rgba(14, 165, 233, 0.06)" filter="url(#reservoirBlur)"/>
-
-        <g filter="url(#reservoirBlur)">
-          <path d="M 150 750 L 150 350 C 150 250, 350 200, 600 200 C 850 200, 1050 250, 1050 350 L 1050 750 Z" fill="url(#concreteGrad)"/>
-          
-          <path d="M 200 750 L 200 280 C 200 220, 400 220, 400 280 L 400 750 Z" fill="#475569" opacity="0.9"/>
-          
-          <path d="M 450 750 L 450 180 C 450 120, 750 120, 750 180 L 750 750 Z" fill="#334155"/>
-
-          <path d="M 800 750 L 800 300 C 800 240, 1000 240, 1000 300 L 1000 750 Z" fill="#475569" opacity="0.9"/>
-
-          <rect x="200" y="450" width="800" height="40" fill="#1e293b"/>
-          <rect x="350" y="320" width="500" height="30" fill="#0f172a"/>
-
-          <rect x="100" y="650" width="1000" height="25" rx="12" fill="url(#waterGlow)"/>
-          <circle cx="600" cy="662.5" r="45" fill="#38bdf8" opacity="0.7"/>
-        </g>
-
-        <radialGradient id="vignette" cx="50%" cy="50%" r="65%">
-          <stop offset="40%" stop-color="transparent"/>
-          <stop offset="100%" stop-color="#030712" stop-opacity="0.9"/>
-        </radialGradient>
-        <rect width="1200" height="800" fill="url(#vignette)"/>
-      </svg>
-    `;
-
-    const base64Svg = btoa(svgString.trim());
-
     overlay.style.cssText = `
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
       background: 
-        linear-gradient(rgba(3, 7, 18, 0.75), rgba(3, 7, 18, 0.88)),
-        url("data:image/svg+xml;base64,${base64Svg}");
+        linear-gradient(rgba(3, 7, 18, 0.65), rgba(3, 7, 18, 0.85)),
+        url("manual-imagens/login.jfif");
       background-size: cover;
       background-position: center;
-      backdrop-filter: blur(14px);
+      backdrop-filter: blur(4px);
       display: flex; justify-content: center; align-items: center; z-index: 99999;
       font-family: inherit; color: #fff;
     `;

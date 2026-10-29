@@ -348,8 +348,8 @@ header h1 {
 
 /* Efeito sutil ao passar o mouse por cima */
 .btn-operacional-quadrado:hover {
-  background-color: var(--border-color);
-  color: var(--heading-color);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
 }
 
 
@@ -2821,11 +2821,13 @@ header h1 {
   border-top: 1px dashed var(--border-color);
 }
 
-body.is-cco-fullscreen-active header {
+body.is-cco-fullscreen-active header,
+body.is-config-window-active header {
   display: none !important;
 }
 
-body.is-cco-fullscreen-active .view-tabs {
+body.is-cco-fullscreen-active .view-tabs,
+body.is-config-window-active .view-tabs {
   display: none !important;
 }
 
