@@ -32,7 +32,22 @@ window.ApiClient = {
     try {
       const resp = await fetch("dados_historicos/config_reservatorios.json");
       if (resp.ok) {
-        return await resp.json();
+        const data = await resp.json();
+        if (data && data._estado_plantao) {
+          if (data._estado_plantao.reconhecidos) {
+            window.ccoReconhecidos = new Map(data._estado_plantao.reconhecidos);
+            try {
+              localStorage.setItem("samae_cco_reconhecidos", JSON.stringify(Object.fromEntries(window.ccoReconhecidos.entries())));
+            } catch(e){}
+          }
+          if (data._estado_plantao.logsIncidentes) {
+            window.samaeIncidentsLog = data._estado_plantao.logsIncidentes;
+            try {
+              localStorage.setItem("samae_cco_incidents_log", JSON.stringify(window.samaeIncidentsLog));
+            } catch(e){}
+          }
+        }
+        return data;
       }
     } catch (e) {
       console.warn("Aviso: Não foi possível carregar config_reservatorios.json", e);

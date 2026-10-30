@@ -2060,6 +2060,37 @@ function atualizarBadgeAlarmes() {
   }
 }
 
+function carregarReconhecidosLocalStorage() {
+  if (window.ccoReconhecidosCarregado) return;
+  try {
+    const salvos = localStorage.getItem("samae_cco_reconhecidos");
+    if (salvos) {
+      const obj = JSON.parse(salvos);
+      window.ccoReconhecidos = new Map(Object.entries(obj));
+    }
+    const logsSalvos = localStorage.getItem("samae_cco_incidents_log");
+    if (logsSalvos) {
+      window.samaeIncidentsLog = JSON.parse(logsSalvos);
+    }
+  } catch(e){}
+  window.ccoReconhecidosCarregado = true;
+}
+
+function salvarReconhecidosLocalStorage() {
+  try {
+    if (window.ccoReconhecidos) {
+      const obj = Object.fromEntries(window.ccoReconhecidos.entries());
+      localStorage.setItem("samae_cco_reconhecidos", JSON.stringify(obj));
+    }
+    if (window.samaeIncidentsLog) {
+      localStorage.setItem("samae_cco_incidents_log", JSON.stringify(window.samaeIncidentsLog));
+    }
+    if (typeof window.sincronizarEstadoAlarmesNoArquivo === 'function') {
+      window.sincronizarEstadoAlarmesNoArquivo();
+    }
+  } catch(e){}
+}
+
 function renderizarDashboardExceccoes() {
   const banco = window.bancoDeDados;
   const seletorData = document.getElementById("seletor-data");
@@ -2067,6 +2098,7 @@ function renderizarDashboardExceccoes() {
   if (!banco || !banco.historico || !seletorData || !gridExceccoes) return;
 
   window.ccoReconhecidos = window.ccoReconhecidos || new Map();
+  carregarReconhecidosLocalStorage();
   const dataSelecionada = seletorData.value;
   gridExceccoes.innerHTML = "";
 
@@ -2078,12 +2110,14 @@ function renderizarDashboardExceccoes() {
   window.ccoReconhecidos.forEach((sevAntiga, chave) => {
     if (!chavesAtuais.has(chave)) {
       window.ccoReconhecidos.delete(chave);
+      salvarReconhecidosLocalStorage();
     } else {
       const exc = exceccoes.find(e => e.chave === chave);
       if (exc) {
         const pesoSev = (s) => s === "Crítico" ? 1 : s === "Atenção" ? 2 : 3;
         if (pesoSev(exc.severidade) < pesoSev(sevAntiga)) {
           window.ccoReconhecidos.delete(chave);
+          salvarReconhecidosLocalStorage();
         }
       }
     }
@@ -2324,6 +2358,7 @@ window.abrirReservatorioMural = function(chave) {
 
 window.toggleAckMural = function(chave, severidade, nome) {
   window.ccoReconhecidos = window.ccoReconhecidos || new Map();
+  carregarReconhecidosLocalStorage();
   const reconhecido = window.ccoReconhecidos.has(chave);
   window.samaeIncidentsLog = window.samaeIncidentsLog || [];
   const tempoInicio = window.ccoAlarmTriggerTime?.[chave] || Date.now();
@@ -2356,6 +2391,7 @@ window.toggleAckMural = function(chave, severidade, nome) {
       tempoRespostaMs
     });
   }
+  salvarReconhecidosLocalStorage();
   renderizarDashboardExceccoes();
 };
 

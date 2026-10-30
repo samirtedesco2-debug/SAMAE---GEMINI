@@ -2891,6 +2891,30 @@ async function salvarConfiguracaoReservatorio(chave) {
   }
 }
 
+window.sincronizarEstadoAlarmesNoArquivo = async function() {
+  if (!configFileHandle) return;
+  try {
+    const salvosStr = localStorage.getItem("samai_reservatorios_config");
+    if (!salvosStr) return;
+    const salvos = JSON.parse(salvosStr);
+
+    const reconhecidosArr = window.ccoReconhecidos ? Array.from(window.ccoReconhecidos.entries()) : [];
+    const logsArr = window.samaeIncidentsLog || [];
+
+    salvos._estado_plantao = {
+      reconhecidos: reconhecidosArr,
+      logsIncidentes: logsArr,
+      timestampAtualizacao: new Date().toISOString()
+    };
+
+    const writable = await configFileHandle.createWritable();
+    await writable.write(JSON.stringify(salvos, null, 2));
+    await writable.close();
+  } catch (err) {
+    console.warn("Aviso ao sincronizar estado de alarmes no arquivo vinculado:", err);
+  }
+};
+
 async function renderizarPainelLogsAuditoria() {
   const container = document.getElementById("config-detalhe-container");
   if (!container) return;

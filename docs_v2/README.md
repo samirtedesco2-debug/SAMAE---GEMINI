@@ -13,6 +13,9 @@ Esta documentação foi estruturada em pastas e subpastas organizadas por áreas
 
 2. **Módulos do Sistema (`modulos/`)**:
    - [Orquestrador Principal (`app.js`)](./modulos/app.md)
+   - [Repositório de Autenticação & IndexedDB (`authRepository.js`)](./modulos/auth-repository.md)
+   - [Interface de Autenticação & Login (`authUI.js`)](./modulos/auth-ui.md)
+   - [Controle de Acesso Baseado em Papéis - RBAC (`rbac.js`)](./modulos/rbac.md)
    - [Sincronização e Janela CCO (`ccoSync.js`)](./modulos/cco-sync.md)
    - [Interface de Usuário (`ui.js`)](./modulos/ui.md)
    - [Regras de Negócio & Motor Preditivo (`regrasNegocio.js`)](./modulos/regras-negocio.md)
@@ -21,9 +24,11 @@ Esta documentação foi estruturada em pastas e subpastas organizadas por áreas
    - [Cliente de API & Configurações (`apiClient.js`)](./modulos/api-client.md)
 
 3. **Funcionalidades Operacionais (`funcionalidades/`)**:
+   - [Controle de Acesso (RBAC) & Segurança Industrial](./funcionalidades/controle-acesso-rbac.md)
    - [Motor de Autonomia Preditiva e Balanço Hidráulico](./funcionalidades/motor-preditivo.md)
    - [Parametrização e Regras de Alarme](./funcionalidades/parametrizacao.md)
    - [Guia de Migração para Tempo Real](./funcionalidades/migracao-tempo-real.md)
 
 ---
 *SAMAE - Centro de Controle Operacional (CCO)*
+
