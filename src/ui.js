@@ -2061,7 +2061,9 @@ function atualizarBadgeAlarmes() {
 }
 
 function carregarReconhecidosLocalStorage() {
-  if (window.ccoReconhecidosCarregado) return;
+  window.ccoReconhecidos = window.ccoReconhecidos || new Map();
+  window.samaeIncidentsLog = window.samaeIncidentsLog || [];
+  
   try {
     const salvos = localStorage.getItem("samae_cco_reconhecidos");
     if (salvos) {
@@ -2073,7 +2075,6 @@ function carregarReconhecidosLocalStorage() {
       window.samaeIncidentsLog = JSON.parse(logsSalvos);
     }
   } catch(e){}
-  window.ccoReconhecidosCarregado = true;
 }
 
 function salvarReconhecidosLocalStorage() {
@@ -2081,9 +2082,21 @@ function salvarReconhecidosLocalStorage() {
     if (window.ccoReconhecidos) {
       const obj = Object.fromEntries(window.ccoReconhecidos.entries());
       localStorage.setItem("samae_cco_reconhecidos", JSON.stringify(obj));
+      window.ccoReconhecidos.forEach((severidade, chave) => {
+        if (window.StorageRepository) {
+          window.StorageRepository.salvarReconhecido(chave, severidade);
+        }
+      });
     }
     if (window.samaeIncidentsLog) {
       localStorage.setItem("samae_cco_incidents_log", JSON.stringify(window.samaeIncidentsLog));
+      const ultimoLog = window.samaeIncidentsLog[window.samaeIncidentsLog.length - 1];
+      if (window.StorageRepository && ultimoLog) {
+        window.StorageRepository.salvarLog(ultimoLog);
+      }
+    }
+    if (window.ccoChannel) {
+      window.ccoChannel.postMessage({ type: 'SYNC_RECONHECIDOS', reconhecidos: Object.fromEntries(window.ccoReconhecidos.entries()) });
     }
     if (typeof window.sincronizarEstadoAlarmesNoArquivo === 'function') {
       window.sincronizarEstadoAlarmesNoArquivo();
@@ -2306,40 +2319,9 @@ function renderizarDashboardExceccoes() {
 
     const btnFooterAck = card.querySelector(`#${CSS.escape(btnFooterId)}`);
     if (btnFooterAck) {
-      btnFooterAck.addEventListener("click", (e) => {
+      btnFooterAck.addEventListener("click", async (e) => {
         e.stopPropagation();
-        window.samaeIncidentsLog = window.samaeIncidentsLog || [];
-        const tempoInicio = window.ccoAlarmTriggerTime?.[chave] || Date.now();
-        const tempoRespostaMs = Date.now() - tempoInicio;
-
-        if (reconhecido) {
-          window.ccoReconhecidos.delete(chave);
-          if (window.ccoChannel) {
-            window.ccoChannel.postMessage({ type: 'REVOKE_ACK', chave });
-          }
-          window.samaeIncidentsLog.push({
-            timestamp: new Date().toISOString(),
-            chave,
-            nome,
-            severidade,
-            acao: 'Revogado',
-            tempoRespostaMs
-          });
-        } else {
-          window.ccoReconhecidos.set(chave, severidade);
-          if (window.ccoChannel) {
-            window.ccoChannel.postMessage({ type: 'ACK_ALARM', chave, severidade });
-          }
-          window.samaeIncidentsLog.push({
-            timestamp: new Date().toISOString(),
-            chave,
-            nome,
-            severidade,
-            acao: 'Reconhecido',
-            tempoRespostaMs
-          });
-        }
-        renderizarDashboardExceccoes();
+        await toggleAckMural(chave, severidade, nome);
       });
     }
   });
@@ -2356,7 +2338,7 @@ window.abrirReservatorioMural = function(chave) {
   }
 };
 
-window.toggleAckMural = function(chave, severidade, nome) {
+window.toggleAckMural = async function(chave, severidade, nome) {
   window.ccoReconhecidos = window.ccoReconhecidos || new Map();
   carregarReconhecidosLocalStorage();
   const reconhecido = window.ccoReconhecidos.has(chave);
@@ -2366,6 +2348,13 @@ window.toggleAckMural = function(chave, severidade, nome) {
 
   if (reconhecido) {
     window.ccoReconhecidos.delete(chave);
+    if (window.StorageRepository) {
+      await window.StorageRepository.removerReconhecido(chave);
+    }
+    if (window.AuthRepository && typeof window.AuthRepository.registrarAuditoria === 'function') {
+      const session = JSON.parse(localStorage.getItem("samae_cco_session") || "{}");
+      await window.AuthRepository.registrarAuditoria('MURAL_REVOGAR_ACK', session.username || 'Operador', `Revogado alarme em ${nome || chave} (${chave}) - Severidade: ${severidade}`);
+    }
     if (window.ccoChannel) {
       window.ccoChannel.postMessage({ type: 'REVOKE_ACK', chave });
     }
@@ -2379,6 +2368,13 @@ window.toggleAckMural = function(chave, severidade, nome) {
     });
   } else {
     window.ccoReconhecidos.set(chave, severidade);
+    if (window.StorageRepository) {
+      await window.StorageRepository.salvarReconhecido(chave, severidade);
+    }
+    if (window.AuthRepository && typeof window.AuthRepository.registrarAuditoria === 'function') {
+      const session = JSON.parse(localStorage.getItem("samae_cco_session") || "{}");
+      await window.AuthRepository.registrarAuditoria('MURAL_RECONHECER_ACK', session.username || 'Operador', `Reconhecido alarme em ${nome || chave} (${chave}) - Severidade: ${severidade}`);
+    }
     if (window.ccoChannel) {
       window.ccoChannel.postMessage({ type: 'ACK_ALARM', chave, severidade });
     }

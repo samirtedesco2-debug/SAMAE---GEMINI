@@ -33,5 +33,13 @@ Este documento registra o histórico cronológico de melhorias, refatorações e
 * **Data:** 27 de Outubro de 2026
 * **Descrição:** Substituição de seletores numéricos frágeis baseados em ordem (`nth-child`) por IDs e atributos semânticos explícitos (`id="config-res-${chave}"`, `id="btn-gerenciar-usuarios"`, `id="btn-config-parametros-globais"`), garantindo endereçamento direto e imune a reordenações no DOM.
 
+### 7. Sincronização Multi-Monitor CCO, Persistência Síncrona e Auditoria Unificada
+* **Data:** 30 de Outubro de 2026
+* **Descrição:** 
+  - **Múltiplos Monitores CCO**: Restauração da abertura do Mural de Alarmes em janela separada otimizada (`window.open` em `?view=exceccoes`) com gerenciamento automático de ciclo de vida (`beforeunload` para fechar janelas filhas ao sair).
+  - **Persistência Síncrona**: Utilização de `localStorage` síncrono e `StorageRepository` (IndexedDB) para garantir gravação instantânea de ACKs e incidentes sem perdas por fechamento rápido de janela.
+  - **Sincronização em Tempo Real**: Propagação bidirecional via `BroadcastChannel` e eventos `storage`.
+  - **Auditoria Unificada**: Integração completa das ações operacionais de ACK/revogação na trilha central de auditoria (`AuthRepository`), exibindo todos os eventos na tabela de **Logs de Auditoria & Sistema**.
+
 ---
 *SAMAE - Centro de Controle Operacional (CCO)*

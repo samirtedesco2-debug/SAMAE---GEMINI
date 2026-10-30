@@ -141,9 +141,13 @@ class AuthRepository {
 
     try {
       const db = await this.abrirDB();
-      const transaction = db.transaction("auditoria", "readwrite");
-      const store = transaction.objectStore("auditoria");
-      store.add(logEntry);
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction("auditoria", "readwrite");
+        const store = transaction.objectStore("auditoria");
+        const req = store.add(logEntry);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      });
     } catch (e) {
       console.warn("Erro ao gravar auditoria no IndexedDB:", e);
     }

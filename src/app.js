@@ -25,6 +25,21 @@ const coresAnaliticas = [
 // Inicialização Assíncrona Carregando Todos os Meses Históricos via ApiClient
 async function inicializarBancoAssincrono() {
   try {
+    if (window.StorageRepository) {
+      try {
+        const map = await window.StorageRepository.carregarReconhecidos();
+        if (map && map.size > 0) {
+          window.ccoReconhecidos = map;
+        }
+        const logs = await window.StorageRepository.carregarLogs();
+        if (logs && logs.length > 0) {
+          window.samaeIncidentsLog = logs;
+        }
+        window.ccoReconhecidosCarregado = true;
+      } catch (err) {
+        console.warn("Erro ao carregar do StorageRepository no inicio:", err);
+      }
+    }
     window.bancoDeDados = await window.ApiClient.inicializarBanco();
     inicializarTema();
     if (typeof inicializarControleAudioCCO === 'function') inicializarControleAudioCCO();
@@ -103,6 +118,17 @@ document.addEventListener("DOMContentLoaded", () => {
   // Tratamento Global de Erros Assíncronos
   window.addEventListener("unhandledrejection", (event) => {
     console.warn("Aviso assíncrono capturado:", event.reason);
+  });
+
+  window.addEventListener("beforeunload", () => {
+    try {
+      if (window.ccoMuralWindow && !window.ccoMuralWindow.closed) {
+        window.ccoMuralWindow.close();
+      }
+      if (window.samaeConfigWindow && !window.samaeConfigWindow.closed) {
+        window.samaeConfigWindow.close();
+      }
+    } catch(e) {}
   });
 
   const urlParams = new URLSearchParams(window.location.search);

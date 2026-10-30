@@ -2,6 +2,7 @@
 const executarTestesNotificacoes = require('./test_notificacoes');
 const executarTestesMural = require('./test_mural');
 const executarTestesRegras = require('./test_regras');
+const executarTestesMultiwindowSync = require('./test_multiwindow_sync');
 
 console.log("==========================================================");
 console.log("       SUÍTE DE TESTES AUTOMATIZADOS - SAMAE CCO          ");
@@ -11,6 +12,7 @@ try {
   executarTestesNotificacoes();
   executarTestesMural();
   executarTestesRegras();
+  executarTestesMultiwindowSync();
   console.log("\n==========================================================");
   console.log("🎉 TODOS OS MÓDULOS FORAM VALIDADOS COM 100% DE SUCESSO!     ");
   console.log("==========================================================");

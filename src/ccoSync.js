@@ -26,10 +26,9 @@ window.CcoSync = {
   },
 
   abrirMuralSingleton() {
-    if (window.ccoMuralWindow && !window.ccoMuralWindow.closed) {
-      window.ccoMuralWindow.focus();
-    } else {
-      window.ccoMuralWindow = window.open('?view=exceccoes', 'ccoMuralWindow', 'width=1200,height=800');
+    const tabExceccoes = document.getElementById("tab-exceccoes");
+    if (tabExceccoes) {
+      tabExceccoes.click();
     }
   },
 
