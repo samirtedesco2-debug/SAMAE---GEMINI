@@ -47,5 +47,18 @@ Este documento registra o histórico cronológico de melhorias, refatorações e
   - **Botão de Ordenação (`#btn-mural-sort-toggle`)**: Retirada do texto descritivo, mantendo apenas o ícone `⏱️` para melhor aproveitamento de espaço na barra de ferramentas operacional.
   - **Timestamps de Acionamento Imutáveis e Persistentes**: O carimbo de data/hora de acionamento dos alarmes (`Acionado em`) passou a ser vinculado à chave composta (`dataSelecionada_chave`) e persistido em `localStorage` (`samae_cco_trigger_times`). Isso garante que o horário original de disparo não seja redefinido em reaberturas, atualizações ou trocas de turno.
 
+### 9. Aprimoramentos Operacionais do Mural CCO (ACK com Operador, Ícones Dinâmicos e Reordenação de Tabela)
+* **Data:** 31 de Outubro de 2026
+* **Descrição:** 
+  - **Metadados de ACK Desacoplados (`window.ccoAckMetadata`)**: Armazenamento e exibição do carimbo de data/hora exato do reconhecimento e do nome do operador responsável diretamente no botão de ACK e tooltips dos cards/tabela, mantendo `window.ccoReconhecidos` compatível com a sincronização multi-janela e `StorageRepository`.
+  - **Ordenação Estrita por Horário**: No modo de ordenação por horário (`horario`), o mural ignora a severidade e classifica estritamente de forma cronológica pelo momento de disparo.
+  - **Ícones Dinâmicos nos Botões de Controle**: Os botões de alternância de visualização (`#btn-mural-view-toggle`: `🗂️` Grid, `📋` Tabela, `📊` Kanban) e ordenação (`#btn-mural-sort-toggle`: `⏱️` Horário, `⚠️` Severidade) alternam seus ícones dinamicamente.
+  - **Reordenação da Tabela Comparativa**: A coluna **"Acionado em"** foi reposicionada para o primeiro lugar (à esquerda), antecedendo a coluna **"TAG / Reservatório"**.
+
+### 10. Catálogo Centralizado de Taxonomia de Alarmes e Diagnósticos (`taxonomia_alarmes.json`)
+* **Data:** 31 de Outubro de 2026
+* **Descrição:** 
+  - **Padronização Operacional**: Criação do arquivo `dados_historicos/taxonomia_alarmes.json` contendo códigos padronizados (`ALM-NIV-01`, `ALM-VAZ-01`, `ALM-DAT-01`, etc.), categorias, severidades e templates de mensagens com linguagem operacional clara e orientada à ação imediata para os operadores do CCO.
+
 ---
 *SAMAE - Centro de Controle Operacional (CCO)*
