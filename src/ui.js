@@ -1920,7 +1920,7 @@ function obterReservatoriosComAlertaOuExcecao(banco, dataSelecionada) {
   const exceccoesMap = new Map();
 
   Object.entries(dadosDoDia.reservatorios).forEach(([chave, res]) => {
-    const nome = obterIdentificacaoReservatorio(chave);
+    const nome = res.nome || obterIdentificacaoReservatorio(chave);
     const config = obterConfiguracaoReservatorio(chave);
     if (config.emManutencao) return;
 
@@ -2063,6 +2063,7 @@ function atualizarBadgeAlarmes() {
 function carregarReconhecidosLocalStorage() {
   window.ccoReconhecidos = window.ccoReconhecidos || new Map();
   window.samaeIncidentsLog = window.samaeIncidentsLog || [];
+  window.ccoAlarmTriggerTimes = window.ccoAlarmTriggerTimes || new Map();
   
   try {
     const salvos = localStorage.getItem("samae_cco_reconhecidos");
@@ -2073,6 +2074,11 @@ function carregarReconhecidosLocalStorage() {
     const logsSalvos = localStorage.getItem("samae_cco_incidents_log");
     if (logsSalvos) {
       window.samaeIncidentsLog = JSON.parse(logsSalvos);
+    }
+    const triggerTimesSalvos = localStorage.getItem("samae_cco_trigger_times");
+    if (triggerTimesSalvos) {
+      const obj = JSON.parse(triggerTimesSalvos);
+      window.ccoAlarmTriggerTimes = new Map(Object.entries(obj));
     }
   } catch(e){}
 }
@@ -2087,6 +2093,10 @@ function salvarReconhecidosLocalStorage() {
           window.StorageRepository.salvarReconhecido(chave, severidade);
         }
       });
+    }
+    if (window.ccoAlarmTriggerTimes) {
+      const obj = Object.fromEntries(window.ccoAlarmTriggerTimes.entries());
+      localStorage.setItem("samae_cco_trigger_times", JSON.stringify(obj));
     }
     if (window.samaeIncidentsLog) {
       localStorage.setItem("samae_cco_incidents_log", JSON.stringify(window.samaeIncidentsLog));
@@ -2111,12 +2121,31 @@ function renderizarDashboardExceccoes() {
   if (!banco || !banco.historico || !seletorData || !gridExceccoes) return;
 
   window.ccoReconhecidos = window.ccoReconhecidos || new Map();
+  window.ccoAlarmStartTimes = window.ccoAlarmStartTimes || new Map();
   carregarReconhecidosLocalStorage();
   const dataSelecionada = seletorData.value;
+  const dadosDoDia = banco.historico[dataSelecionada];
+  if (!dadosDoDia) return;
   gridExceccoes.innerHTML = "";
 
   const exceccoes = obterReservatoriosComAlertaOuExcecao(banco, dataSelecionada);
   atualizarBadgeAlarmes();
+
+  // Rastreamento de Timestamp de Acionamento (Persistente e Imutável por Data + Reservatório)
+  window.ccoAlarmTriggerTimes = window.ccoAlarmTriggerTimes || new Map();
+  let triggerTimesAlterados = false;
+  exceccoes.forEach(e => {
+    const triggerKey = `${dataSelecionada}_${e.chave}`;
+    if (!window.ccoAlarmTriggerTimes.has(triggerKey)) {
+      const agora = new Date();
+      const dataHoraStr = `${agora.toLocaleDateString('pt-BR')} ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+      window.ccoAlarmTriggerTimes.set(triggerKey, dataHoraStr);
+      triggerTimesAlterados = true;
+    }
+  });
+  if (triggerTimesAlterados) {
+    salvarReconhecidosLocalStorage();
+  }
 
   // Auto-reset & Auto-debugging
   const chavesAtuais = new Set(exceccoes.map(e => e.chave));
@@ -2166,17 +2195,60 @@ function renderizarDashboardExceccoes() {
     };
   });
 
+  window.ccoMuralModoVisualizacao = window.ccoMuralModoVisualizacao || (window.ccoMuralModoTabela ? "tabela" : "grid");
+
   const btnViewToggle = document.getElementById("btn-mural-view-toggle");
   if (btnViewToggle && !btnViewToggle.dataset.bound) {
     btnViewToggle.dataset.bound = "true";
-    window.ccoMuralModoTabela = window.ccoMuralModoTabela || false;
     btnViewToggle.addEventListener("click", () => {
-      window.ccoMuralModoTabela = !window.ccoMuralModoTabela;
-      window.ccoModoTabela = window.ccoMuralModoTabela;
+      if (window.ccoMuralModoVisualizacao === "grid") {
+        window.ccoMuralModoVisualizacao = "tabela";
+        window.ccoMuralModoTabela = true;
+      } else if (window.ccoMuralModoVisualizacao === "tabela") {
+        window.ccoMuralModoVisualizacao = "kanban";
+        window.ccoMuralModoTabela = false;
+      } else {
+        window.ccoMuralModoVisualizacao = "grid";
+        window.ccoMuralModoTabela = false;
+      }
       renderizarDashboardExceccoes();
     });
   }
-  window.ccoMuralModoTabela = window.ccoMuralModoTabela || window.ccoModoTabela || false;
+
+  if (btnViewToggle) {
+    if (window.ccoMuralModoVisualizacao === "grid") {
+      btnViewToggle.title = "Modo Atual: Grid de Cards. Clique para Tabela.";
+    } else if (window.ccoMuralModoVisualizacao === "tabela") {
+      btnViewToggle.title = "Modo Atual: Tabela Comparativa. Clique para Kanban.";
+    } else {
+      btnViewToggle.title = "Modo Atual: Kanban por Prioridade. Clique para Grid.";
+    }
+  }
+
+  const btnSortToggle = document.getElementById("btn-mural-sort-toggle");
+  window.ccoMuralModoOrdenacao = window.ccoMuralModoOrdenacao || "severidade";
+
+  if (btnSortToggle && !btnSortToggle.dataset.bound) {
+    btnSortToggle.dataset.bound = "true";
+    btnSortToggle.addEventListener("click", () => {
+      window.ccoMuralModoOrdenacao = window.ccoMuralModoOrdenacao === "severidade" ? "horario" : "severidade";
+      renderizarDashboardExceccoes();
+    });
+  }
+
+  if (btnSortToggle) {
+    if (window.ccoMuralModoOrdenacao === "horario") {
+      btnSortToggle.style.background = "var(--accent-color)";
+      btnSortToggle.style.color = "#fff";
+      btnSortToggle.title = "Ordenando por: Horário de Disparo (Cronológico). Clique para Severidade.";
+      btnSortToggle.textContent = "⏱️";
+    } else {
+      btnSortToggle.style.background = "var(--surface-inset)";
+      btnSortToggle.style.color = "var(--text-color)";
+      btnSortToggle.title = "Ordenando por: Severidade. Clique para classificar por Horário de Disparo.";
+      btnSortToggle.textContent = "⏱️";
+    }
+  }
 
   const searchInput = document.getElementById("cco-search-input");
   if (searchInput && !searchInput.dataset.bound) {
@@ -2213,10 +2285,100 @@ function renderizarDashboardExceccoes() {
 
   exceccoesFiltradas.sort((a, b) => {
     const peso = (sev) => sev === "Crítico" ? 1 : sev === "Atenção" ? 2 : sev === "Inconsistente" ? 3 : 4;
-    return peso(a.severidade) - peso(b.severidade);
+    const diffPeso = peso(a.severidade) - peso(b.severidade);
+    if (diffPeso !== 0) return diffPeso;
+
+    const keyA = `${dataSelecionada}_${a.chave}`;
+    const keyB = `${dataSelecionada}_${b.chave}`;
+    const tA = window.ccoAlarmTriggerTimes?.get(keyA) || window.ccoAlarmTriggerTimes?.get(a.chave) || "";
+    const tB = window.ccoAlarmTriggerTimes?.get(keyB) || window.ccoAlarmTriggerTimes?.get(b.chave) || "";
+    return tA.localeCompare(tB);
   });
 
-  if (window.ccoMuralModoTabela) {
+  if (window.ccoMuralModoVisualizacao === "kanban") {
+    gridExceccoes.style.display = "grid";
+    gridExceccoes.style.gridTemplateColumns = "repeat(auto-fit, minmax(280px, 1fr))";
+    gridExceccoes.style.gap = "20px";
+    gridExceccoes.innerHTML = "";
+
+    const colunasDef = [
+      { titulo: "🔴 Críticos", severidade: "Crítico", corBorda: "var(--status-critical-color)", bgHeader: "rgba(227,93,106,0.15)" },
+      { titulo: "🟡 Atenção", severidade: "Atenção", corBorda: "#d7a52b", bgHeader: "rgba(215,165,43,0.15)" },
+      { titulo: "🔵 Inconsistentes / Flapping", severidade: "Inconsistente", corBorda: "var(--accent-color)", bgHeader: "rgba(89,117,217,0.15)" }
+    ];
+
+    colunasDef.forEach(col => {
+      const itensColuna = exceccoesFiltradas.filter(e => e.severidade === col.severidade);
+      const colDiv = document.createElement("div");
+      colDiv.style.cssText = `background: var(--surface-bg); border: 1px solid var(--border-color); border-top: 5px solid ${col.corBorda}; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-height: 400px;`;
+      
+      const headerDiv = document.createElement("div");
+      headerDiv.style.cssText = `display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;`;
+      headerDiv.innerHTML = `<h4 style="margin: 0; font-size: 0.95rem; color: var(--text-color);">${col.titulo}</h4><span style="background: ${col.bgHeader}; color: var(--text-color); padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 700;">${itensColuna.length}</span>`;
+      colDiv.appendChild(headerDiv);
+
+      const cardsContainer = document.createElement("div");
+      cardsContainer.style.cssText = `display: flex; flex-direction: column; gap: 12px; flex: 1;`;
+
+      if (itensColuna.length === 0) {
+        cardsContainer.innerHTML = `<div style="text-align: center; color: var(--muted-color); font-size: 0.85rem; padding: 30px 0;">Nenhum alarme nesta coluna</div>`;
+      } else {
+        itensColuna.forEach(({ chave, nome, severidade, cor, bg, mensagens }) => {
+          const card = document.createElement("article");
+          const reconhecido = window.ccoReconhecidos.has(chave);
+
+          card.className = reconhecido ? "" : "animar-pulso";
+          card.style.cssText = `background: var(--card-bg); border: 1px solid var(--border-color); border-left: 5px solid ${cor}; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s; opacity: ${reconhecido ? '0.5' : '1'};`;
+          
+          card.addEventListener("click", () => {
+            window.veioDeAlertasCCO = true;
+            const tabOp = document.getElementById("tab-operacional");
+            if (tabOp) tabOp.click();
+            const seletorFiltro = document.getElementById("seletor-filtro");
+            if (seletorFiltro) {
+              seletorFiltro.value = `reservatorio:${chave}`;
+              seletorFiltro.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+          });
+
+          const triggerKey = `${dataSelecionada}_${chave}`;
+          const triggerTime = window.ccoAlarmTriggerTimes?.get(triggerKey) || window.ccoAlarmTriggerTimes?.get(chave) || "—";
+          const btnFooterId = `btn-kanban-ack-${chave}`;
+          card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-color);">${nome}</span>
+              <span style="background: ${bg}; color: ${cor}; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;">${severidade}</span>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--muted-color);">Acionado em: <strong>${triggerTime}</strong></div>
+            <div style="font-size: 0.8rem; color: var(--muted-color); display: flex; flex-direction: column; gap: 2px;">
+              ${mensagens.map(m => `<div>• ${m}</div>`).join("")}
+            </div>
+            <div style="display: flex; justify-content: flex-end; align-items: center; border-top: 1px solid var(--border-color); padding-top: 8px;">
+              <button type="button" id="${btnFooterId}" title="${reconhecido ? 'Reconhecido. Apenas ADMIN pode revogar.' : 'Reconhecer alarme'}" style="padding: 4px 10px; background: ${reconhecido ? 'rgba(115,191,105,0.2)' : 'var(--accent-color)'}; color: ${reconhecido ? 'var(--status-normal-color)' : '#fff'}; border: none; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">
+                ${reconhecido ? '✓ Reconhecido' : '🚨 Reconhecer'}
+              </button>
+            </div>
+          `;
+
+          cardsContainer.appendChild(card);
+
+          const btnAck = card.querySelector(`#${CSS.escape(btnFooterId)}`);
+          if (btnAck) {
+            btnAck.addEventListener("click", async (e) => {
+              e.stopPropagation();
+              await toggleAckMural(chave, severidade, nome);
+            });
+          }
+        });
+      }
+
+      colDiv.appendChild(cardsContainer);
+      gridExceccoes.appendChild(colDiv);
+    });
+    return;
+  }
+
+  if (window.ccoMuralModoVisualizacao === "tabela") {
     gridExceccoes.style.display = "block";
     gridExceccoes.innerHTML = `
       <div class="engineering-table-wrap" style="background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 12px; overflow-x: auto;">
@@ -2226,19 +2388,21 @@ function renderizarDashboardExceccoes() {
               <th style="padding: 12px;">TAG / Reservatório</th>
               <th style="padding: 12px;">Severidade</th>
               <th style="padding: 12px;">Diagnósticos / Mensagens</th>
-              <th style="padding: 12px;">Tendência</th>
+              <th style="padding: 12px;">Acionado em</th>
               <th style="padding: 12px; text-align: center;">Ação (ACK)</th>
             </tr>
           </thead>
           <tbody>
-            ${exceccoesFiltradas.map(({ chave, nome, severidade, cor, bg, mensagens, predicao }) => {
+            ${exceccoesFiltradas.map(({ chave, nome, severidade, cor, bg, mensagens }) => {
               const reconhecido = window.ccoReconhecidos.has(chave);
+              const triggerKey = `${dataSelecionada}_${chave}`;
+              const triggerTime = window.ccoAlarmTriggerTimes?.get(triggerKey) || window.ccoAlarmTriggerTimes?.get(chave) || "—";
               return `
                 <tr style="border-top: 1px solid var(--border-color); opacity: ${reconhecido ? '0.6' : '1'}; cursor: pointer;" onclick="abrirReservatorioMural('${chave}')">
-                  <td style="padding: 12px; font-weight: 700; color: var(--text-color);">${nome} (${chave})</td>
+                  <td style="padding: 12px; font-weight: 700; color: var(--text-color);">${nome}</td>
                   <td style="padding: 12px;"><span style="background: ${bg}; color: ${cor}; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${severidade}</span></td>
                   <td style="padding: 12px; color: var(--muted-color);">${mensagens.join(" | ")}</td>
-                  <td style="padding: 12px; font-weight: 600; color: var(--text-color);">${predicao ? `${predicao.tendencia} ${predicao.iconeTendencia}` : 'N/A'}</td>
+                  <td style="padding: 12px; font-weight: 600; color: var(--text-color);">${triggerTime}</td>
                   <td style="padding: 12px; text-align: center;" onclick="event.stopPropagation()">
                     <button type="button" onclick="toggleAckMural('${chave}', '${severidade}', '${nome}')" style="padding: 6px 12px; background: ${reconhecido ? 'rgba(115,191,105,0.2)' : 'var(--accent-color)'}; color: ${reconhecido ? 'var(--status-normal-color)' : '#fff'}; border: none; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">
                       ${reconhecido ? '✓ Reconhecido' : '🚨 Reconhecer'}
@@ -2258,6 +2422,8 @@ function renderizarDashboardExceccoes() {
   exceccoesFiltradas.forEach(({ chave, nome, severidade, cor, bg, mensagens, predicao }) => {
     const card = document.createElement("article");
     const reconhecido = window.ccoReconhecidos.has(chave);
+    const triggerKey = `${dataSelecionada}_${chave}`;
+    const triggerTime = window.ccoAlarmTriggerTimes?.get(triggerKey) || window.ccoAlarmTriggerTimes?.get(chave) || "—";
 
     card.className = reconhecido ? "" : "animar-pulso";
     card.setAttribute("tabindex", "0");
@@ -2301,14 +2467,14 @@ function renderizarDashboardExceccoes() {
     const btnFooterId = `btn-footer-ack-${chave}`;
     card.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: 700; font-size: 1rem; color: var(--text-color);">${nome} (${chave})</span>
+        <span style="font-weight: 700; font-size: 1rem; color: var(--text-color);">${nome}</span>
         <span style="background: ${bg}; color: ${cor}; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${severidade}</span>
       </div>
+      <div style="font-size: 0.8rem; color: var(--muted-color);">Acionado em: <strong>${triggerTime}</strong></div>
       <div style="font-size: 0.85rem; color: var(--muted-color); display: flex; flex-direction: column; gap: 4px;">
         ${mensagens.map(m => `<div>• ${m}</div>`).join("")}
       </div>
-      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 12px; font-size: 0.85rem; flex-wrap: wrap; gap: 8px;">
-        <span style="color: var(--muted-color);">Tendência: <strong style="color: var(--text-color);">${predicao ? `${predicao.tendencia} ${predicao.iconeTendencia}` : 'N/A'}</strong></span>
+      <div style="display: flex; justify-content: flex-end; align-items: center; border-top: 1px solid var(--border-color); padding-top: 12px;">
         <button type="button" id="${btnFooterId}" style="padding: 6px 14px; background: ${reconhecido ? 'rgba(115,191,105,0.2)' : 'var(--accent-color)'}; color: ${reconhecido ? 'var(--status-normal-color)' : '#fff'}; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
           ${reconhecido ? '✓ Alarme Reconhecido' : '🚨 Reconhecer Alarme'}
         </button>
@@ -2346,14 +2512,31 @@ window.toggleAckMural = async function(chave, severidade, nome) {
   const tempoInicio = window.ccoAlarmTriggerTime?.[chave] || Date.now();
   const tempoRespostaMs = Date.now() - tempoInicio;
 
+  let isAdmin = false;
+  try {
+    const sessionStr = localStorage.getItem("samae_cco_session");
+    if (sessionStr) {
+      const session = JSON.parse(sessionStr);
+      isAdmin = (session.role === "ADMIN");
+    }
+  } catch(e) {}
+
   if (reconhecido) {
+    if (!isAdmin) {
+      alert("Acesso Negado (RBAC): Apenas administradores (Perfil ADMIN) podem revogar (des-reconhecer) um alarme já reconhecido.");
+      return;
+    }
+
+    const confirmar = confirm(`⚠️ Confirmação Administrativa (ADMIN):\n\nDeseja realmente revogar o reconhecimento do alarme do reservatório "${nome || chave}" (${chave})?\n\nEsta ação reativará os alertas visuais e sonoros no CCO.`);
+    if (!confirmar) return;
+
     window.ccoReconhecidos.delete(chave);
     if (window.StorageRepository) {
       await window.StorageRepository.removerReconhecido(chave);
     }
     if (window.AuthRepository && typeof window.AuthRepository.registrarAuditoria === 'function') {
       const session = JSON.parse(localStorage.getItem("samae_cco_session") || "{}");
-      await window.AuthRepository.registrarAuditoria('MURAL_REVOGAR_ACK', session.username || 'Operador', `Revogado alarme em ${nome || chave} (${chave}) - Severidade: ${severidade}`);
+      await window.AuthRepository.registrarAuditoria('MURAL_REVOGAR_ACK', session.username || 'Admin', `Revogado alarme em ${nome || chave} (${chave}) - Severidade: ${severidade}`);
     }
     if (window.ccoChannel) {
       window.ccoChannel.postMessage({ type: 'REVOKE_ACK', chave });

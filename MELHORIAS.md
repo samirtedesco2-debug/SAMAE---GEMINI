@@ -41,5 +41,11 @@ Este documento registra o histórico cronológico de melhorias, refatorações e
   - **Sincronização em Tempo Real**: Propagação bidirecional via `BroadcastChannel` e eventos `storage`.
   - **Auditoria Unificada**: Integração completa das ações operacionais de ACK/revogação na trilha central de auditoria (`AuthRepository`), exibindo todos os eventos na tabela de **Logs de Auditoria & Sistema**.
 
+### 8. Simplificação do Botão de Ordenação e Imutabilidade de Timestamps de Alarme
+* **Data:** 31 de Outubro de 2026
+* **Descrição:** 
+  - **Botão de Ordenação (`#btn-mural-sort-toggle`)**: Retirada do texto descritivo, mantendo apenas o ícone `⏱️` para melhor aproveitamento de espaço na barra de ferramentas operacional.
+  - **Timestamps de Acionamento Imutáveis e Persistentes**: O carimbo de data/hora de acionamento dos alarmes (`Acionado em`) passou a ser vinculado à chave composta (`dataSelecionada_chave`) e persistido em `localStorage` (`samae_cco_trigger_times`). Isso garante que o horário original de disparo não seja redefinido em reaberturas, atualizações ou trocas de turno.
+
 ---
 *SAMAE - Centro de Controle Operacional (CCO)*

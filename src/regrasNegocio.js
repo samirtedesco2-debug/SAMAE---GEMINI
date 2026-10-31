@@ -246,15 +246,23 @@ function auditarLeiturasNivel(valores) {
       if (variacaoAbs > 25) {
         return { status: "Inconsistente", motivo: "Degrau Impossível (Variação > 25% entre horas consecutivas)" };
       }
+    }
+  }
 
-      /*
-        ESTRUTURA DE PREPARAÇÃO PARA TEMPO REAL - DEGRAU IMPOSSÍVEL:
-        // Cálculo estrito de variação de 10% entre duas leituras consecutivas em tempo real:
-        // const LIMITE_DEGRAU_TEMPO_REAL = 10;
-        // if (variacaoAbs > LIMITE_DEGRAU_TEMPO_REAL) {
-        //   return { status: "Inconsistente", motivo: "Degrau Impossível em Tempo Real (> 10% entre leituras)" };
-        // }
-      */
+  // c) FLAPPING DETECTION (ALARMES INTERMITENTES): Se as leituras válidas alternam o status (Normal <-> Anormal) 2 ou mais vezes.
+  if (validosComIndice.length >= 3) {
+    let transicoes = 0;
+    let estadoAnterior = null;
+    for (let i = 0; i < validosComIndice.length; i++) {
+      const v = validosComIndice[i].val;
+      const estadoAtual = v < 60 ? "ANORMAL" : "NORMAL";
+      if (estadoAnterior !== null && estadoAtual !== estadoAnterior) {
+        transicoes++;
+      }
+      estadoAnterior = estadoAtual;
+    }
+    if (transicoes >= 2) {
+      return { status: "Inconsistente", motivo: "Alerta Intermitente (Flapping: oscilação instável de status na telemetria)" };
     }
   }
 

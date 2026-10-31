@@ -28,6 +28,7 @@ Esta documentação foi estruturada em pastas e subpastas organizadas por áreas
    - [Motor de Autonomia Preditiva e Balanço Hidráulico](./funcionalidades/motor-preditivo.md)
    - [Parametrização e Regras de Alarme](./funcionalidades/parametrizacao.md)
    - [Guia de Migração para Tempo Real](./funcionalidades/migracao-tempo-real.md)
+   - [Possíveis Melhorias Futuras](./funcionalidades/possiveis-melhorias.md)
 
 ---
 *SAMAE - Centro de Controle Operacional (CCO)*
