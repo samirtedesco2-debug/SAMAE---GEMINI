@@ -78,7 +78,7 @@ class StorageRepository {
   async salvarReconhecido(chave, severidade) {
     try {
       const db = await this.abrirDB();
-      return new Promise((resolve, reject) => {
+      await new Promise((resolve, reject) => {
         const transaction = db.transaction("reconhecidos", "readwrite");
         const store = transaction.objectStore("reconhecidos");
         const req = store.put({ chave, severidade, timestamp: Date.now() });
@@ -88,7 +88,7 @@ class StorageRepository {
     } catch (e) {
       console.warn("Erro ao salvar reconhecido no IndexedDB", e);
     }
-    // Backup localStorage
+    // Backup localStorage sempre
     try {
       if (window.ccoReconhecidos) {
         const obj = Object.fromEntries(window.ccoReconhecidos.entries());

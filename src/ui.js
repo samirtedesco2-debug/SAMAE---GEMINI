@@ -2064,12 +2064,18 @@ function carregarReconhecidosLocalStorage() {
   window.ccoReconhecidos = window.ccoReconhecidos || new Map();
   window.samaeIncidentsLog = window.samaeIncidentsLog || [];
   window.ccoAlarmTriggerTimes = window.ccoAlarmTriggerTimes || new Map();
+  window.ccoAckMetadata = window.ccoAckMetadata || new Map();
   
   try {
     const salvos = localStorage.getItem("samae_cco_reconhecidos");
     if (salvos) {
       const obj = JSON.parse(salvos);
       window.ccoReconhecidos = new Map(Object.entries(obj));
+    }
+    const metaSalvos = localStorage.getItem("samae_cco_ack_metadata");
+    if (metaSalvos) {
+      const objMeta = JSON.parse(metaSalvos);
+      window.ccoAckMetadata = new Map(Object.entries(objMeta));
     }
     const logsSalvos = localStorage.getItem("samae_cco_incidents_log");
     if (logsSalvos) {
@@ -2086,15 +2092,28 @@ function carregarReconhecidosLocalStorage() {
 function salvarReconhecidosLocalStorage() {
   try {
     if (window.ccoReconhecidos) {
+      if (!(window.ccoReconhecidos instanceof Map)) {
+        window.ccoReconhecidos = new Map(Object.entries(window.ccoReconhecidos));
+      }
       const obj = Object.fromEntries(window.ccoReconhecidos.entries());
       localStorage.setItem("samae_cco_reconhecidos", JSON.stringify(obj));
       window.ccoReconhecidos.forEach((severidade, chave) => {
         if (window.StorageRepository) {
-          window.StorageRepository.salvarReconhecido(chave, severidade);
+          try { window.StorageRepository.salvarReconhecido(chave, severidade); } catch(e) {}
         }
       });
     }
+    if (window.ccoAckMetadata) {
+      if (!(window.ccoAckMetadata instanceof Map)) {
+        window.ccoAckMetadata = new Map(Object.entries(window.ccoAckMetadata));
+      }
+      const objMeta = Object.fromEntries(window.ccoAckMetadata.entries());
+      localStorage.setItem("samae_cco_ack_metadata", JSON.stringify(objMeta));
+    }
     if (window.ccoAlarmTriggerTimes) {
+      if (!(window.ccoAlarmTriggerTimes instanceof Map)) {
+        window.ccoAlarmTriggerTimes = new Map(Object.entries(window.ccoAlarmTriggerTimes));
+      }
       const obj = Object.fromEntries(window.ccoAlarmTriggerTimes.entries());
       localStorage.setItem("samae_cco_trigger_times", JSON.stringify(obj));
     }
@@ -2102,16 +2121,47 @@ function salvarReconhecidosLocalStorage() {
       localStorage.setItem("samae_cco_incidents_log", JSON.stringify(window.samaeIncidentsLog));
       const ultimoLog = window.samaeIncidentsLog[window.samaeIncidentsLog.length - 1];
       if (window.StorageRepository && ultimoLog) {
-        window.StorageRepository.salvarLog(ultimoLog);
+        try { window.StorageRepository.salvarLog(ultimoLog); } catch(e) {}
       }
     }
     if (window.ccoChannel) {
-      window.ccoChannel.postMessage({ type: 'SYNC_RECONHECIDOS', reconhecidos: Object.fromEntries(window.ccoReconhecidos.entries()) });
+      try { window.ccoChannel.postMessage({ type: 'SYNC_RECONHECIDOS', reconhecidos: Object.fromEntries(window.ccoReconhecidos.entries()) }); } catch(e) {}
     }
     if (typeof window.sincronizarEstadoAlarmesNoArquivo === 'function') {
-      window.sincronizarEstadoAlarmesNoArquivo();
+      try { window.sincronizarEstadoAlarmesNoArquivo(); } catch(e) {}
     }
   } catch(e){}
+}
+
+function obterDetalhesAck(chave) {
+  window.ccoReconhecidos = window.ccoReconhecidos || new Map();
+  if (!(window.ccoReconhecidos instanceof Map)) {
+    window.ccoReconhecidos = new Map(Object.entries(window.ccoReconhecidos));
+  }
+  if (!window.ccoReconhecidos.has(chave)) return { reconhecido: false };
+
+  window.ccoAckMetadata = window.ccoAckMetadata || new Map();
+  if (!(window.ccoAckMetadata instanceof Map)) {
+    window.ccoAckMetadata = new Map(Object.entries(window.ccoAckMetadata));
+  }
+
+  const meta = window.ccoAckMetadata.get(chave);
+  if (meta && typeof meta === 'object') {
+    return {
+      reconhecido: true,
+      timestamp: meta.timestamp || '',
+      operador: meta.operador || 'Operador',
+      texto: `✓ (${meta.timestamp || ''} - ${meta.operador || ''})`,
+      titulo: `Reconhecido em ${meta.timestamp || '—'} por ${meta.operador || 'Operador'}. Apenas ADMIN pode revogar.`
+    };
+  }
+  return {
+    reconhecido: true,
+    timestamp: '',
+    operador: 'Operador',
+    texto: '✓ Reconhecido',
+    titulo: 'Reconhecido. Apenas ADMIN pode revogar.'
+  };
 }
 
 function renderizarDashboardExceccoes() {
@@ -2217,11 +2267,14 @@ function renderizarDashboardExceccoes() {
 
   if (btnViewToggle) {
     if (window.ccoMuralModoVisualizacao === "grid") {
-      btnViewToggle.title = "Modo Atual: Grid de Cards. Clique para Tabela.";
+      btnViewToggle.textContent = "🗂️";
+      btnViewToggle.title = "Modo Atual: Grid de Cards. Clique para alternar para Tabela.";
     } else if (window.ccoMuralModoVisualizacao === "tabela") {
-      btnViewToggle.title = "Modo Atual: Tabela Comparativa. Clique para Kanban.";
+      btnViewToggle.textContent = "📋";
+      btnViewToggle.title = "Modo Atual: Tabela Comparativa. Clique para alternar para Kanban.";
     } else {
-      btnViewToggle.title = "Modo Atual: Kanban por Prioridade. Clique para Grid.";
+      btnViewToggle.textContent = "📊";
+      btnViewToggle.title = "Modo Atual: Kanban por Prioridade. Clique para alternar para Grid.";
     }
   }
 
@@ -2246,7 +2299,7 @@ function renderizarDashboardExceccoes() {
       btnSortToggle.style.background = "var(--surface-inset)";
       btnSortToggle.style.color = "var(--text-color)";
       btnSortToggle.title = "Ordenando por: Severidade. Clique para classificar por Horário de Disparo.";
-      btnSortToggle.textContent = "⏱️";
+      btnSortToggle.textContent = "⚠️";
     }
   }
 
@@ -2284,15 +2337,19 @@ function renderizarDashboardExceccoes() {
   }
 
   exceccoesFiltradas.sort((a, b) => {
-    const peso = (sev) => sev === "Crítico" ? 1 : sev === "Atenção" ? 2 : sev === "Inconsistente" ? 3 : 4;
-    const diffPeso = peso(a.severidade) - peso(b.severidade);
-    if (diffPeso !== 0) return diffPeso;
-
     const keyA = `${dataSelecionada}_${a.chave}`;
     const keyB = `${dataSelecionada}_${b.chave}`;
     const tA = window.ccoAlarmTriggerTimes?.get(keyA) || window.ccoAlarmTriggerTimes?.get(a.chave) || "";
     const tB = window.ccoAlarmTriggerTimes?.get(keyB) || window.ccoAlarmTriggerTimes?.get(b.chave) || "";
-    return tA.localeCompare(tB);
+
+    if (window.ccoMuralModoOrdenacao === "horario") {
+      return tA.localeCompare(tB);
+    } else {
+      const peso = (sev) => sev === "Crítico" ? 1 : sev === "Atenção" ? 2 : sev === "Inconsistente" ? 3 : 4;
+      const diffPeso = peso(a.severidade) - peso(b.severidade);
+      if (diffPeso !== 0) return diffPeso;
+      return tA.localeCompare(tB);
+    }
   });
 
   if (window.ccoMuralModoVisualizacao === "kanban") {
@@ -2325,12 +2382,14 @@ function renderizarDashboardExceccoes() {
       } else {
         itensColuna.forEach(({ chave, nome, severidade, cor, bg, mensagens }) => {
           const card = document.createElement("article");
-          const reconhecido = window.ccoReconhecidos.has(chave);
+          const ackDet = obterDetalhesAck(chave);
+          const reconhecido = ackDet.reconhecido;
 
           card.className = reconhecido ? "" : "animar-pulso";
           card.style.cssText = `background: var(--card-bg); border: 1px solid var(--border-color); border-left: 5px solid ${cor}; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s; opacity: ${reconhecido ? '0.5' : '1'};`;
           
-          card.addEventListener("click", () => {
+          card.addEventListener("click", (e) => {
+            if (e.target.closest("button")) return;
             window.veioDeAlertasCCO = true;
             const tabOp = document.getElementById("tab-operacional");
             if (tabOp) tabOp.click();
@@ -2354,8 +2413,8 @@ function renderizarDashboardExceccoes() {
               ${mensagens.map(m => `<div>• ${m}</div>`).join("")}
             </div>
             <div style="display: flex; justify-content: flex-end; align-items: center; border-top: 1px solid var(--border-color); padding-top: 8px;">
-              <button type="button" id="${btnFooterId}" title="${reconhecido ? 'Reconhecido. Apenas ADMIN pode revogar.' : 'Reconhecer alarme'}" style="padding: 4px 10px; background: ${reconhecido ? 'rgba(115,191,105,0.2)' : 'var(--accent-color)'}; color: ${reconhecido ? 'var(--status-normal-color)' : '#fff'}; border: none; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">
-                ${reconhecido ? '✓ Reconhecido' : '🚨 Reconhecer'}
+              <button type="button" id="${btnFooterId}" title="${ackDet.titulo}" style="padding: 4px 10px; background: ${reconhecido ? 'rgba(115,191,105,0.2)' : 'var(--accent-color)'}; color: ${reconhecido ? 'var(--status-normal-color)' : '#fff'}; border: none; border-radius: 4px; font-size: 0.7rem; font-weight: 700; cursor: pointer;">
+                ${ackDet.reconhecido ? ackDet.texto : '🚨 Reconhecer'}
               </button>
             </div>
           `;
@@ -2385,27 +2444,28 @@ function renderizarDashboardExceccoes() {
         <table class="comparison-table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
           <thead>
             <tr style="background: var(--surface-inset); text-align: left;">
+              <th style="padding: 12px;">Acionado em</th>
               <th style="padding: 12px;">TAG / Reservatório</th>
               <th style="padding: 12px;">Severidade</th>
               <th style="padding: 12px;">Diagnósticos / Mensagens</th>
-              <th style="padding: 12px;">Acionado em</th>
               <th style="padding: 12px; text-align: center;">Ação (ACK)</th>
             </tr>
           </thead>
           <tbody>
             ${exceccoesFiltradas.map(({ chave, nome, severidade, cor, bg, mensagens }) => {
-              const reconhecido = window.ccoReconhecidos.has(chave);
+              const ackDet = obterDetalhesAck(chave);
+              const reconhecido = ackDet.reconhecido;
               const triggerKey = `${dataSelecionada}_${chave}`;
               const triggerTime = window.ccoAlarmTriggerTimes?.get(triggerKey) || window.ccoAlarmTriggerTimes?.get(chave) || "—";
               return `
                 <tr style="border-top: 1px solid var(--border-color); opacity: ${reconhecido ? '0.6' : '1'}; cursor: pointer;" onclick="abrirReservatorioMural('${chave}')">
+                  <td style="padding: 12px; font-weight: 600; color: var(--text-color);">${triggerTime}</td>
                   <td style="padding: 12px; font-weight: 700; color: var(--text-color);">${nome}</td>
                   <td style="padding: 12px;"><span style="background: ${bg}; color: ${cor}; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${severidade}</span></td>
                   <td style="padding: 12px; color: var(--muted-color);">${mensagens.join(" | ")}</td>
-                  <td style="padding: 12px; font-weight: 600; color: var(--text-color);">${triggerTime}</td>
                   <td style="padding: 12px; text-align: center;" onclick="event.stopPropagation()">
-                    <button type="button" onclick="toggleAckMural('${chave}', '${severidade}', '${nome}')" style="padding: 6px 12px; background: ${reconhecido ? 'rgba(115,191,105,0.2)' : 'var(--accent-color)'}; color: ${reconhecido ? 'var(--status-normal-color)' : '#fff'}; border: none; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">
-                      ${reconhecido ? '✓ Reconhecido' : '🚨 Reconhecer'}
+                    <button type="button" onclick="toggleAckMural('${chave}', '${severidade}')" title="${ackDet.titulo}" style="padding: 6px 12px; background: ${reconhecido ? 'rgba(115,191,105,0.2)' : 'var(--accent-color)'}; color: ${reconhecido ? 'var(--status-normal-color)' : '#fff'}; border: none; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">
+                      ${ackDet.reconhecido ? ackDet.texto : '🚨 Reconhecer'}
                     </button>
                   </td>
                 </tr>
@@ -2421,7 +2481,8 @@ function renderizarDashboardExceccoes() {
   gridExceccoes.style.display = "grid";
   exceccoesFiltradas.forEach(({ chave, nome, severidade, cor, bg, mensagens, predicao }) => {
     const card = document.createElement("article");
-    const reconhecido = window.ccoReconhecidos.has(chave);
+    const ackDet = obterDetalhesAck(chave);
+    const reconhecido = ackDet.reconhecido;
     const triggerKey = `${dataSelecionada}_${chave}`;
     const triggerTime = window.ccoAlarmTriggerTimes?.get(triggerKey) || window.ccoAlarmTriggerTimes?.get(chave) || "—";
 
@@ -2453,7 +2514,8 @@ function renderizarDashboardExceccoes() {
       card.style.boxShadow = "none";
     });
 
-    card.addEventListener("click", () => {
+    card.addEventListener("click", (e) => {
+      if (e.target.closest("button")) return;
       window.veioDeAlertasCCO = true;
       const tabOp = document.getElementById("tab-operacional");
       if (tabOp) tabOp.click();
@@ -2475,8 +2537,8 @@ function renderizarDashboardExceccoes() {
         ${mensagens.map(m => `<div>• ${m}</div>`).join("")}
       </div>
       <div style="display: flex; justify-content: flex-end; align-items: center; border-top: 1px solid var(--border-color); padding-top: 12px;">
-        <button type="button" id="${btnFooterId}" style="padding: 6px 14px; background: ${reconhecido ? 'rgba(115,191,105,0.2)' : 'var(--accent-color)'}; color: ${reconhecido ? 'var(--status-normal-color)' : '#fff'}; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
-          ${reconhecido ? '✓ Alarme Reconhecido' : '🚨 Reconhecer Alarme'}
+        <button type="button" id="${btnFooterId}" title="${ackDet.titulo}" style="padding: 6px 14px; background: ${reconhecido ? 'rgba(115,191,105,0.2)' : 'var(--accent-color)'}; color: ${reconhecido ? 'var(--status-normal-color)' : '#fff'}; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+          ${ackDet.reconhecido ? ackDet.texto : '🚨 Reconhecer Alarme'}
         </button>
       </div>
     `;
@@ -2531,8 +2593,10 @@ window.toggleAckMural = async function(chave, severidade, nome) {
     if (!confirmar) return;
 
     window.ccoReconhecidos.delete(chave);
+    window.ccoAckMetadata = window.ccoAckMetadata || new Map();
+    window.ccoAckMetadata.delete(chave);
     if (window.StorageRepository) {
-      await window.StorageRepository.removerReconhecido(chave);
+      try { await window.StorageRepository.removerReconhecido(chave); } catch(e) {}
     }
     if (window.AuthRepository && typeof window.AuthRepository.registrarAuditoria === 'function') {
       const session = JSON.parse(localStorage.getItem("samae_cco_session") || "{}");
@@ -2550,16 +2614,26 @@ window.toggleAckMural = async function(chave, severidade, nome) {
       tempoRespostaMs
     });
   } else {
-    window.ccoReconhecidos.set(chave, severidade);
+    const agora = new Date();
+    const dataHoraAck = `${agora.toLocaleDateString('pt-BR')} ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+    const session = JSON.parse(localStorage.getItem("samae_cco_session") || "{}");
+    const operadorNome = session.username || 'Operador';
+
+    window.ccoReconhecidos.set(chave, severidade || 'Crítico');
+    window.ccoAckMetadata = window.ccoAckMetadata || new Map();
+    window.ccoAckMetadata.set(chave, {
+      timestamp: dataHoraAck,
+      operador: operadorNome
+    });
+
     if (window.StorageRepository) {
-      await window.StorageRepository.salvarReconhecido(chave, severidade);
+      try { await window.StorageRepository.salvarReconhecido(chave, severidade || 'Crítico'); } catch(e) {}
     }
     if (window.AuthRepository && typeof window.AuthRepository.registrarAuditoria === 'function') {
-      const session = JSON.parse(localStorage.getItem("samae_cco_session") || "{}");
-      await window.AuthRepository.registrarAuditoria('MURAL_RECONHECER_ACK', session.username || 'Operador', `Reconhecido alarme em ${nome || chave} (${chave}) - Severidade: ${severidade}`);
+      await window.AuthRepository.registrarAuditoria('MURAL_RECONHECER_ACK', operadorNome, `Reconhecido alarme em ${nome || chave} (${chave}) - Severidade: ${severidade}`);
     }
     if (window.ccoChannel) {
-      window.ccoChannel.postMessage({ type: 'ACK_ALARM', chave, severidade });
+      window.ccoChannel.postMessage({ type: 'ACK_ALARM', chave, severidade: severidade || 'Crítico' });
     }
     window.samaeIncidentsLog.push({
       timestamp: new Date().toISOString(),
