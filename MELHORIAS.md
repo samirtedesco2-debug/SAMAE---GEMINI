@@ -60,5 +60,12 @@ Este documento registra o histórico cronológico de melhorias, refatorações e
 * **Descrição:** 
   - **Padronização Operacional**: Criação do arquivo `dados_historicos/taxonomia_alarmes.json` contendo códigos padronizados (`ALM-NIV-01`, `ALM-VAZ-01`, `ALM-DAT-01`, etc.), categorias, severidades e templates de mensagens com linguagem operacional clara e orientada à ação imediata para os operadores do CCO.
 
+### 11. Unificação de Regras Mural-Cards e Exibição de Telemetria
+* **Data:** 31 de Outubro de 2026
+* **Descrição:** 
+  - **Paridade Total**: Unificação completa da lógica de cálculo de nível e vazão no mural de exceções (`obterReservatoriosComAlertaOuExcecao`) utilizando exatamente as mesmas funções dos cards principais (`avaliarStatusNivel` com referência histórica e `avaliarAlertaVazao`), eliminando divergências e alarmes fantasmas.
+  - **Integração da Taxonomia**: O mural passou a exibir mensagens padronizadas limpas e diretas baseadas nas categorias do catálogo (ex: "Nível Crítico", "Vazão Baixa", "Sem Comunicação").
+  - **Indicadores de Telemetria nos Cards**: Inclusão de selos de status `Inconsistente` diretamente no cabeçalho dos cartões de monitoramento sempre que houver falhas de comunicação ou leituras ausentes na madrugada.
+
 ---
 *SAMAE - Centro de Controle Operacional (CCO)*

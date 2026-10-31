@@ -385,6 +385,7 @@ function criarCardHTML(
           }>
             ${vazaoSemComparacao ? "Vazão: N/A" : `Vazão: ${alertaVazao.status}`}
           </span>
+          ${leiturasAusentes > 0 ? `<span class="badge-status status-sem-dados" title="Falha de telemetria / ${leiturasAusentes} leitura(s) ausente(s)">Inconsistente</span>` : ""}
         </span>
       </div>
 
@@ -1928,27 +1929,22 @@ function obterReservatoriosComAlertaOuExcecao(banco, dataSelecionada) {
     const leituras = res?.leituras;
     
     const nivelAtual = obterUltimaLeituraNivel(leituras?.nivel);
-    const statusNivel = avaliarStatusNivel(leituras?.nivel, chave);
+    const comparacaoNivel = obterComparacaoNivel(
+      banco,
+      chave,
+      dataSelecionada,
+      baseComparacao,
+      horarios,
+      nivelAtual,
+    );
+    const statusNivel = avaliarStatusNivel(leituras?.nivel, chave, comparacaoNivel?.referencia);
 
-    const vazaoAtual = obterUltimaLeitura(filtrarLeiturasVazaoValidas(leituras?.vazao));
     const referenciaVazao = obterReferenciaVazao(banco, chave, dataSelecionada, baseComparacao, horarios);
-    
-    let statusVazao = "Normal";
-    let variacaoVazao = null;
-    let direcaoVazao = "estável";
-    if (vazaoAtual !== null && referenciaVazao?.media !== null && referenciaVazao.media > 0) {
-      variacaoVazao = ((vazaoAtual - referenciaVazao.media) / referenciaVazao.media) * 100;
-      const mag = Math.abs(variacaoVazao);
-      direcaoVazao = variacaoVazao < 0 ? "baixa" : variacaoVazao > 0 ? "alta" : "estável";
-      
-      if (config.alertaVazaoMediaAtivo) {
-        if (mag >= config.vazaoMediaCritico) {
-          statusVazao = "Crítico";
-        } else if (mag >= config.vazaoMediaAtencao) {
-          statusVazao = "Atenção";
-        }
-      }
-    }
+    const alertaVazao = avaliarAlertaVazao(leituras?.vazao, referenciaVazao, horarios, chave);
+    const statusVazao = alertaVazao.status;
+    const vazaoAtual = obterUltimaLeitura(filtrarLeiturasVazaoValidas(leituras?.vazao));
+    const variacaoVazao = alertaVazao.indicadores?.[0]?.variacao ?? null;
+    const direcaoVazao = alertaVazao.indicadores?.[0]?.direcao ?? "estável";
 
     const nivelAtivo = escopoOperacional !== "vazao";
     const vazaoAtiva = escopoOperacional !== "nivel";
@@ -1995,26 +1991,29 @@ function obterReservatoriosComAlertaOuExcecao(banco, dataSelecionada) {
       }
 
       const mensagens = [];
-      if (statusNivel && statusNivel !== "Normal" && statusNivel !== "Sem Dados" && statusNivel !== "Inconsistente") {
-        let detalheNivel = `Nível atual em ${nivelAtual}% (${statusNivel})`;
-        if (nivelAtual !== null) {
-          detalheNivel = `Nível atual em ${nivelAtual}% (${statusNivel}: ${nivelAtual < 50 ? 'abaixo do limite crítico' : 'abaixo do limite de atenção'})`;
-        }
-        mensagens.push(detalheNivel);
+      if (statusNivel === "Crítico") {
+        const msg = obterMensagemTaxonomia("ALM-NIV-01", { nome, valorAtual: nivelAtual });
+        mensagens.push(msg || `Nível crítico em ${nivelAtual}%`);
+      } else if (statusNivel === "Atenção") {
+        const msg = obterMensagemTaxonomia("ALM-NIV-02", { nome, valorAtual: nivelAtual });
+        mensagens.push(msg || `Nível de atenção em ${nivelAtual}%`);
       }
-      if (statusNivel === "Inconsistente") {
-        mensagens.push("Leituras de nível inconsistentes ou fora da faixa válida (0-110%)");
+      if (statusNivel === "Inconsistente" || statusNivel === "Sem Dados") {
+        const msg = obterMensagemTaxonomia("ALM-DAT-02", { nome, valorAtual: nivelAtual ?? "N/A" });
+        mensagens.push(msg || "Leituras de nível inconsistentes ou fora da faixa válida (0-110%)");
       }
-      if (statusVazao !== "Normal") {
-        const varAbs = variacaoVazao !== null ? Math.abs(variacaoVazao).toFixed(0) + "%" : "";
-        const dirTxt = direcaoVazao === "alta" ? "acima da referência" : direcaoVazao === "baixa" ? "abaixo da referência" : "desviada";
-        mensagens.push(`Vazão atual (${vazaoAtual} L/s) está ${varAbs} ${dirTxt} (${statusVazao})`);
+      if (statusVazao === "Crítico" || statusVazao === "Atenção") {
+        const varAbs = variacaoVazao !== null ? Math.abs(variacaoVazao).toFixed(0) : "";
+        const codigoVazao = direcaoVazao === "alta" ? "ALM-VAZ-02" : "ALM-VAZ-01";
+        const msg = obterMensagemTaxonomia(codigoVazao, { nome, valorAtual: vazaoAtual, variacao: varAbs });
+        mensagens.push(msg || `Vazão atual (${vazaoAtual} L/s) está desviada (${statusVazao})`);
       }
       if (isPreditivo) {
         mensagens.push(predicao.mensagemPreditiva);
       }
       if (isIncompleto && ausentesSelecionadas.length > 0) {
-        mensagens.push(`${ausentesSelecionadas.length} leitura(s) ausente(s) por falha de telemetria`);
+        const msg = obterMensagemTaxonomia("ALM-DAT-01", { nome });
+        mensagens.push(msg || `${ausentesSelecionadas.length} leitura(s) ausente(s) por falha de telemetria`);
       }
 
       exceccoesMap.set(chave, {
@@ -2131,6 +2130,12 @@ function salvarReconhecidosLocalStorage() {
       try { window.sincronizarEstadoAlarmesNoArquivo(); } catch(e) {}
     }
   } catch(e){}
+}
+
+function obterMensagemTaxonomia(codigo, dados) {
+  const tax = window.taxonomiaAlarmes;
+  if (!tax || !tax[codigo] || !tax[codigo].template) return null;
+  return tax[codigo].template;
 }
 
 function obterDetalhesAck(chave) {

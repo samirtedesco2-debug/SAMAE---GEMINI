@@ -3,49 +3,42 @@
     "codigo": "ALM-NIV-01",
     "categoria": "Nível Crítico",
     "severidade": "Crítico",
-    "parametrosAnalisados": ["Nível Atual"],
-    "template": "[{codigo}] Nível Crítico — Reservatório {nome} com nível muito baixo ({valorAtual}%). Ação: Verificar consumo excessivo ou falha na entrada de água."
+    "template": "Nível Crítico"
   },
   "ALM-NIV-02": {
     "codigo": "ALM-NIV-02",
     "categoria": "Nível de Atenção",
     "severidade": "Atenção",
-    "parametrosAnalisados": ["Nível Atual"],
-    "template": "[{codigo}] Nível de Atenção — Reservatório {nome} operando abaixo do normal ({valorAtual}%). Ação: Monitorar tendência de queda."
+    "template": "Nível de Atenção"
   },
   "ALM-VAZ-01": {
     "codigo": "ALM-VAZ-01",
     "categoria": "Vazão Baixa",
     "severidade": "Atenção",
-    "parametrosAnalisados": ["Vazão Mínima", "Vazão Média"],
-    "template": "[{codigo}] Vazão Baixa — Reservatório {nome} com entrada de água abaixo do esperado ({valorAtual} L/s, variação de {variacao}%). Ação: Checar adução."
+    "template": "Vazão Baixa"
   },
   "ALM-VAZ-02": {
     "codigo": "ALM-VAZ-02",
     "categoria": "Vazão Alta",
     "severidade": "Crítico",
-    "parametrosAnalisados": ["Vazão Máxima", "Vazão Média"],
-    "template": "[{codigo}] Vazão Alta — Reservatório {nome} com vazão acima do normal ({valorAtual} L/s, aumento de {variacao}%). Ação: Possível vazamento ou consumo elevado na rede."
+    "template": "Vazão Alta"
   },
   "ALM-DAT-01": {
     "codigo": "ALM-DAT-01",
     "categoria": "Sem Comunicação",
     "severidade": "Inconsistente",
-    "parametrosAnalisados": ["Slots de Leitura Horária"],
-    "template": "[{codigo}] Sem Comunicação — Reservatório {nome} sem atualização de dados recentes. Ação: Verificar sinal de rádio ou telemetria."
+    "template": "Sem Comunicação"
   },
   "ALM-DAT-02": {
     "codigo": "ALM-DAT-02",
     "categoria": "Leitura Inválida",
     "severidade": "Inconsistente",
-    "parametrosAnalisados": ["Leitura Bruta de Campo"],
-    "template": "[{codigo}] Leitura Inválida — Reservatório {nome} registrou dado impossível ({valorAtual}). Ação: Inspecionar sensor ou transdutor local."
+    "template": "Leitura Inválida"
   },
   "ALM-FLP-01": {
     "codigo": "ALM-FLP-01",
     "categoria": "Alarme Intermitente",
     "severidade": "Inconsistente",
-    "parametrosAnalisados": ["Transições de Status"],
-    "template": "[{codigo}] Alarme Intermitente — Reservatório {nome} oscilando rapidamente entre status. Ação: Verificar estabilidade do sinal de campo."
+    "template": "Alarme Intermitente"
   }
 }

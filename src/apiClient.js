@@ -55,10 +55,25 @@ window.ApiClient = {
     return {};
   },
 
+  async carregarTaxonomia() {
+    try {
+      const resp = await fetch("dados_historicos/taxonomia_alarmes.json");
+      if (resp.ok) {
+        const data = await resp.json();
+        window.taxonomiaAlarmes = data;
+        return data;
+      }
+    } catch (e) {
+      console.warn("Aviso: Não foi possível carregar taxonomia_alarmes.json", e);
+    }
+    return {};
+  },
+
   async inicializarBanco() {
     const [indice, configuracoesArquivo] = await Promise.all([
       this.carregarIndice(),
-      this.carregarConfiguracoes()
+      this.carregarConfiguracoes(),
+      this.carregarTaxonomia()
     ]);
     const datasDisponiveis = indice.datasDisponiveis || [];
     const historico = {};
