@@ -5,3 +5,8 @@ O arquivo `src/apiClient.js` é responsável por gerenciar a comunicação com f
 ## Responsabilidades Principais
 - Gerenciamento de persistência de configurações de reservatórios.
 - Interação com fontes de dados e tratamento de erros de carregamento assíncrono.
+
+## Precedência do estado de plantão
+- `carregarConfiguracoes()` pode importar `_estado_plantao` de `dados_historicos/config_reservatorios.json` como fallback.
+- Se `window.ccoReconhecidosCarregado` já estiver marcado, a configuração não substitui reconhecimentos nem logs que vieram do `StorageRepository`. Esse sinal é definido após a tentativa de carregar o estado local durante a inicialização em `app.js`.
+- Assim, o snapshot do arquivo continua útil em uma primeira carga sem estado local, mas não deve sobrescrever o estado que o navegador já carregou.

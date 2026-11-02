@@ -67,5 +67,36 @@ Este documento registra o histórico cronológico de melhorias, refatorações e
   - **Integração da Taxonomia**: O mural passou a exibir mensagens padronizadas limpas e diretas baseadas nas categorias do catálogo (ex: "Nível Crítico", "Vazão Baixa", "Sem Comunicação").
   - **Indicadores de Telemetria nos Cards**: Inclusão de selos de status `Inconsistente` diretamente no cabeçalho dos cartões de monitoramento sempre que houver falhas de comunicação ou leituras ausentes na madrugada.
 
+## 📅 Novembro de 2026
+
+### 12. Persistência e consistência dos reconhecimentos de alarmes
+* **Data:** 2 de Novembro de 2026
+* **Antes:** A abertura do IndexedDB podia apagar o banco inteiro se faltasse uma store; metadados do ACK ficavam apenas no `localStorage`; revogações podiam ser restauradas por snapshots antigos; e renderizações repetidas podiam inserir novamente o último incidente no histórico.
+* **Agora:** A versão 2 do `SamaeCCOStorageDB` cria stores ausentes sem apagar as existentes, persiste metadados junto ao reconhecimento e registra revogações como tombstones. O histórico operacional é gravado na ação explícita e leituras removem duplicatas entre IndexedDB e `localStorage`.
+* **Por quê:** Preservar dados existentes e reduzir divergências entre a interface, IndexedDB e o fallback legado.
+* **Validação:** Testes automatizados de migração, persistência, revogação, recuperação de snapshots legados e deduplicação do histórico em `testes/test_storage_repository.js`.
+
+### 13. Precedência do estado local e cobertura de regressão
+* **Data:** 2 de Novembro de 2026
+* **Antes:** Um `_estado_plantao` vindo de `config_reservatorios.json` podia substituir reconhecimentos e logs mais recentes já carregados do armazenamento local.
+* **Agora:** `apiClient.js` usa o estado do arquivo como fallback somente quando o estado local ainda não foi carregado.
+* **Por quê:** Evitar que uma cópia antiga da configuração reverta o estado atual do navegador.
+* **Validação:** `testes/test_api_client_config.js` cobre a precedência do estado local e o fallback do arquivo quando o estado local não está disponível.
+
+### 14. Metadados, sincronização entre abas e tempo de resposta
+* **Data:** 2 de Novembro de 2026
+* **Antes:** Metadados do ACK não acompanhavam a sincronização entre abas e o tempo de resposta podia ser calculado a partir de uma propriedade diferente da que armazena os horários de acionamento.
+* **Agora:** Mensagens `ACK_ALARM` e `SYNC_RECONHECIDOS` incluem metadados e histórico operacional; o cálculo do tempo usa o timestamp armazenado por data e reservatório, retornando indisponível quando não há horário válido.
+* **Por quê:** Melhorar a consistência dos detalhes do ACK entre janelas e evitar durações inventadas quando o timestamp está ausente.
+* **Validação:** Testes automatizados cobrem o cálculo do tempo e a propagação de metadados entre janelas simuladas.
+* **Limitações conhecidas:** Snapshots completos ainda podem sobrescrever alterações concorrentes entre abas; o timestamp representa quando a interface detectou o alerta, não necessariamente o início real da condição; e IndexedDB e histórico operacional não são gravados em uma única transação. A suíte usa mock de IndexedDB e não substitui testes em navegador real.
+
+### 15. Clareza visual e navegação no Mural CCO
+* **Data:** 2 de Novembro de 2026
+* **Antes:** Os contadores excluíam alarmes reconhecidos que continuavam visíveis; o ACK reduzia a opacidade do alerta; cards Kanban e linhas da tabela não tinham abertura acessível por teclado; e a mensagem de estado vazio não distinguia busca sem resultado da ausência de alarmes.
+* **Agora:** Contadores refletem todos os alarmes ativos, com nota explicativa; alarmes reconhecidos mantêm contraste e exibem selo próprio; cards e Kanban abrem detalhes com Enter/Espaço, e a tabela tem botão explícito para abrir o reservatório. Estados vazios agora permitem limpar a busca ou voltar a todos os alarmes.
+* **Por quê:** Manter os indicadores coerentes com a lista e tornar o estado do reconhecimento, a navegação e os resultados da busca mais claros.
+* **Validação:** Suíte automatizada, verificações de sintaxe e revisão do diff.
+
 ---
 *SAMAE - Centro de Controle Operacional (CCO)*

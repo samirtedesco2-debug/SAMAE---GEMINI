@@ -1,5 +1,8 @@
 // testes/test_multiwindow_sync.js
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
 
 function executarTestesMultiwindowSync() {
   console.log("-> Executando testes de Sincronização Multi-Janela e Auditoria CCO...");
@@ -65,6 +68,54 @@ function executarTestesMultiwindowSync() {
   const reconRevogado = localStorage.getItem("samae_cco_reconhecidos");
   windowB.ccoReconhecidos = new Map(Object.entries(JSON.parse(reconRevogado)));
   assert.strictEqual(windowB.ccoReconhecidos.has(chaveAlarme), false);
+
+  const canais = new Map();
+  class BroadcastChannelMock {
+    constructor(nome) {
+      this.nome = nome;
+      this.onmessage = null;
+      const inscritos = canais.get(nome) || [];
+      inscritos.push(this);
+      canais.set(nome, inscritos);
+    }
+
+    postMessage(data) {
+      (canais.get(this.nome) || []).forEach((canal) => {
+        if (canal !== this && canal.onmessage) canal.onmessage({ data });
+      });
+    }
+  }
+
+  function criarJanela() {
+    const janela = { ccoReconhecidos: new Map(), samaeIncidentsLog: [] };
+    const contexto = {
+      window: janela,
+      BroadcastChannel: BroadcastChannelMock,
+      renderizarDashboardExceccoes() {},
+      Map,
+      Object
+    };
+    const source = fs.readFileSync(path.join(__dirname, '../src/ccoSync.js'), 'utf8');
+    vm.runInNewContext(source, contexto);
+    janela.CcoSync.inicializarCanal();
+    return janela;
+  }
+
+  const janelaA = criarJanela();
+  const janelaB = criarJanela();
+  janelaA.ccoChannel.postMessage({
+    type: 'SYNC_RECONHECIDOS',
+    reconhecidos: { 'R-02': 'Atenção' },
+    ackMetadata: { 'R-02': { timestamp: '30/10/2026 09:00:00', operador: 'operador' } },
+    incidentsLog: [{ chave: 'R-02', acao: 'Reconhecido' }]
+  });
+  assert.strictEqual(janelaB.ccoReconhecidos.get('R-02'), 'Atenção');
+  assert.strictEqual(janelaB.ccoAckMetadata.get('R-02').operador, 'operador');
+  assert.strictEqual(janelaB.samaeIncidentsLog.length, 1);
+
+  janelaA.ccoChannel.postMessage({ type: 'REVOKE_ACK', chave: 'R-02' });
+  assert.strictEqual(janelaB.ccoReconhecidos.has('R-02'), false);
+  assert.strictEqual(janelaB.ccoAckMetadata.has('R-02'), false);
 
   console.log("✓ Sincronização Multi-Janela e Auditoria: Todos os testes passaram!");
 }

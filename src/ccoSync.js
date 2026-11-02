@@ -8,15 +8,27 @@ window.CcoSync = {
     if (!window.ccoChannel) {
       window.ccoChannel = new BroadcastChannel('samae_cco_link');
       window.ccoReconhecidos = window.ccoReconhecidos || new Map();
+      window.ccoAckMetadata = window.ccoAckMetadata || new Map();
       window.ccoChannel.onmessage = (event) => {
-        const { type, chave, severidade } = event.data || {};
+        const { type, chave, severidade, metadados, reconhecidos, ackMetadata, incidentsLog } = event.data || {};
         if (type === 'ACK_ALARM') {
           window.ccoReconhecidos.set(chave, severidade);
+          if (metadados) window.ccoAckMetadata.set(chave, metadados);
           if (typeof renderizarDashboardExceccoes === 'function') {
             renderizarDashboardExceccoes();
           }
         } else if (type === 'REVOKE_ACK') {
           window.ccoReconhecidos.delete(chave);
+          window.ccoAckMetadata.delete(chave);
+          if (typeof renderizarDashboardExceccoes === 'function') {
+            renderizarDashboardExceccoes();
+          }
+        } else if (type === 'SYNC_RECONHECIDOS') {
+          window.ccoReconhecidos = new Map(Object.entries(reconhecidos || {}));
+          window.ccoAckMetadata = new Map(Object.entries(ackMetadata || {}));
+          if (Array.isArray(incidentsLog)) {
+            window.samaeIncidentsLog = incidentsLog;
+          }
           if (typeof renderizarDashboardExceccoes === 'function') {
             renderizarDashboardExceccoes();
           }

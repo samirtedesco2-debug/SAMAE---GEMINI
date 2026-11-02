@@ -5,6 +5,7 @@ O sistema é uma aplicação web interativa desenvolvida em **Vanilla JavaScript
 ## Estrutura de Arquivos e Módulos (`src/`)
 
 - **`apiClient.js`**: Gerencia chamadas e integração com fontes externas de dados.
+- **`alarmTiming.js`**: Calcula o tempo de resposta a partir do timestamp de acionamento salvo, sem estimar valores quando não há horário válido.
 - **`app.js`**: Ponto de entrada principal que orquestra a aplicação, tratamento global de erros, exportações e eventos de UI.
 - **`authRepository.js`**: Camada de repositório e persistência durável via IndexedDB isolado (`SamaeAuthDB` & `SamaeHandlesDB`), gerenciamento de usuários e trilha de auditoria.
 - **`authUI.js`**: Gerencia a interface de login em tela cheia (com fundo SVG Base64), modais de primeiro acesso e o painel ADMIN de gerenciamento de usuários.
@@ -19,4 +20,3 @@ O sistema é uma aplicação web interativa desenvolvida em **Vanilla JavaScript
 - **Modularidade**: Regras de negócio estritamente separadas da interface de usuário e camadas de autenticação.
 - **Resiliência**: Fallback automático para modo somente nível quando dados de vazão estiverem ausentes e isolamento robusto de bancos IndexedDB.
 - **Estética & Usabilidade**: Padrão visual moderno com suporte a temas, telas grandes (TV 55") e indicadores codificados por cores intuitivas.
-

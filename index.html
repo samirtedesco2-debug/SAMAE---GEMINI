@@ -364,6 +364,7 @@
               🔵 Inconsistentes (<span id="count-filtro-incompletos">0</span>)
             </button>
           </div>
+          <p class="cco-filter-count-note">Contagens de alarmes ativos, incluindo os já reconhecidos.</p>
         </div>
 
         <!-- Botão Fechar Minimalista sem Borda no Canto Superior Direito -->
@@ -427,7 +428,7 @@
       <!-- Barra de Ferramentas de Exportação Multiformato CCO -->
       <div id="cco-export-toolbar" role="region" aria-label="Ferramentas de Exportação e Relatórios" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; background: var(--surface-bg); border: 1px solid var(--border-color); padding: 12px 16px; border-radius: 8px;">
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <input type="text" id="cco-search-input" placeholder="🔍 Filtrar por TAG ou nome..." style="padding: 8px 12px; font-size: 0.82rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--surface-inset); color: var(--text-color); width: 240px; outline: none;" title="Filtrar alarmes ativos por TAG ou nome do reservatório">
+          <input type="text" id="cco-search-input" aria-label="Buscar alarmes por TAG, nome ou diagnóstico" placeholder="🔍 Filtrar por TAG ou nome..." style="padding: 8px 12px; font-size: 0.82rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--surface-inset); color: var(--text-color); width: 240px; outline: none;" title="Filtrar alarmes ativos por TAG, nome ou diagnóstico">
         </div>
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <label for="seletor-relatorios-cco" style="font-size: 0.78rem; font-weight: 700; color: var(--muted-color); text-transform: uppercase;">Relatórios:</label>
@@ -745,12 +746,13 @@
     <script src="src/dados.js?v=5"></script>
     <script src="src/regrasNegocio.js?v=5"></script>
     <script src="src/graficos.js?v=5"></script>
-    <script src="src/storageRepository.js?v=5"></script>
-    <script src="src/ui.js?v=5"></script>
-    <script src="src/ccoSync.js?v=5"></script>
+    <script src="src/storageRepository.js?v=6"></script>
+    <script src="src/alarmTiming.js?v=1"></script>
+    <script src="src/ui.js?v=6"></script>
+    <script src="src/ccoSync.js?v=6"></script>
     <script src="src/authRepository.js?v=5"></script>
     <script src="src/rbac.js?v=5"></script>
     <script src="src/authUI.js?v=5"></script>
-    <script src="src/app.js?v=5"></script>
+    <script src="src/app.js?v=6"></script>
   </body>
 </html>

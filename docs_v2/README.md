@@ -4,6 +4,8 @@ Bem-vindo à nova documentação oficial do **Sistema de Monitoramento e Autonom
 
 Esta documentação foi estruturada em pastas e subpastas organizadas por áreas, mantendo a pasta antiga (`docs/`) preservada para fins históricos.
 
+O histórico cronológico de melhorias, com contexto de antes/depois, motivos e validações, está em [MELHORIAS.md](../MELHORIAS.md).
+
 ## Estrutura de Pastas e Módulos
 
 1. **Arquitetura (`arquitetura/`)**:
@@ -13,11 +15,13 @@ Esta documentação foi estruturada em pastas e subpastas organizadas por áreas
 
 2. **Módulos do Sistema (`modulos/`)**:
    - [Orquestrador Principal (`app.js`)](./modulos/app.md)
+   - [Persistência de Alarmes (`storageRepository.js`)](./modulos/storage-repository.md)
    - [Repositório de Autenticação & IndexedDB (`authRepository.js`)](./modulos/auth-repository.md)
    - [Interface de Autenticação & Login (`authUI.js`)](./modulos/auth-ui.md)
    - [Controle de Acesso Baseado em Papéis - RBAC (`rbac.js`)](./modulos/rbac.md)
    - [Sincronização e Janela CCO (`ccoSync.js`)](./modulos/cco-sync.md)
    - [Interface de Usuário (`ui.js`)](./modulos/ui.md)
+   - [Cálculo do Tempo de Resposta (`alarmTiming.js`)](./modulos/alarm-timing.md)
    - [Regras de Negócio & Motor Preditivo (`regrasNegocio.js`)](./modulos/regras-negocio.md)
    - [Gráficos & Visualização (`graficos.js`)](./modulos/graficos.md)
    - [Processamento de Dados & Histórico (`dados.js`)](./modulos/dados.md)
@@ -32,4 +36,3 @@ Esta documentação foi estruturada em pastas e subpastas organizadas por áreas
 
 ---
 *SAMAE - Centro de Controle Operacional (CCO)*
-

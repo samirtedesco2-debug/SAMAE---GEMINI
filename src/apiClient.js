@@ -33,7 +33,7 @@ window.ApiClient = {
       const resp = await fetch("dados_historicos/config_reservatorios.json");
       if (resp.ok) {
         const data = await resp.json();
-        if (data && data._estado_plantao) {
+        if (data && data._estado_plantao && !window.ccoReconhecidosCarregado) {
           if (data._estado_plantao.reconhecidos) {
             window.ccoReconhecidos = new Map(data._estado_plantao.reconhecidos);
             try {

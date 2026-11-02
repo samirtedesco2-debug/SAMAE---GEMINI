@@ -2847,6 +2847,82 @@ body.is-config-window-active .view-tabs {
   border-width: 2px !important;
 }
 
+.cco-filter-count-note {
+  margin-top: 6px;
+  color: var(--muted-color);
+  font-size: 0.75rem;
+}
+
+.mural-empty-state {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--surface-bg);
+  text-align: center;
+}
+
+.mural-empty-state h3 {
+  color: var(--text-color);
+}
+
+.mural-empty-state p {
+  color: var(--muted-color);
+  font-size: 0.9rem;
+}
+
+.mural-empty-action {
+  padding: 8px 14px;
+  border: 1px solid var(--accent-color);
+  border-radius: 6px;
+  background: var(--accent-color);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mural-empty-action:focus-visible,
+.mural-row-open:focus-visible,
+.mural-alarm-card:focus-visible,
+.mural-table-row:focus-visible {
+  outline: 3px solid var(--accent-color);
+  outline-offset: 3px;
+}
+
+.mural-ack-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  padding: 3px 8px;
+  border: 1px solid var(--status-normal-color);
+  border-radius: 999px;
+  background: var(--status-normal-background);
+  color: var(--status-normal-color);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.mural-row-open {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mural-row-open:hover {
+  color: var(--accent-color);
+  text-decoration: underline;
+}
+
 @keyframes pulsarAlertaTab {
   0% {
     box-shadow: 0 0 0 0 rgba(227, 93, 106, 0.6);

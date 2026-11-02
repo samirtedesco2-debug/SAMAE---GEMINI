@@ -1,37 +1,17 @@
 // storageRepository.js - Repositório Durável em IndexedDB para ACKs e Logs CCO (SamaeCCOStorageDB)
 
 const CCO_DB_NAME = "SamaeCCOStorageDB";
-const CCO_DB_VERSION = 1;
+const CCO_DB_VERSION = 2;
 
 class StorageRepository {
   async abrirDB() {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(CCO_DB_NAME, CCO_DB_VERSION);
       request.onerror = () => reject(request.error);
-      request.onsuccess = (event) => {
-        const db = event.target.result;
-        if (!db.objectStoreNames.contains("reconhecidos") || !db.objectStoreNames.contains("logs")) {
-          db.close();
-          const deleteReq = indexedDB.deleteDatabase(CCO_DB_NAME);
-          deleteReq.onsuccess = () => {
-            const retryReq = indexedDB.open(CCO_DB_NAME, CCO_DB_VERSION);
-            retryReq.onerror = () => reject(retryReq.error);
-            retryReq.onsuccess = (e) => resolve(e.target.result);
-            retryReq.onupgradeneeded = (ev) => {
-              const newDb = ev.target.result;
-              if (!newDb.objectStoreNames.contains("reconhecidos")) {
-                newDb.createObjectStore("reconhecidos", { keyPath: "chave" });
-              }
-              if (!newDb.objectStoreNames.contains("logs")) {
-                newDb.createObjectStore("logs", { keyPath: "id", autoIncrement: true });
-              }
-            };
-          };
-          deleteReq.onerror = () => reject(deleteReq.error);
-          return;
-        }
-        resolve(db);
-      };
+      request.onblocked = () => reject(
+        new Error("A migração do armazenamento aguarda outras janelas; feche e reabra o aplicativo.")
+      );
+      request.onsuccess = (event) => resolve(event.target.result);
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
         if (!db.objectStoreNames.contains("reconhecidos")) {
@@ -44,117 +24,273 @@ class StorageRepository {
     });
   }
 
-  async carregarReconhecidos() {
-    try {
-      const db = await this.abrirDB();
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction("reconhecidos", "readonly");
-        const store = transaction.objectStore("reconhecidos");
-        const req = store.getAll();
-        req.onsuccess = () => {
-          const map = new Map();
-          const list = req.result || [];
-          for (const item of list) {
-            map.set(item.chave, item.severidade);
-          }
-          resolve(map);
-        };
-        req.onerror = () => reject(req.error);
-      });
-    } catch (e) {
-      console.warn("Erro ao carregar reconhecidos do IndexedDB, fallback para localStorage", e);
-      // Fallback para localStorage se IndexedDB falhar
+  async executarTransacao(nomeStore, modo, executar) {
+    const db = await this.abrirDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(nomeStore, modo);
+      let resultado;
+      transaction.oncomplete = () => {
+        db.close();
+        resolve(resultado);
+      };
+      transaction.onerror = () => {
+        db.close();
+        reject(transaction.error || new Error("Falha na transação do IndexedDB."));
+      };
+      transaction.onabort = () => {
+        db.close();
+        reject(transaction.error || new Error("Transação do IndexedDB cancelada."));
+      };
+
       try {
-        const salvos = localStorage.getItem("samae_cco_reconhecidos");
-        if (salvos) {
-          const obj = JSON.parse(salvos);
-          return new Map(Object.entries(obj));
+        const request = executar(transaction.objectStore(nomeStore));
+        if (request) {
+          request.onsuccess = () => {
+            resultado = request.result;
+          };
+          request.onerror = () => reject(request.error || new Error("Falha na operação do IndexedDB."));
         }
-      } catch(err) {}
-      return new Map();
+      } catch (error) {
+        db.close();
+        reject(error);
+      }
+    });
+  }
+
+  lerReconhecidosLocalStorage() {
+    const salvos = localStorage.getItem("samae_cco_reconhecidos");
+    return salvos ? new Map(Object.entries(JSON.parse(salvos))) : new Map();
+  }
+
+  lerMetadadosLocalStorage() {
+    const salvos = localStorage.getItem("samae_cco_ack_metadata");
+    return salvos ? new Map(Object.entries(JSON.parse(salvos))) : new Map();
+  }
+
+  lerTombstonesLocalStorage() {
+    const salvos = localStorage.getItem("samae_cco_ack_tombstones");
+    const obj = salvos ? JSON.parse(salvos) : {};
+    return new Map(Object.entries(obj));
+  }
+
+  salvarTombstonesLocalStorage(tombstones) {
+    localStorage.setItem("samae_cco_ack_tombstones", JSON.stringify(Object.fromEntries(tombstones)));
+  }
+
+  salvarSnapshotLocalStorage() {
+    if (window.ccoReconhecidos) {
+      localStorage.setItem(
+        "samae_cco_reconhecidos",
+        JSON.stringify(Object.fromEntries(window.ccoReconhecidos.entries()))
+      );
+    }
+    if (window.ccoAckMetadata) {
+      localStorage.setItem(
+        "samae_cco_ack_metadata",
+        JSON.stringify(Object.fromEntries(window.ccoAckMetadata.entries()))
+      );
     }
   }
 
-  async salvarReconhecido(chave, severidade) {
+  async carregarReconhecidos() {
+    let registros = [];
     try {
-      const db = await this.abrirDB();
-      await new Promise((resolve, reject) => {
-        const transaction = db.transaction("reconhecidos", "readwrite");
-        const store = transaction.objectStore("reconhecidos");
-        const req = store.put({ chave, severidade, timestamp: Date.now() });
-        req.onsuccess = () => resolve(true);
-        req.onerror = () => reject(req.error);
-      });
-    } catch (e) {
-      console.warn("Erro ao salvar reconhecido no IndexedDB", e);
+      registros = await this.executarTransacao(
+        "reconhecidos",
+        "readonly",
+        (store) => store.getAll()
+      );
+    } catch (error) {
+      console.warn("Erro ao carregar reconhecidos do IndexedDB; usando localStorage.", error);
     }
-    // Backup localStorage sempre
+
+    const porChave = new Map(registros.map((registro) => [registro.chave, registro]));
+    const tombstones = new Map(
+      registros
+        .filter((registro) => registro.revogado)
+        .map((registro) => [registro.chave, Number(registro.timestamp) || 0])
+    );
+    let tombstonesLocais = new Map();
     try {
-      if (window.ccoReconhecidos) {
-        const obj = Object.fromEntries(window.ccoReconhecidos.entries());
-        localStorage.setItem("samae_cco_reconhecidos", JSON.stringify(obj));
+      tombstonesLocais = this.lerTombstonesLocalStorage();
+      tombstonesLocais.forEach((timestamp, chave) => {
+        tombstones.set(chave, Math.max(Number(timestamp) || 0, tombstones.get(chave) || 0));
+      });
+    } catch (error) {
+      console.error("Não foi possível carregar revogações locais de alarmes.", error);
+    }
+    const reconhecidos = new Map();
+    registros.forEach((registro) => {
+      if (!registro.revogado && (Number(registro.timestamp) || 0) >= (tombstones.get(registro.chave) || 0)) {
+        reconhecidos.set(registro.chave, registro.severidade);
       }
-    } catch(err) {}
+    });
+
+    try {
+      const locais = this.lerReconhecidosLocalStorage();
+      locais.forEach((severidade, chave) => {
+        const registro = porChave.get(chave);
+        const registroAindaValido = registro && !registro.revogado &&
+          (Number(registro.timestamp) || 0) >= (tombstones.get(chave) || 0);
+        if (!tombstones.has(chave) || registroAindaValido || !tombstonesLocais.has(chave)) {
+          if (!reconhecidos.has(chave)) reconhecidos.set(chave, severidade);
+        }
+      });
+    } catch (error) {
+      console.error("Não foi possível complementar os reconhecimentos pelo localStorage.", error);
+    }
+    return reconhecidos;
+  }
+
+  async carregarMetadadosReconhecidos() {
+    let registros = [];
+    try {
+      registros = await this.executarTransacao(
+        "reconhecidos",
+        "readonly",
+        (store) => store.getAll()
+      );
+    } catch (error) {
+      console.warn("Erro ao carregar metadados de reconhecimento do IndexedDB; usando localStorage.", error);
+    }
+    const porChave = new Map(registros.map((registro) => [registro.chave, registro]));
+    const tombstones = new Map(
+      registros
+        .filter((registro) => registro.revogado)
+        .map((registro) => [registro.chave, Number(registro.timestamp) || 0])
+    );
+    let tombstonesLocais = new Map();
+    try {
+      tombstonesLocais = this.lerTombstonesLocalStorage();
+      tombstonesLocais.forEach((timestamp, chave) => {
+        tombstones.set(chave, Math.max(Number(timestamp) || 0, tombstones.get(chave) || 0));
+      });
+    } catch (error) {
+      console.error("Não foi possível carregar revogações locais de metadados.", error);
+    }
+    const metadados = new Map(
+      registros
+        .filter((registro) =>
+          !registro.revogado &&
+          registro.metadados &&
+          (Number(registro.timestamp) || 0) >= (tombstones.get(registro.chave) || 0)
+        )
+        .map((registro) => [registro.chave, registro.metadados])
+    );
+    try {
+      const locais = this.lerMetadadosLocalStorage();
+      locais.forEach((metadata, chave) => {
+        const registro = porChave.get(chave);
+        const registroAindaValido = registro && !registro.revogado &&
+          (Number(registro.timestamp) || 0) >= (tombstones.get(chave) || 0);
+        if ((!tombstones.has(chave) || registroAindaValido || !tombstonesLocais.has(chave)) && !metadados.has(chave)) {
+          metadados.set(chave, metadata);
+        }
+      });
+    } catch (error) {
+      console.error("Não foi possível complementar os metadados pelo localStorage.", error);
+    }
+    return metadados;
+  }
+
+  async salvarReconhecido(chave, severidade, metadados) {
+    let timestamp = Date.now() + 1;
+    try {
+      timestamp = Math.max(
+        timestamp,
+        (Number(this.lerTombstonesLocalStorage().get(chave)) || 0) + 1
+      );
+    } catch (error) {
+      console.warn("Não foi possível consultar a revogação anterior do reconhecimento.", error);
+    }
+
+    let salvoNoIndexedDB = false;
+    try {
+      await this.executarTransacao("reconhecidos", "readwrite", (store) =>
+        store.put({ chave, severidade, metadados, timestamp })
+      );
+      salvoNoIndexedDB = true;
+    } catch (error) {
+      console.warn("Erro ao salvar reconhecido no IndexedDB; usando localStorage.", error);
+    }
+    try {
+      const tombstones = this.lerTombstonesLocalStorage();
+      tombstones.delete(chave);
+      this.salvarTombstonesLocalStorage(tombstones);
+      this.salvarSnapshotLocalStorage();
+    } catch (error) {
+      console.error("Não foi possível persistir o reconhecimento.", error);
+      if (!salvoNoIndexedDB) throw error;
+    }
   }
 
   async removerReconhecido(chave) {
+    const timestamp = Date.now();
+    let removidoNoIndexedDB = false;
     try {
-      const db = await this.abrirDB();
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction("reconhecidos", "readwrite");
-        const store = transaction.objectStore("reconhecidos");
-        const req = store.delete(chave);
-        req.onsuccess = () => resolve(true);
-        req.onerror = () => reject(req.error);
-      });
-    } catch (e) {
-      console.warn("Erro ao remover reconhecido do IndexedDB", e);
+      await this.executarTransacao("reconhecidos", "readwrite", (store) =>
+        store.put({ chave, revogado: true, timestamp })
+      );
+      removidoNoIndexedDB = true;
+    } catch (error) {
+      console.warn("Erro ao remover reconhecido do IndexedDB; atualizando localStorage.", error);
     }
     try {
-      if (window.ccoReconhecidos) {
-        const obj = Object.fromEntries(window.ccoReconhecidos.entries());
-        localStorage.setItem("samae_cco_reconhecidos", JSON.stringify(obj));
-      }
-    } catch(err) {}
+      const tombstones = this.lerTombstonesLocalStorage();
+      tombstones.set(chave, timestamp);
+      this.salvarTombstonesLocalStorage(tombstones);
+      this.salvarSnapshotLocalStorage();
+    } catch (error) {
+      console.error("Não foi possível persistir a revogação do reconhecimento.", error);
+      if (!removidoNoIndexedDB) throw error;
+    }
   }
 
   async carregarLogs() {
+    let logs = [];
     try {
-      const db = await this.abrirDB();
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction("logs", "readonly");
-        const store = transaction.objectStore("logs");
-        const req = store.getAll();
-        req.onsuccess = () => resolve(req.result || []);
-        req.onerror = () => reject(req.error);
-      });
-    } catch (e) {
-      try {
-        const logsSalvos = localStorage.getItem("samae_cco_incidents_log");
-        if (logsSalvos) return JSON.parse(logsSalvos);
-      } catch(err) {}
-      return [];
+      logs = await this.executarTransacao("logs", "readonly", (store) => store.getAll());
+    } catch (error) {
+      console.warn("Erro ao carregar logs do IndexedDB; usando localStorage.", error);
     }
+    try {
+      const logsSalvos = localStorage.getItem("samae_cco_incidents_log");
+      if (logsSalvos) logs = logs.concat(JSON.parse(logsSalvos));
+    } catch (error) {
+      console.error("Não foi possível complementar o histórico pelo localStorage.", error);
+    }
+    const vistos = new Set();
+    return logs.filter((log) => {
+      const identidade = JSON.stringify([
+        log.timestamp,
+        log.chave,
+        log.nome,
+        log.severidade,
+        log.acao,
+        log.tempoRespostaMs
+      ]);
+      if (vistos.has(identidade)) return false;
+      vistos.add(identidade);
+      return true;
+    });
   }
 
   async salvarLog(logItem) {
+    let salvoNoIndexedDB = false;
     try {
-      const db = await this.abrirDB();
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction("logs", "readwrite");
-        const store = transaction.objectStore("logs");
-        const req = store.add({ ...logItem, timestamp: logItem.timestamp || Date.now() });
-        req.onsuccess = () => resolve(true);
-        req.onerror = () => reject(req.error);
-      });
-    } catch (e) {
-      console.warn("Erro ao salvar log no IndexedDB", e);
+      await this.executarTransacao("logs", "readwrite", (store) => store.add(logItem));
+      salvoNoIndexedDB = true;
+    } catch (error) {
+      console.warn("Erro ao salvar log no IndexedDB; usando localStorage.", error);
     }
     try {
       if (window.samaeIncidentsLog) {
         localStorage.setItem("samae_cco_incidents_log", JSON.stringify(window.samaeIncidentsLog));
       }
-    } catch(err) {}
+    } catch (error) {
+      console.error("Não foi possível persistir o evento do alarme.", error);
+      if (!salvoNoIndexedDB) throw error;
+    }
   }
 }
 

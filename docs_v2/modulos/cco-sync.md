@@ -5,7 +5,9 @@ O arquivo `src/ccoSync.js` é responsável por centralizar a lógica de sincroni
 ## Responsabilidades e Funções
 - **`inicializarCanal()`**:
   - Configura o `BroadcastChannel('samae_cco_link')`.
-  - Sincroniza em tempo real ações de reconhecimento (`ACK_ALARM`) e revogação (`REVOKE_ACK`) entre diferentes abas e janelas do navegador.
+  - Sincroniza reconhecimentos (`ACK_ALARM`), revogações (`REVOKE_ACK`) e snapshots (`SYNC_RECONHECIDOS`) entre abas e janelas, incluindo metadados do ACK e histórico do mural.
+  - As mensagens são locais às janelas/abas do mesmo navegador; não sincronizam computadores diferentes.
+  - `SYNC_RECONHECIDOS` substitui os mapas e o histórico recebidos. Em atualizações simultâneas, um snapshot desatualizado pode sobrescrever uma alteração recente; a sincronização ainda não faz merge nem resolução de conflitos.
 - **`abrirMuralSingleton()`**:
   - Garante o comportamento de **janela singleton** para o Mural de Alarmes CCO (`ccoMuralWindow`).
   - Se a janela já estiver aberta, traz o foco para ela (`focus()`); caso contrário, abre nova janela em `?view=exceccoes` com dimensões otimizadas.

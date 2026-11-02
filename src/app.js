@@ -28,11 +28,15 @@ async function inicializarBancoAssincrono() {
     if (window.StorageRepository) {
       try {
         const map = await window.StorageRepository.carregarReconhecidos();
-        if (map && map.size > 0) {
+        if (map) {
           window.ccoReconhecidos = map;
         }
+        const metadadosAck = await window.StorageRepository.carregarMetadadosReconhecidos();
+        if (metadadosAck) {
+          window.ccoAckMetadata = metadadosAck;
+        }
         const logs = await window.StorageRepository.carregarLogs();
-        if (logs && logs.length > 0) {
+        if (logs) {
           window.samaeIncidentsLog = logs;
         }
         window.ccoReconhecidosCarregado = true;

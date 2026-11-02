@@ -2064,28 +2064,30 @@ function carregarReconhecidosLocalStorage() {
   window.samaeIncidentsLog = window.samaeIncidentsLog || [];
   window.ccoAlarmTriggerTimes = window.ccoAlarmTriggerTimes || new Map();
   window.ccoAckMetadata = window.ccoAckMetadata || new Map();
-  
+
   try {
-    const salvos = localStorage.getItem("samae_cco_reconhecidos");
-    if (salvos) {
-      const obj = JSON.parse(salvos);
-      window.ccoReconhecidos = new Map(Object.entries(obj));
-    }
-    const metaSalvos = localStorage.getItem("samae_cco_ack_metadata");
-    if (metaSalvos) {
-      const objMeta = JSON.parse(metaSalvos);
-      window.ccoAckMetadata = new Map(Object.entries(objMeta));
-    }
-    const logsSalvos = localStorage.getItem("samae_cco_incidents_log");
-    if (logsSalvos) {
-      window.samaeIncidentsLog = JSON.parse(logsSalvos);
+    if (!window.ccoReconhecidosCarregado) {
+      const salvos = localStorage.getItem("samae_cco_reconhecidos");
+      if (salvos) {
+        window.ccoReconhecidos = new Map(Object.entries(JSON.parse(salvos)));
+      }
+      const metaSalvos = localStorage.getItem("samae_cco_ack_metadata");
+      if (metaSalvos) {
+        window.ccoAckMetadata = new Map(Object.entries(JSON.parse(metaSalvos)));
+      }
+      const logsSalvos = localStorage.getItem("samae_cco_incidents_log");
+      if (logsSalvos) {
+        window.samaeIncidentsLog = JSON.parse(logsSalvos);
+      }
     }
     const triggerTimesSalvos = localStorage.getItem("samae_cco_trigger_times");
     if (triggerTimesSalvos) {
       const obj = JSON.parse(triggerTimesSalvos);
       window.ccoAlarmTriggerTimes = new Map(Object.entries(obj));
     }
-  } catch(e){}
+  } catch (error) {
+    console.warn("Não foi possível carregar o estado local dos alarmes.", error);
+  }
 }
 
 function salvarReconhecidosLocalStorage() {
@@ -2096,11 +2098,6 @@ function salvarReconhecidosLocalStorage() {
       }
       const obj = Object.fromEntries(window.ccoReconhecidos.entries());
       localStorage.setItem("samae_cco_reconhecidos", JSON.stringify(obj));
-      window.ccoReconhecidos.forEach((severidade, chave) => {
-        if (window.StorageRepository) {
-          try { window.StorageRepository.salvarReconhecido(chave, severidade); } catch(e) {}
-        }
-      });
     }
     if (window.ccoAckMetadata) {
       if (!(window.ccoAckMetadata instanceof Map)) {
@@ -2118,18 +2115,23 @@ function salvarReconhecidosLocalStorage() {
     }
     if (window.samaeIncidentsLog) {
       localStorage.setItem("samae_cco_incidents_log", JSON.stringify(window.samaeIncidentsLog));
-      const ultimoLog = window.samaeIncidentsLog[window.samaeIncidentsLog.length - 1];
-      if (window.StorageRepository && ultimoLog) {
-        try { window.StorageRepository.salvarLog(ultimoLog); } catch(e) {}
-      }
     }
     if (window.ccoChannel) {
-      try { window.ccoChannel.postMessage({ type: 'SYNC_RECONHECIDOS', reconhecidos: Object.fromEntries(window.ccoReconhecidos.entries()) }); } catch(e) {}
+      window.ccoChannel.postMessage({
+        type: 'SYNC_RECONHECIDOS',
+        reconhecidos: Object.fromEntries(window.ccoReconhecidos.entries()),
+        ackMetadata: Object.fromEntries(window.ccoAckMetadata.entries()),
+        incidentsLog: window.samaeIncidentsLog
+      });
     }
     if (typeof window.sincronizarEstadoAlarmesNoArquivo === 'function') {
-      try { window.sincronizarEstadoAlarmesNoArquivo(); } catch(e) {}
+      window.sincronizarEstadoAlarmesNoArquivo().catch((error) => {
+        console.error("Não foi possível sincronizar o estado dos alarmes no arquivo vinculado.", error);
+      });
     }
-  } catch(e){}
+  } catch (error) {
+    console.error("Não foi possível salvar o estado local dos alarmes.", error);
+  }
 }
 
 function obterMensagemTaxonomia(codigo, dados) {
@@ -2169,6 +2171,15 @@ function obterDetalhesAck(chave) {
   };
 }
 
+function obterTempoRespostaMs(chave) {
+  const dataSelecionada = document.getElementById("seletor-data")?.value;
+  return window.AlarmTiming.calcularTempoRespostaMs(
+    chave,
+    window.ccoAlarmTriggerTimes,
+    dataSelecionada
+  );
+}
+
 function renderizarDashboardExceccoes() {
   const banco = window.bancoDeDados;
   const seletorData = document.getElementById("seletor-data");
@@ -2202,29 +2213,35 @@ function renderizarDashboardExceccoes() {
     salvarReconhecidosLocalStorage();
   }
 
-  // Auto-reset & Auto-debugging
+  // Auto-reset de reconhecimentos que não correspondem mais a alarmes ativos.
   const chavesAtuais = new Set(exceccoes.map(e => e.chave));
+  let reconhecimentosAlterados = false;
   window.ccoReconhecidos.forEach((sevAntiga, chave) => {
-    if (!chavesAtuais.has(chave)) {
-      window.ccoReconhecidos.delete(chave);
-      salvarReconhecidosLocalStorage();
-    } else {
+    let remover = !chavesAtuais.has(chave);
+    if (!remover) {
       const exc = exceccoes.find(e => e.chave === chave);
-      if (exc) {
-        const pesoSev = (s) => s === "Crítico" ? 1 : s === "Atenção" ? 2 : 3;
-        if (pesoSev(exc.severidade) < pesoSev(sevAntiga)) {
-          window.ccoReconhecidos.delete(chave);
-          salvarReconhecidosLocalStorage();
-        }
+      const pesoSev = (s) => s === "Crítico" ? 1 : s === "Atenção" ? 2 : 3;
+      remover = Boolean(exc && pesoSev(exc.severidade) < pesoSev(sevAntiga));
+    }
+    if (remover) {
+      window.ccoReconhecidos.delete(chave);
+      window.ccoAckMetadata.delete(chave);
+      reconhecimentosAlterados = true;
+      if (window.StorageRepository) {
+        window.StorageRepository.removerReconhecido(chave).catch((error) => {
+          console.error(`Não foi possível remover o reconhecimento persistido de ${chave}.`, error);
+        });
       }
     }
   });
+  if (reconhecimentosAlterados) {
+    salvarReconhecidosLocalStorage();
+  }
 
-  const exceccoesAtivas = exceccoes.filter(e => !window.ccoReconhecidos.has(e.chave));
-  const totalCount = exceccoesAtivas.length;
-  const criticoCount = exceccoesAtivas.filter(e => e.severidade === "Crítico").length;
-  const atencaoCount = exceccoesAtivas.filter(e => e.severidade === "Atenção").length;
-  const inconsistenteCount = exceccoesAtivas.filter(e => e.severidade === "Inconsistente").length;
+  const totalCount = exceccoes.length;
+  const criticoCount = exceccoes.filter(e => e.severidade === "Crítico").length;
+  const atencaoCount = exceccoes.filter(e => e.severidade === "Atenção").length;
+  const inconsistenteCount = exceccoes.filter(e => e.severidade === "Inconsistente").length;
 
   const elTotais = document.getElementById("count-filtro-totais");
   const elCriticos = document.getElementById("count-filtro-criticos");
@@ -2332,12 +2349,41 @@ function renderizarDashboardExceccoes() {
 
   if (exceccoesFiltradas.length === 0) {
     gridExceccoes.style.display = "grid";
+    const buscaSemResultado = Boolean(searchQuery);
+    const nenhumAlarmeAtivo = exceccoes.length === 0;
+    const tituloVazio = buscaSemResultado
+      ? "Nenhum alarme corresponde à busca"
+      : nenhumAlarmeAtivo
+        ? "Nenhum alarme ativo no momento"
+        : `Nenhum alarme ativo na categoria ${window.ccoFiltroAtual}`;
+    const mensagemVazia = buscaSemResultado
+      ? "Tente outro termo ou limpe a busca para voltar a ver os alarmes."
+      : nenhumAlarmeAtivo
+        ? "Quando houver alertas, eles serão exibidos aqui."
+        : "Selecione outra categoria ou veja todos os alarmes ativos.";
+    const acaoVazia = buscaSemResultado
+      ? `<button type="button" class="mural-empty-action" data-action="clear-search">Limpar busca</button>`
+      : !nenhumAlarmeAtivo && window.ccoFiltroAtual !== "TODOS"
+        ? `<button type="button" class="mural-empty-action" data-action="show-all">Ver todos os alarmes</button>`
+        : "";
     gridExceccoes.innerHTML = `
-      <div style="grid-column: 1 / -1; background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--status-normal-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-        <h3 style="margin: 0; color: var(--text-color);">Nenhum Alarme encontrado para o filtro "${window.ccoFiltroAtual}"</h3>
-        <p style="margin: 0; color: var(--muted-color); font-size: 0.9rem;">Selecione outra categoria ou visualize todos os alarmes.</p>
+      <div class="mural-empty-state">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--status-normal-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        <h3>${tituloVazio}</h3>
+        <p>${mensagemVazia}</p>
+        ${acaoVazia}
       </div>`;
+    const acaoBotaoVazio = gridExceccoes.querySelector(".mural-empty-action");
+    if (acaoBotaoVazio) {
+      acaoBotaoVazio.addEventListener("click", () => {
+        if (acaoBotaoVazio.dataset.action === "clear-search" && searchInput) {
+          searchInput.value = "";
+        } else if (acaoBotaoVazio.dataset.action === "show-all") {
+          window.ccoFiltroAtual = "TODOS";
+        }
+        renderizarDashboardExceccoes();
+      });
+    }
     return;
   }
 
@@ -2390,18 +2436,19 @@ function renderizarDashboardExceccoes() {
           const ackDet = obterDetalhesAck(chave);
           const reconhecido = ackDet.reconhecido;
 
-          card.className = reconhecido ? "" : "animar-pulso";
-          card.style.cssText = `background: var(--card-bg); border: 1px solid var(--border-color); border-left: 5px solid ${cor}; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s; opacity: ${reconhecido ? '0.5' : '1'};`;
+          card.className = `mural-alarm-card${reconhecido ? "" : " animar-pulso"}`;
+          card.setAttribute("tabindex", "0");
+          card.setAttribute("aria-label", `Alarme ${nome}, severidade ${severidade}${reconhecido ? ", reconhecido" : ", não reconhecido"}. Pressione Enter ou Espaço para abrir os detalhes.`);
+          card.style.cssText = `background: var(--card-bg); border: 1px solid var(--border-color); border-left: 5px solid ${cor}; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;`;
           
           card.addEventListener("click", (e) => {
             if (e.target.closest("button")) return;
-            window.veioDeAlertasCCO = true;
-            const tabOp = document.getElementById("tab-operacional");
-            if (tabOp) tabOp.click();
-            const seletorFiltro = document.getElementById("seletor-filtro");
-            if (seletorFiltro) {
-              seletorFiltro.value = `reservatorio:${chave}`;
-              seletorFiltro.dispatchEvent(new Event("change", { bubbles: true }));
+            window.abrirReservatorioMural(chave);
+          });
+          card.addEventListener("keydown", (e) => {
+            if (e.target === card && (e.key === "Enter" || e.key === " ")) {
+              e.preventDefault();
+              window.abrirReservatorioMural(chave);
             }
           });
 
@@ -2413,6 +2460,7 @@ function renderizarDashboardExceccoes() {
               <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-color);">${nome}</span>
               <span style="background: ${bg}; color: ${cor}; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;">${severidade}</span>
             </div>
+            ${reconhecido ? '<span class="mural-ack-badge">✓ Reconhecido</span>' : ""}
             <div style="font-size: 0.75rem; color: var(--muted-color);">Acionado em: <strong>${triggerTime}</strong></div>
             <div style="font-size: 0.8rem; color: var(--muted-color); display: flex; flex-direction: column; gap: 2px;">
               ${mensagens.map(m => `<div>• ${m}</div>`).join("")}
@@ -2463,12 +2511,15 @@ function renderizarDashboardExceccoes() {
               const triggerKey = `${dataSelecionada}_${chave}`;
               const triggerTime = window.ccoAlarmTriggerTimes?.get(triggerKey) || window.ccoAlarmTriggerTimes?.get(chave) || "—";
               return `
-                <tr style="border-top: 1px solid var(--border-color); opacity: ${reconhecido ? '0.6' : '1'}; cursor: pointer;" onclick="abrirReservatorioMural('${chave}')">
+                <tr class="mural-table-row" data-reservatorio="${chave}" tabindex="0" aria-label="Alarme ${nome}, severidade ${severidade}${reconhecido ? ", reconhecido" : ", não reconhecido"}. Pressione Enter ou Espaço para abrir os detalhes." style="border-top: 1px solid var(--border-color); cursor: pointer;">
                   <td style="padding: 12px; font-weight: 600; color: var(--text-color);">${triggerTime}</td>
-                  <td style="padding: 12px; font-weight: 700; color: var(--text-color);">${nome}</td>
-                  <td style="padding: 12px;"><span style="background: ${bg}; color: ${cor}; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${severidade}</span></td>
-                  <td style="padding: 12px; color: var(--muted-color);">${mensagens.join(" | ")}</td>
-                  <td style="padding: 12px; text-align: center;" onclick="event.stopPropagation()">
+                    <td style="padding: 12px; font-weight: 700; color: var(--text-color);">
+                      <button type="button" class="mural-row-open" onclick="abrirReservatorioMural('${chave}')" aria-label="Abrir detalhes de ${nome} (${chave})">${nome}</button>
+                      ${reconhecido ? '<span class="mural-ack-badge">✓ Reconhecido</span>' : ""}
+                    </td>
+                    <td style="padding: 12px;"><span style="background: ${bg}; color: ${cor}; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${severidade}</span></td>
+                    <td style="padding: 12px; color: var(--text-color);">${mensagens.join(" | ")}</td>
+                    <td style="padding: 12px; text-align: center;">
                     <button type="button" onclick="toggleAckMural('${chave}', '${severidade}')" title="${ackDet.titulo}" style="padding: 6px 12px; background: ${reconhecido ? 'rgba(115,191,105,0.2)' : 'var(--accent-color)'}; color: ${reconhecido ? 'var(--status-normal-color)' : '#fff'}; border: none; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">
                       ${ackDet.reconhecido ? ackDet.texto : '🚨 Reconhecer'}
                     </button>
@@ -2480,6 +2531,19 @@ function renderizarDashboardExceccoes() {
         </table>
       </div>
     `;
+    gridExceccoes.querySelectorAll(".mural-table-row").forEach((row) => {
+      const chave = row.dataset.reservatorio;
+      row.addEventListener("click", (event) => {
+        if (event.target.closest("button")) return;
+        window.abrirReservatorioMural(chave);
+      });
+      row.addEventListener("keydown", (event) => {
+        if (event.target === row && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          window.abrirReservatorioMural(chave);
+        }
+      });
+    });
     return;
   }
 
@@ -2491,9 +2555,10 @@ function renderizarDashboardExceccoes() {
     const triggerKey = `${dataSelecionada}_${chave}`;
     const triggerTime = window.ccoAlarmTriggerTimes?.get(triggerKey) || window.ccoAlarmTriggerTimes?.get(chave) || "—";
 
-    card.className = reconhecido ? "" : "animar-pulso";
+    card.className = `mural-alarm-card${reconhecido ? "" : " animar-pulso"}`;
     card.setAttribute("tabindex", "0");
-    card.style.cssText = `background: var(--card-bg); border: 1px solid var(--border-color); border-left: 6px solid ${cor}; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s; opacity: ${reconhecido ? '0.5' : '1'}; outline: none;`;
+    card.setAttribute("aria-label", `Alarme ${nome}, severidade ${severidade}${reconhecido ? ", reconhecido" : ", não reconhecido"}. Pressione Enter ou Espaço para abrir os detalhes.`);
+    card.style.cssText = `background: var(--card-bg); border: 1px solid var(--border-color); border-left: 6px solid ${cor}; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;`;
     card.title = "Clique ou pressione Enter para abrir detalhes operacionais";
 
     card.addEventListener("focus", () => {
@@ -2504,9 +2569,9 @@ function renderizarDashboardExceccoes() {
     });
 
     card.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
+      if (e.target === card && (e.key === "Enter" || e.key === " ")) {
         e.preventDefault();
-        card.click();
+        window.abrirReservatorioMural(chave);
       }
     });
 
@@ -2521,14 +2586,7 @@ function renderizarDashboardExceccoes() {
 
     card.addEventListener("click", (e) => {
       if (e.target.closest("button")) return;
-      window.veioDeAlertasCCO = true;
-      const tabOp = document.getElementById("tab-operacional");
-      if (tabOp) tabOp.click();
-      const seletorFiltro = document.getElementById("seletor-filtro");
-      if (seletorFiltro) {
-        seletorFiltro.value = `reservatorio:${chave}`;
-        seletorFiltro.dispatchEvent(new Event("change", { bubbles: true }));
-      }
+      window.abrirReservatorioMural(chave);
     });
 
     const btnFooterId = `btn-footer-ack-${chave}`;
@@ -2537,6 +2595,7 @@ function renderizarDashboardExceccoes() {
         <span style="font-weight: 700; font-size: 1rem; color: var(--text-color);">${nome}</span>
         <span style="background: ${bg}; color: ${cor}; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${severidade}</span>
       </div>
+      ${reconhecido ? '<span class="mural-ack-badge">✓ Reconhecido</span>' : ""}
       <div style="font-size: 0.8rem; color: var(--muted-color);">Acionado em: <strong>${triggerTime}</strong></div>
       <div style="font-size: 0.85rem; color: var(--muted-color); display: flex; flex-direction: column; gap: 4px;">
         ${mensagens.map(m => `<div>• ${m}</div>`).join("")}
@@ -2576,18 +2635,21 @@ window.toggleAckMural = async function(chave, severidade, nome) {
   carregarReconhecidosLocalStorage();
   const reconhecido = window.ccoReconhecidos.has(chave);
   window.samaeIncidentsLog = window.samaeIncidentsLog || [];
-  const tempoInicio = window.ccoAlarmTriggerTime?.[chave] || Date.now();
-  const tempoRespostaMs = Date.now() - tempoInicio;
+  const tempoRespostaMs = obterTempoRespostaMs(chave);
 
   let isAdmin = false;
+  let session = {};
   try {
     const sessionStr = localStorage.getItem("samae_cco_session");
     if (sessionStr) {
-      const session = JSON.parse(sessionStr);
+      session = JSON.parse(sessionStr);
       isAdmin = (session.role === "ADMIN");
     }
-  } catch(e) {}
+  } catch (error) {
+    console.warn("Não foi possível ler a sessão antes de atualizar o reconhecimento.", error);
+  }
 
+  let metadadosAnteriores;
   if (reconhecido) {
     if (!isAdmin) {
       alert("Acesso Negado (RBAC): Apenas administradores (Perfil ADMIN) podem revogar (des-reconhecer) um alarme já reconhecido.");
@@ -2599,55 +2661,75 @@ window.toggleAckMural = async function(chave, severidade, nome) {
 
     window.ccoReconhecidos.delete(chave);
     window.ccoAckMetadata = window.ccoAckMetadata || new Map();
+    metadadosAnteriores = window.ccoAckMetadata.get(chave);
     window.ccoAckMetadata.delete(chave);
-    if (window.StorageRepository) {
-      try { await window.StorageRepository.removerReconhecido(chave); } catch(e) {}
-    }
-    if (window.AuthRepository && typeof window.AuthRepository.registrarAuditoria === 'function') {
-      const session = JSON.parse(localStorage.getItem("samae_cco_session") || "{}");
-      await window.AuthRepository.registrarAuditoria('MURAL_REVOGAR_ACK', session.username || 'Admin', `Revogado alarme em ${nome || chave} (${chave}) - Severidade: ${severidade}`);
-    }
-    if (window.ccoChannel) {
-      window.ccoChannel.postMessage({ type: 'REVOKE_ACK', chave });
-    }
-    window.samaeIncidentsLog.push({
-      timestamp: new Date().toISOString(),
-      chave,
-      nome,
-      severidade,
-      acao: 'Revogado',
-      tempoRespostaMs
-    });
   } else {
     const agora = new Date();
     const dataHoraAck = `${agora.toLocaleDateString('pt-BR')} ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
-    const session = JSON.parse(localStorage.getItem("samae_cco_session") || "{}");
-    const operadorNome = session.username || 'Operador';
-
     window.ccoReconhecidos.set(chave, severidade || 'Crítico');
     window.ccoAckMetadata = window.ccoAckMetadata || new Map();
+    metadadosAnteriores = window.ccoAckMetadata.get(chave);
     window.ccoAckMetadata.set(chave, {
       timestamp: dataHoraAck,
-      operador: operadorNome
+      operador: session.username || 'Operador'
     });
+  }
 
+  const incidente = {
+    timestamp: new Date().toISOString(),
+    chave,
+    nome,
+    severidade,
+    acao: reconhecido ? 'Revogado' : 'Reconhecido',
+    tempoRespostaMs
+  };
+  window.samaeIncidentsLog.push(incidente);
+
+  try {
     if (window.StorageRepository) {
-      try { await window.StorageRepository.salvarReconhecido(chave, severidade || 'Crítico'); } catch(e) {}
+      if (reconhecido) {
+        await window.StorageRepository.removerReconhecido(chave);
+      } else {
+        await window.StorageRepository.salvarReconhecido(
+          chave,
+          severidade || 'Crítico',
+          window.ccoAckMetadata.get(chave)
+        );
+      }
+      await window.StorageRepository.salvarLog(incidente);
     }
-    if (window.AuthRepository && typeof window.AuthRepository.registrarAuditoria === 'function') {
-      await window.AuthRepository.registrarAuditoria('MURAL_RECONHECER_ACK', operadorNome, `Reconhecido alarme em ${nome || chave} (${chave}) - Severidade: ${severidade}`);
+  } catch (error) {
+    if (reconhecido) {
+      window.ccoReconhecidos.set(chave, severidade || 'Crítico');
+      if (metadadosAnteriores) window.ccoAckMetadata.set(chave, metadadosAnteriores);
+    } else {
+      window.ccoReconhecidos.delete(chave);
+      window.ccoAckMetadata.delete(chave);
     }
-    if (window.ccoChannel) {
-      window.ccoChannel.postMessage({ type: 'ACK_ALARM', chave, severidade: severidade || 'Crítico' });
+    window.samaeIncidentsLog.pop();
+    console.error("Não foi possível persistir a alteração do reconhecimento.", error);
+    alert("Não foi possível salvar a alteração do alarme. Verifique o armazenamento do navegador e tente novamente.");
+    salvarReconhecidosLocalStorage();
+    return;
+  }
+
+  if (window.AuthRepository && typeof window.AuthRepository.registrarAuditoria === 'function') {
+    try {
+      await window.AuthRepository.registrarAuditoria(
+        reconhecido ? 'MURAL_REVOGAR_ACK' : 'MURAL_RECONHECER_ACK',
+        session.username || (reconhecido ? 'Admin' : 'Operador'),
+        `${reconhecido ? 'Revogado' : 'Reconhecido'} alarme em ${nome || chave} (${chave}) - Severidade: ${severidade}`
+      );
+    } catch (error) {
+      console.error("Não foi possível registrar a auditoria da alteração do alarme.", error);
     }
-    window.samaeIncidentsLog.push({
-      timestamp: new Date().toISOString(),
-      chave,
-      nome,
-      severidade,
-      acao: 'Reconhecido',
-      tempoRespostaMs
-    });
+  }
+  if (window.ccoChannel) {
+    window.ccoChannel.postMessage(
+      reconhecido
+        ? { type: 'REVOKE_ACK', chave }
+        : { type: 'ACK_ALARM', chave, severidade: severidade || 'Crítico', metadados: window.ccoAckMetadata.get(chave) }
+    );
   }
   salvarReconhecidosLocalStorage();
   renderizarDashboardExceccoes();

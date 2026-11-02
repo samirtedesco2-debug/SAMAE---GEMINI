@@ -14,11 +14,15 @@ O arquivo `src/ui.js` é responsável por renderizar a interface de usuário (DO
   - Classificação visual (`obterClasseStatus`) atribuindo classes adequadas (`status-sem-dados`) para leituras fora da faixa válida (0-110%) ou ausentes.
 - **Mural de Alertas CCO (`renderizarDashboardExceccoes` e `obterReservatoriosComAlertaOuExcecao`)**:
   - Visão dedicada (fullscreen sem header principal) com relógio digital em tempo real e cabeçalho compacto (`analysis-intro`) otimizado para salas de controle.
-  - **Alternância de Visualização (Cards vs. Tabela):** Suporte a dois modos de visualização no Mural CCO:
-    - *Modo Cards (Padrão CCO):* Cartões operacionais com borda lateral colorida por severidade, indicação de tendência e botões de ACK instantâneo.
-    - *Modo Tabela (Engenharia):* Visão tabular densa contendo colunas para TAG/Reservatório, Severidade, Diagnósticos, Tendência e Ação (ACK), otimizada para monitoramento em massa.
-  - Filtros interativos por categoria (Totais, Críticos, Atenção, Incompletos) com contadores dinâmicos.
+  - **Alternância de visualização:** três modos: Cards (padrão CCO), Tabela (visão densa para monitoramento em massa) e Kanban (colunas por severidade), com botões de ACK em cada modo.
+  - Filtros interativos por categoria (Totais, Críticos, Atenção, Incompletos). Os contadores incluem todos os alarmes ativos, reconhecidos ou não.
+  - A busca filtra por TAG, nome do reservatório e mensagens de diagnóstico.
+  - O reconhecimento mantém a cor e a identificação da severidade; um selo explícito “Reconhecido” diferencia o ACK sem reduzir a legibilidade do alerta.
+  - Cards e cartões Kanban podem receber foco por teclado e abrir os detalhes com Enter ou Espaço. Na tabela, a linha e o botão com o nome do reservatório abrem os detalhes; o ACK permanece em um controle separado.
+  - Estados vazios distinguem ausência de alarmes de busca sem correspondência e oferecem ações para limpar a busca ou voltar a todos os alarmes, conforme o caso.
+  - Reconhecimento registra operador e horário; revogação é restrita a ADMIN. Cada ação gera um evento no histórico operacional do mural e outro na trilha de auditoria de segurança.
+  - O tempo de resposta usa o horário de acionamento armazenado para a data e reservatório. Esse horário é capturado quando a interface detecta o alerta; não representa necessariamente o início real da condição.
   - Avaliação de nível e vazão baseada no momento atual (última leitura telemetrada).
   - Header enxuto de investigação (`atualizarHeaderEnxutoInvestigacao`) para visualização focada e botão de retorno rápido.
   - Barra de ferramentas operacional unificada e barra de exportação semântica (`#cco-export-toolbar`) com ações de cópia de plantão, CSV e HTML.
-  - Suporte completo a navegação por teclado (`tabindex`, setas, `Enter`, `Espaço`).
+  - Suporte a foco sequencial por teclado nos cards, nos controles e nos botões de abertura da tabela; cards abrem detalhes com `Enter` ou `Espaço`.

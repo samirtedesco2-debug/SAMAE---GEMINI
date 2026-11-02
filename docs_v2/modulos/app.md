@@ -4,6 +4,7 @@ O arquivo `src/app.js` atua como o **controlador principal (orquestrador)** da a
 
 ## Responsabilidades
 - Inicialização da aplicação ao carregar a página e verificação de query parameters (`?view=exceccoes`).
+- Carregamento inicial do estado de reconhecimentos, metadados e logs pelo `StorageRepository` antes de inicializar o banco de dados da aplicação. Quando esse estado foi carregado, ele tem precedência sobre `_estado_plantao` vindo da configuração no `apiClient.js`.
 - **Integração com Módulo CCO Sync (`src/ccoSync.js`)**:
   - Delegação da inicialização do `BroadcastChannel('samae_cco_link')` e do modo CCO/Fullscreen.
   - Gerenciamento de Janela Singleton (`ccoMuralWindow`) para o Mural de Alarmes CCO.
@@ -25,4 +26,3 @@ O arquivo `src/app.js` atua como o **controlador principal (orquestrador)** da a
 - Gerenciamento de eventos de navegação entre abas (Visão Operacional, Analítica, Engenharia, Configurações, Mural de Alarmes CCO).
 - Sincronização de seletores de grupo, reservatório e data.
 - Inicialização do sistema de alarmes CCO e atualização periódica.
-
