@@ -1,4 +1,4 @@
-# Possíveis Melhorias Futuras - Sistema CCO SAMAE
+# Nexo Hídrico — Possíveis Melhorias Futuras
 
 Este documento registra as sugestões de evolução arquitetural e funcional levantadas nas análises multidisciplinares (Engenharia, CCO, Análise de Dados e Gestão Executiva) para futuras iterações do sistema.
 
@@ -38,4 +38,4 @@ Este documento registra as sugestões de evolução arquitetural e funcional lev
 * **Até a implementação:** Tratar o login como uma barreira básica da interface, restringir o uso às estações controladas e não depender dele para proteger dados sensíveis ou permissões de produção.
 
 ---
-*SAMAE - Centro de Controle Operacional (CCO)*
+*Nexo Hídrico — Centro de Controle Operacional*

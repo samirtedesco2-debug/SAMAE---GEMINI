@@ -1,6 +1,6 @@
 # Motor de Autonomia Preditiva e Balanço Hidráulico
 
-O motor preditivo do CCO SAMAE calcula projeções baseadas em tempo, tendências operacionais e balanço hidráulico para cada reservatório.
+O motor preditivo do Nexo Hídrico calcula projeções baseadas em tempo, tendências operacionais e balanço hidráulico para cada reservatório.
 
 ## 1. Filtro de Ruído Temporal (Média Móvel)
 - Função: `calcularMediaMovel(valores, janela)`

@@ -1,6 +1,14 @@
-# Documentação Oficial - Sistema CCO SAMAE (Versão 2.0)
+# Nexo Hídrico — Documentação do Centro de Controle Operacional
 
-Bem-vindo à nova documentação oficial do **Sistema de Monitoramento e Autonomia Preditiva dos Reservatórios do SAMAE**.
+Esta é a documentação técnica e operacional do **Nexo Hídrico**, sistema de monitoramento de reservatórios, alarmes e apoio à operação.
+
+![Logotipo Nexo Hídrico](../manual-imagens/nexo-hidrico-logo.svg)
+
+## Sobre o nome
+
+**Nexo Hídrico** une duas ideias. **“Nexo”** representa ligação, contexto e integração: os dados dos reservatórios, os alarmes e a atuação das equipes fazem parte de uma mesma visão operacional. **“Hídrico”** identifica o elemento central desse trabalho — a água, seus níveis, vazões e estruturas de armazenamento.
+
+Juntos, os termos sugerem um ponto de conexão entre informação e operação. O nome traduz a proposta do sistema: organizar dados e ocorrências para facilitar o acompanhamento dos reservatórios e apoiar decisões mais claras e coordenadas. É uma identidade que remete a monitoramento e gestão, sem afirmar que a plataforma substitui a avaliação dos operadores ou que todos os dados são transmitidos em tempo real.
 
 Esta documentação foi estruturada em pastas e subpastas organizadas por áreas, mantendo a pasta antiga (`docs/`) preservada para fins históricos.
 
@@ -44,4 +52,4 @@ O histórico cronológico de melhorias, com contexto de antes/depois, motivos e 
 - Os testes de navegador usam contas e dados locais de demonstração. Não reutilize credenciais reais; o ensaio manual com operadores deve ocorrer em ambiente de teste, sem provocar alarmes reais.
 
 ---
-*SAMAE - Centro de Controle Operacional (CCO)*
+*Nexo Hídrico — Centro de Controle Operacional*

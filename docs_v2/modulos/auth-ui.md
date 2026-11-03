@@ -1,10 +1,11 @@
 # Módulo: authUI.js
 
-O arquivo `src/authUI.js` gerencia a interface de usuário relacionada à autenticação e controle de acesso no sistema **CCO SAMAE**.
+O arquivo `src/authUI.js` gerencia a interface de autenticação e controle de acesso do **Nexo Hídrico**.
 
 ## Responsabilidades
 - **Renderização da Tela de Login em Tela Cheia**:
   - Overlay com imagem de fundo carregada de `manual-imagens/login.jfif`.
+  - Exibe o logotipo `manual-imagens/nexo-hidrico-logo.svg`.
   - Formulário de credenciais com campos rotulados e feedback visual quando a autenticação falha.
 - **Primeiro Acesso e Recuperação**:
   - Exibição automática da troca de senha obrigatória quando a flag `primeiroAcesso` está ativa.

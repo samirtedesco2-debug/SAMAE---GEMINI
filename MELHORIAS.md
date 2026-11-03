@@ -1,6 +1,6 @@
-# Histórico de Melhorias - Sistema CCO SAMAE
+# Histórico de Melhorias — Nexo Hídrico
 
-Este documento registra o histórico cronológico de melhorias, refatorações e evoluções arquiteturais aplicadas ao sistema CCO SAMAE.
+Este documento registra o histórico cronológico de melhorias, refatorações e evoluções arquiteturais aplicadas ao sistema, originalmente desenvolvido para o CCO SAMAE.
 
 ---
 
@@ -104,5 +104,10 @@ Este documento registra o histórico cronológico de melhorias, refatorações e
 * **Validação:** CI verifica a sintaxe JavaScript e executa testes unitários e E2E no Chromium. Os cenários de navegador cobrem login, logout e novo login, isolamento de bloqueio entre contas, aviso de dados incompletos e persistência/sincronização de ACK. O usuário também informou que todos os itens do ensaio manual com operador foram concluídos com sucesso.
 * **Limitação:** a autenticação e os dados permanecem locais ao navegador. A aprovação dos testes automatizados e do ensaio operacional não substitui autenticação, autorização e persistência confiáveis para produção.
 
+### 17. Identidade visual Nexo Hídrico
+* **Data:** 3 de Novembro de 2026
+* **Agora:** O logotipo vetorial é exibido no cabeçalho e na tela de login. O nome do produto também aparece no título da aba e no favicon; a documentação apresenta a nova identidade.
+* **Validação:** SVGs verificados, teste E2E confirma o logotipo no login e no cabeçalho, e os demais testes continuam aprovados.
+
 ---
-*SAMAE - Centro de Controle Operacional (CCO)*
+*Nexo Hídrico — Centro de Controle Operacional*

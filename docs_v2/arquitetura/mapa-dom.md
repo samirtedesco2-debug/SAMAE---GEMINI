@@ -8,7 +8,7 @@ Este documento fornece um mapa completo de todos os elementos estruturais (`head
 
 ### Cabeçalho (`header`)
 - **`.header-top`**: Container superior do cabeçalho.
-  - **`.header-brand`**: Marca e logotipo SAMAE.
+  - **`.header-brand`**: Logotipo e identificação do produto Nexo Hídrico.
     - **`.brand-mark`**: Ícone SVG estilizado.
     - **`.header-brand-copy`**: Títulos e subtítulos.
       - **`.header-eyebrow`**: Rótulo "MONITORAMENTO".

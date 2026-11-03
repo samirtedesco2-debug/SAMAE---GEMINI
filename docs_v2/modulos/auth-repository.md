@@ -1,6 +1,6 @@
 # Módulo: authRepository.js
 
-O arquivo `src/authRepository.js` implementa a camada de repositório e persistência durável para autenticação, controle de usuários e auditoria de segurança no sistema **CCO SAMAE**.
+O arquivo `src/authRepository.js` implementa a persistência local de autenticação, usuários e auditoria de segurança do **Nexo Hídrico**.
 
 > Os dados de autenticação permanecem no navegador. Este mecanismo é um controle básico da interface e não substitui autenticação ou autorização validadas por servidor.
 

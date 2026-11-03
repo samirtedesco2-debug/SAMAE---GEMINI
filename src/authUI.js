@@ -62,6 +62,11 @@ class AuthUI {
         display: flex; flex-direction: column; gap: 20px; text-align: center;
       ">
         <div>
+          <img
+            class="auth-brand-logo"
+            src="manual-imagens/nexo-hidrico-logo.svg"
+            alt="Nexo Hídrico — Monitoramento e operação"
+          >
           <h2 style="color: #f8fafc; margin: 0 0 6px 0; font-size: 1.6rem; font-weight: 700;">Acesso ao Sistema</h2>
           <p style="color: #94a3b8; margin: 0; font-size: 0.9rem;">Insira suas credenciais para continuar</p>
         </div>

@@ -12,6 +12,7 @@ test.beforeEach(async ({ page }) => {
 test("login acessível rejeita credenciais inválidas", async ({ page }) => {
   await page.goto("/");
 
+  await expect(page.locator("#samae-auth-overlay .auth-brand-logo")).toBeVisible();
   const campoUsuario = page.getByLabel("Usuário");
   const campoSenha = page.getByLabel("Senha");
   await expect(campoUsuario).toBeVisible();
@@ -36,6 +37,7 @@ test("login válido cria sessão e abre o painel", async ({ page }) => {
   await page.getByRole("button", { name: "Entrar" }).click();
 
   await expect(page.locator("#samae-auth-overlay")).toHaveCount(0, { timeout: 15_000 });
+  await expect(page.locator(".header-brand-logo")).toBeVisible();
   await expect(page.locator("#logged-username-display")).toContainText("admin.samae");
   await expect.poll(() =>
     page.evaluate(() => JSON.parse(localStorage.getItem("samae_cco_session") || "null"))

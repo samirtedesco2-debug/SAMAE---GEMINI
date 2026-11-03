@@ -3,10 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Monitoramento dos Reservatórios</title>
+    <title>Nexo Hídrico | Centro de Controle Operacional</title>
+    <link rel="icon" type="image/svg+xml" href="manual-imagens/nexo-hidrico-icon.svg" />
 
     <!-- Estilos CSS -->
-    <link rel="stylesheet" href="styles.css?v=1" />
+    <link rel="stylesheet" href="styles.css?v=3" />
 
     <meta name="author" content="Samir Tedesco" />
 
@@ -18,20 +19,12 @@
     <header>
       <div class="header-top">
         <div class="header-brand">
-          <span class="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 32 32" focusable="false">
-              <path
-                d="M16 3.5c-3.8 5-8.5 10-8.5 16a8.5 8.5 0 0 0 17 0c0-6-4.7-11-8.5-16Z"
-              ></path>
-              <path d="M11.5 20.5a4.5 4.5 0 0 0 4.5 4.5"></path>
-            </svg>
-          </span>
           <div class="header-brand-copy">
-            <span class="header-eyebrow"
-              ><span aria-hidden="true"></span> MONITORAMENTO</span
+            <img
+              class="header-brand-logo"
+              src="manual-imagens/nexo-hidrico-logo.svg"
+              alt="Nexo Hídrico — Monitoramento e operação"
             >
-            <h1>Reservatórios</h1>
-            <p class="header-subtitle">Níveis e vazões</p>
             <div id="logged-user-container" style="display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 0.82rem;">
               <span id="logged-username-display" style="color: var(--text-color); font-weight: 600;" title="Usuário conectado">---</span>
               <button type="button" id="btn-global-logout" title="Sair da sessão" style="background: none; border: none; color: var(--status-critical-color); cursor: pointer; padding: 2px 4px; display: flex; align-items: center;" aria-label="Sair">
@@ -739,6 +732,8 @@
 
     <footer>
       <p class="footer">
+        <strong>Nexo Hídrico</strong> · Centro de Controle Operacional
+        <span aria-hidden="true">|</span>
         &copy; 2026 Desenvolvido por <strong>Samir Tedesco</strong>.
       </p>
     </footer>
@@ -754,7 +749,7 @@
     <script src="src/ccoSync.js?v=6"></script>
     <script src="src/authRepository.js?v=7"></script>
     <script src="src/rbac.js?v=5"></script>
-    <script src="src/authUI.js?v=7"></script>
+    <script src="src/authUI.js?v=9"></script>
     <script src="src/app.js?v=8"></script>
   </body>
 </html>

@@ -161,6 +161,29 @@ header.has-active-filter .header-controls {
   gap: 5px;
 }
 
+.header-brand-logo {
+  display: block;
+  width: clamp(180px, 30vw, 340px);
+  max-width: 100%;
+  height: auto;
+  padding: 6px 9px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 9px;
+  background: #f8fafc;
+  box-shadow: 0 4px 14px var(--shadow-color);
+}
+
+.auth-brand-logo {
+  display: block;
+  width: min(280px, 100%);
+  height: auto;
+  margin: 0 auto 14px;
+  padding: 6px 9px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 9px;
+  background: #f8fafc;
+}
+
 .header-eyebrow {
   display: flex;
   align-items: center;

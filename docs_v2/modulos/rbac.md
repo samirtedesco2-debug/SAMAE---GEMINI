@@ -1,6 +1,6 @@
 # Módulo: rbac.js
 
-O arquivo `src/rbac.js` implementa o motor de Controle de Acesso Baseado em Papéis (*Role-Based Access Control* - RBAC) no sistema **CCO SAMAE**.
+O arquivo `src/rbac.js` implementa o controle de acesso baseado em papéis (*Role-Based Access Control* - RBAC) na interface do **Nexo Hídrico**.
 
 ## Responsabilidades
 - **Leitura do perfil da sessão local**:
