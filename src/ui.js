@@ -2460,7 +2460,6 @@ function renderizarDashboardExceccoes() {
               <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-color);">${nome}</span>
               <span style="background: ${bg}; color: ${cor}; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;">${severidade}</span>
             </div>
-            ${reconhecido ? '<span class="mural-ack-badge">✓ Reconhecido</span>' : ""}
             <div style="font-size: 0.75rem; color: var(--muted-color);">Acionado em: <strong>${triggerTime}</strong></div>
             <div style="font-size: 0.8rem; color: var(--muted-color); display: flex; flex-direction: column; gap: 2px;">
               ${mensagens.map(m => `<div>• ${m}</div>`).join("")}
@@ -2515,7 +2514,6 @@ function renderizarDashboardExceccoes() {
                   <td style="padding: 12px; font-weight: 600; color: var(--text-color);">${triggerTime}</td>
                     <td style="padding: 12px; font-weight: 700; color: var(--text-color);">
                       <button type="button" class="mural-row-open" onclick="abrirReservatorioMural('${chave}')" aria-label="Abrir detalhes de ${nome} (${chave})">${nome}</button>
-                      ${reconhecido ? '<span class="mural-ack-badge">✓ Reconhecido</span>' : ""}
                     </td>
                     <td style="padding: 12px;"><span style="background: ${bg}; color: ${cor}; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${severidade}</span></td>
                     <td style="padding: 12px; color: var(--text-color);">${mensagens.join(" | ")}</td>
@@ -2595,7 +2593,6 @@ function renderizarDashboardExceccoes() {
         <span style="font-weight: 700; font-size: 1rem; color: var(--text-color);">${nome}</span>
         <span style="background: ${bg}; color: ${cor}; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">${severidade}</span>
       </div>
-      ${reconhecido ? '<span class="mural-ack-badge">✓ Reconhecido</span>' : ""}
       <div style="font-size: 0.8rem; color: var(--muted-color);">Acionado em: <strong>${triggerTime}</strong></div>
       <div style="font-size: 0.85rem; color: var(--muted-color); display: flex; flex-direction: column; gap: 4px;">
         ${mensagens.map(m => `<div>• ${m}</div>`).join("")}

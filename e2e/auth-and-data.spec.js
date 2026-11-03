@@ -290,7 +290,7 @@ test("reconhecimento do alarme persiste e sincroniza entre janelas", async ({ pa
   const alarme = page.locator("#grid-exceccoes .mural-alarm-card").filter({ hasText: "R01-A" }).first();
   await expect(alarme).toBeVisible({ timeout: 15_000 });
   await alarme.getByRole("button", { name: /Reconhecer/ }).click();
-  await expect(alarme.locator(".mural-ack-badge")).toContainText("Reconhecido");
+  await expect(alarme.locator("button").filter({ hasText: "✓" })).toBeVisible();
   await expect.poll(() =>
     page.evaluate(() => JSON.parse(localStorage.getItem("nexo_hidrico_reconhecidos") || "{}")["R01-A"])
   ).toBe("Atenção");
@@ -303,7 +303,7 @@ test("reconhecimento do alarme persiste e sincroniza entre janelas", async ({ pa
     .locator("#grid-exceccoes .mural-alarm-card")
     .filter({ hasText: "R01-A" })
     .first();
-  await expect(alarmeSegundaJanela.locator(".mural-ack-badge")).toContainText("Reconhecido", { timeout: 15_000 });
+  await expect(alarmeSegundaJanela.locator("button").filter({ hasText: "✓" })).toBeVisible({ timeout: 15_000 });
   await expect.poll(() =>
     segundaJanela.evaluate(() => window.ccoAckMetadata.get("R01-A")?.operador)
   ).toBe("admin.nexo");
@@ -312,7 +312,7 @@ test("reconhecimento do alarme persiste e sincroniza entre janelas", async ({ pa
   await expect(page.locator("#nexo-auth-overlay")).toHaveCount(0, { timeout: 15_000 });
   await expect(page.locator("#painel-exceccoes")).toBeVisible({ timeout: 15_000 });
   const alarmePersistido = page.locator("#grid-exceccoes .mural-alarm-card").filter({ hasText: "R01-A" }).first();
-  await expect(alarmePersistido.locator(".mural-ack-badge")).toContainText("Reconhecido", { timeout: 15_000 });
+  await expect(alarmePersistido.locator("button").filter({ hasText: "✓" })).toBeVisible({ timeout: 15_000 });
   await expect.poll(() =>
     page.evaluate(async () => {
       const registros = await window.StorageRepository.executarTransacao(
