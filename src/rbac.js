@@ -1,8 +1,8 @@
-// rbac.js - Controle de Acesso Baseado em Papéis (RBAC) para o CCO SAMAE
+// rbac.js - Controle de Acesso Baseado em Papéis (RBAC)
 
 class RBACManager {
   aplicarPermissoes() {
-    const sessionStr = localStorage.getItem("samae_cco_session");
+    const sessionStr = localStorage.getItem("nexo_hidrico_session");
     if (!sessionStr) return;
 
     let session;
@@ -26,7 +26,7 @@ class RBACManager {
       btnLogout.dataset.bound = "true";
       btnLogout.onclick = () => {
         if (confirm("Deseja realmente encerrar a sessão atual?")) {
-          localStorage.removeItem("samae_cco_session");
+          localStorage.removeItem("nexo_hidrico_session");
           window.location.reload();
         }
       };
@@ -59,7 +59,7 @@ class RBACManager {
     }
 
     // 3. Modificar botão de ACK no Mural para Agent (clique único '✓ Ciência Dada')
-    window.samaeAgentIsRestricted = isAgent;
+    window.nexoAgentIsRestricted = isAgent;
   }
 }
 

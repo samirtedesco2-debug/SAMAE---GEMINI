@@ -1,12 +1,12 @@
 /**
  * ccoSync.js - Módulo de Sincronização, Canal CCO e Janela Singleton
- * SAMAE Jaraguá do Sul - CCO
+ * Nexo Hídrico - CCO
  */
 
 window.CcoSync = {
   inicializarCanal() {
     if (!window.ccoChannel) {
-      window.ccoChannel = new BroadcastChannel('samae_cco_link');
+      window.ccoChannel = new BroadcastChannel('nexo_hidrico_cco_link');
       window.ccoReconhecidos = window.ccoReconhecidos || new Map();
       window.ccoAckMetadata = window.ccoAckMetadata || new Map();
       window.ccoChannel.onmessage = (event) => {
@@ -27,7 +27,7 @@ window.CcoSync = {
           window.ccoReconhecidos = new Map(Object.entries(reconhecidos || {}));
           window.ccoAckMetadata = new Map(Object.entries(ackMetadata || {}));
           if (Array.isArray(incidentsLog)) {
-            window.samaeIncidentsLog = incidentsLog;
+            window.nexoIncidentsLog = incidentsLog;
           }
           if (typeof renderizarDashboardExceccoes === 'function') {
             renderizarDashboardExceccoes();

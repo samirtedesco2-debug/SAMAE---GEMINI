@@ -4,7 +4,7 @@ O arquivo `src/ccoSync.js` é responsável por centralizar a lógica de sincroni
 
 ## Responsabilidades e Funções
 - **`inicializarCanal()`**:
-  - Configura o `BroadcastChannel('samae_cco_link')`.
+  - Configura o `BroadcastChannel('nexo_hidrico_cco_link')`.
   - Sincroniza reconhecimentos (`ACK_ALARM`), revogações (`REVOKE_ACK`) e snapshots (`SYNC_RECONHECIDOS`) entre abas e janelas, incluindo metadados do ACK e histórico do mural.
   - As mensagens são locais às janelas/abas do mesmo navegador; não sincronizam computadores diferentes.
   - `SYNC_RECONHECIDOS` substitui os mapas e o histórico recebidos. Em atualizações simultâneas, um snapshot desatualizado pode sobrescrever uma alteração recente; a sincronização ainda não faz merge nem resolução de conflitos.

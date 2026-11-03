@@ -109,5 +109,10 @@ Este documento registra o histórico cronológico de melhorias, refatorações e
 * **Agora:** O logotipo vetorial é exibido no cabeçalho e na tela de login. O nome do produto também aparece no título da aba e no favicon; a documentação apresenta a nova identidade.
 * **Validação:** SVGs verificados, teste E2E confirma o logotipo no login e no cabeçalho, e os demais testes continuam aprovados.
 
+### 18. Migração compatível dos identificadores locais
+* **Data:** 3 de Novembro de 2026
+* **Agora:** Os identificadores de contas, bancos IndexedDB, chaves `localStorage`, variáveis globais, elementos de autenticação e canal entre janelas usam a identidade Nexo Hídrico. A inicialização migra as contas `admin.samae` e `agent.samae` para `admin.nexo` e `operador.nexo`, preservando credenciais, papéis, bloqueios, tentativas, sessões e dados operacionais; as bases e chaves antigas permanecem intactas como cópia de segurança.
+* **Validação:** Teste E2E cobre migração de contas, auditoria, sessões, configurações, notificações, reconhecimentos, logs e handles de arquivo.
+
 ---
 *Nexo Hídrico — Centro de Controle Operacional*

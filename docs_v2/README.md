@@ -23,6 +23,7 @@ O histórico cronológico de melhorias, com contexto de antes/depois, motivos e 
 
 2. **Módulos do Sistema (`modulos/`)**:
    - [Orquestrador Principal (`app.js`)](./modulos/app.md)
+   - [Migração de dados locais legados (`legacyMigration.js`)](./modulos/app.md#migração-de-identificadores-locais)
    - [Persistência de Alarmes (`storageRepository.js`)](./modulos/storage-repository.md)
    - [Repositório de Autenticação & IndexedDB (`authRepository.js`)](./modulos/auth-repository.md)
    - [Interface de Autenticação & Login (`authUI.js`)](./modulos/auth-ui.md)

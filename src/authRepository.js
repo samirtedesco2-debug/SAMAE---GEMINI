@@ -1,40 +1,14 @@
 // authRepository.js - Repositório desacoplado de Autenticação e Autorização (IndexedDB / RBAC / Auditoria)
 
-const DB_NAME = "SamaeAuthDB";
-const DB_VERSION = 1;
+const DB_NAME = "NexoAuthDB";
+const DB_VERSION = 2;
 
 class AuthRepository {
   async abrirDB() {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
       request.onerror = () => reject(request.error);
-      request.onsuccess = async (event) => {
-        const db = event.target.result;
-        // Validação de segurança: se o banco abriu mas por algum motivo não tem o store "usuarios", recria o banco
-        if (!db.objectStoreNames.contains("usuarios") || !db.objectStoreNames.contains("auditoria")) {
-          db.close();
-          const deleteReq = indexedDB.deleteDatabase(DB_NAME);
-          deleteReq.onsuccess = () => {
-            // Reabre após deletar
-            const retryReq = indexedDB.open(DB_NAME, DB_VERSION);
-            retryReq.onerror = () => reject(retryReq.error);
-            retryReq.onsuccess = (e) => resolve(e.target.result);
-            retryReq.onupgradeneeded = (ev) => {
-              const newDb = ev.target.result;
-              if (!newDb.objectStoreNames.contains("usuarios")) {
-                const storeUsuarios = newDb.createObjectStore("usuarios", { keyPath: "username" });
-                storeUsuarios.createIndex("email", "email", { unique: false });
-              }
-              if (!newDb.objectStoreNames.contains("auditoria")) {
-                newDb.createObjectStore("auditoria", { keyPath: "id", autoIncrement: true });
-              }
-            };
-          };
-          deleteReq.onerror = () => reject(deleteReq.error);
-          return;
-        }
-        resolve(db);
-      };
+      request.onsuccess = (event) => resolve(event.target.result);
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
         if (!db.objectStoreNames.contains("usuarios")) {
@@ -59,7 +33,7 @@ class AuthRepository {
         if (countReq.result === 0) {
           const usuariosIniciais = [
             {
-              username: "admin.samae",
+              username: "admin.nexo",
               senha: "Admin@2026",
               email: "samirtedesco2@gmail.com",
               role: "ADMIN",
@@ -69,7 +43,7 @@ class AuthRepository {
               requerRedefinicao: false
             },
             {
-              username: "agent.samae",
+              username: "operador.nexo",
               senha: "Agent@2026",
               email: "samirtedesco2@gmail.com",
               role: "Agent",
@@ -124,7 +98,7 @@ class AuthRepository {
       });
     } catch (e) {
       console.warn("Erro ao carregar auditoria do IndexedDB:", e);
-      return window.samaeSecurityLog || [];
+      return window.nexoSecurityLog || [];
     }
   }
 
@@ -136,8 +110,8 @@ class AuthRepository {
       detalhes
     };
 
-    window.samaeSecurityLog = window.samaeSecurityLog || [];
-    window.samaeSecurityLog.push(logEntry);
+    window.nexoSecurityLog = window.nexoSecurityLog || [];
+    window.nexoSecurityLog.push(logEntry);
 
     try {
       const db = await this.abrirDB();

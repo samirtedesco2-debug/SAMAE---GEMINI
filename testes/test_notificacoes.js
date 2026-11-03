@@ -17,15 +17,15 @@ function executarTestesNotificacoes() {
     { id: 'n1', tipo: 'UPDATE', titulo: 'Update', mensagem: 'Msg', lida: false },
     { id: 'n2', tipo: 'MAINTENANCE', titulo: 'Manut', mensagem: 'Msg2', lida: false }
   ];
-  localStorage.setItem("samai_cco_external_notifications", JSON.stringify(iniciais));
+  localStorage.setItem("nexo_hidrico_external_notifications", JSON.stringify(iniciais));
   
-  const notifs = JSON.parse(localStorage.getItem("samai_cco_external_notifications"));
+  const notifs = JSON.parse(localStorage.getItem("nexo_hidrico_external_notifications"));
   assert.strictEqual(notifs.length, 2);
   
   notifs[0].lida = true;
-  localStorage.setItem("samai_cco_external_notifications", JSON.stringify(notifs));
+  localStorage.setItem("nexo_hidrico_external_notifications", JSON.stringify(notifs));
   
-  const atualizadas = JSON.parse(localStorage.getItem("samai_cco_external_notifications"));
+  const atualizadas = JSON.parse(localStorage.getItem("nexo_hidrico_external_notifications"));
   assert.strictEqual(atualizadas[0].lida, true);
   
   console.log("✓ Central de Notificações: Todos os testes passaram!");

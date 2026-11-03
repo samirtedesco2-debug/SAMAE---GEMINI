@@ -19,13 +19,13 @@ function executarTestesMultiwindowSync() {
   // Simular Janela A (Principal)
   const windowA = {
     ccoReconhecidos: new Map(),
-    samaeIncidentsLog: []
+    nexoIncidentsLog: []
   };
 
   // Simular Janela B (Mural Pop-up)
   const windowB = {
     ccoReconhecidos: new Map(),
-    samaeIncidentsLog: []
+    nexoIncidentsLog: []
   };
 
   // Ação de ACK na Janela B
@@ -35,37 +35,37 @@ function executarTestesMultiwindowSync() {
   // Janela B reconhece o alarme
   windowB.ccoReconhecidos.set(chaveAlarme, severidadeAlarme);
   const payload = JSON.stringify(Object.fromEntries(windowB.ccoReconhecidos.entries()));
-  localStorage.setItem("samae_cco_reconhecidos", payload);
+  localStorage.setItem("nexo_hidrico_reconhecidos", payload);
   
-  windowB.samaeIncidentsLog.push({
+  windowB.nexoIncidentsLog.push({
     timestamp: new Date().toISOString(),
     chave: chaveAlarme,
     severidade: severidadeAlarme,
     acao: "Reconhecido"
   });
-  localStorage.setItem("samae_cco_incidents_log", JSON.stringify(windowB.samaeIncidentsLog));
+  localStorage.setItem("nexo_hidrico_incidents_log", JSON.stringify(windowB.nexoIncidentsLog));
 
   // Simular Sincronização na Janela A (como se o evento storage ou BroadcastChannel ocorresse)
-  const reconhecidosSalvos = localStorage.getItem("samae_cco_reconhecidos");
+  const reconhecidosSalvos = localStorage.getItem("nexo_hidrico_reconhecidos");
   assert.strictEqual(reconhecidosSalvos !== null, true);
   const objReconhecidos = JSON.parse(reconhecidosSalvos);
   windowA.ccoReconhecidos = new Map(Object.entries(objReconhecidos));
 
-  const logsSalvos = localStorage.getItem("samae_cco_incidents_log");
-  windowA.samaeIncidentsLog = JSON.parse(logsSalvos);
+  const logsSalvos = localStorage.getItem("nexo_hidrico_incidents_log");
+  windowA.nexoIncidentsLog = JSON.parse(logsSalvos);
 
   // Asserções
   assert.strictEqual(windowA.ccoReconhecidos.has(chaveAlarme), true);
   assert.strictEqual(windowA.ccoReconhecidos.get(chaveAlarme), severidadeAlarme);
-  assert.strictEqual(windowA.samaeIncidentsLog.length, 1);
-  assert.strictEqual(windowA.samaeIncidentsLog[0].acao, "Reconhecido");
+  assert.strictEqual(windowA.nexoIncidentsLog.length, 1);
+  assert.strictEqual(windowA.nexoIncidentsLog[0].acao, "Reconhecido");
 
   // Janela A revoga o alarme
   windowA.ccoReconhecidos.delete(chaveAlarme);
-  localStorage.setItem("samae_cco_reconhecidos", JSON.stringify(Object.fromEntries(windowA.ccoReconhecidos.entries())));
+  localStorage.setItem("nexo_hidrico_reconhecidos", JSON.stringify(Object.fromEntries(windowA.ccoReconhecidos.entries())));
 
   // Janela B sincroniza a revogação
-  const reconRevogado = localStorage.getItem("samae_cco_reconhecidos");
+  const reconRevogado = localStorage.getItem("nexo_hidrico_reconhecidos");
   windowB.ccoReconhecidos = new Map(Object.entries(JSON.parse(reconRevogado)));
   assert.strictEqual(windowB.ccoReconhecidos.has(chaveAlarme), false);
 
@@ -87,7 +87,7 @@ function executarTestesMultiwindowSync() {
   }
 
   function criarJanela() {
-    const janela = { ccoReconhecidos: new Map(), samaeIncidentsLog: [] };
+    const janela = { ccoReconhecidos: new Map(), nexoIncidentsLog: [] };
     const contexto = {
       window: janela,
       BroadcastChannel: BroadcastChannelMock,
@@ -111,7 +111,7 @@ function executarTestesMultiwindowSync() {
   });
   assert.strictEqual(janelaB.ccoReconhecidos.get('R-02'), 'Atenção');
   assert.strictEqual(janelaB.ccoAckMetadata.get('R-02').operador, 'operador');
-  assert.strictEqual(janelaB.samaeIncidentsLog.length, 1);
+  assert.strictEqual(janelaB.nexoIncidentsLog.length, 1);
 
   janelaA.ccoChannel.postMessage({ type: 'REVOKE_ACK', chave: 'R-02' });
   assert.strictEqual(janelaB.ccoReconhecidos.has('R-02'), false);

@@ -8,7 +8,7 @@ const LIMITE_CRITICO_VAZAO_PERCENTUAL = 35;
 function obterConfiguracaoReservatorio(idReservatorio) {
   try {
     const salvos = JSON.parse(
-      localStorage.getItem("samai_reservatorios_config") || "{}",
+      localStorage.getItem("nexo_hidrico_reservatorios_config") || "{}",
     );
     const arquivoConfig = window.bancoDeDados?.configuracoes || {};
     const config =

@@ -18,7 +18,7 @@ Este documento centraliza todas as diretrizes, observações arquiteturais e o c
   - Configurar intervalo de atualização na interface (`app.js`) para refletir novas telemetrias sem recarregamento manual.
 
 ## 2. Arquitetura de Sincronização Multi-Monitor
-O sistema já está totalmente preparado para operação em múltiplos monitores (ex: TV LED / Monitor Principal com Visão Operacional e Monitor Secundário com o Mural de Alertas CCO em pop-up dedicado via `window.open`). A transição para tempo real aproveitará a infraestrutura de eventos `BroadcastChannel` já estabelecida (`samae_cco_link`).
+O sistema já está totalmente preparado para operação em múltiplos monitores (ex: TV LED / Monitor Principal com Visão Operacional e Monitor Secundário com o Mural de Alertas CCO em pop-up dedicado via `window.open`). A transição para tempo real aproveitará a infraestrutura de eventos `BroadcastChannel` já estabelecida (`nexo_hidrico_cco_link`).
 
 ## 3. Pontos de Código Marcados (`TODO: [TEMPO_REAL]`)
 Procure por `TODO: [TEMPO_REAL]` no código-fonte (`src/regrasNegocio.js`, `src/apiClient.js`, etc.) para localizar os pontos de integração com a telemetria corporativa.

@@ -1,6 +1,6 @@
 # Manual Completo: Sistema de Controle de Acesso Baseado em Papéis (RBAC) e Segurança Industrial CCO
 
-Este manual descreve a arquitetura, o funcionamento técnico, os fluxos de autenticação, as políticas de segurança e os controles de privilégios implementados no sistema **CCO SAMAE**.
+Este manual descreve a arquitetura, o funcionamento técnico, os fluxos de autenticação, as políticas de segurança e os controles de privilégios implementados no sistema **Nexo Hídrico**.
 
 > **Limitação importante:** a autenticação e o RBAC atuais são locais ao navegador. São controles básicos da interface, não uma barreira confiável contra adulteração por alguém com acesso ao dispositivo. Não os use como única proteção para dados sensíveis ou permissões de produção.
 
@@ -9,7 +9,7 @@ Este manual descreve a arquitetura, o funcionamento técnico, os fluxos de auten
 ## 1. Visão Geral da Arquitetura Atual
 
 O módulo de autenticação e controle de acesso foi construído de forma **desacoplada e modular** no diretório `src/`:
-* **`src/authRepository.js`**: Camada de repositório local via **IndexedDB** (`SamaeAuthDB`), gerenciamento de usuários, validação de senhas por Regex, bloqueio após tentativas falhas e registro de auditoria.
+* **`src/authRepository.js`**: Camada de repositório local via **IndexedDB** (`NexoAuthDB`), gerenciamento de usuários, validação de senhas por Regex, bloqueio após tentativas falhas e registro de auditoria.
 * **`src/authUI.js`**: Camada de interface de autenticação (login, primeiro acesso e orientação sobre recuperação).
 * **`src/rbac.js`**: Aplica restrições de interface com base no perfil local; não substitui autorização validada por servidor.
 
@@ -17,10 +17,10 @@ O módulo de autenticação e controle de acesso foi construído de forma **desa
 
 ## 2. Infraestrutura de Usuários Durável (IndexedDB)
 
-O banco de dados local **`SamaeAuthDB`** gerencia as stores `usuarios` e `auditoria`. Quando a store de usuários está vazia, o sistema cria duas contas de demonstração:
-1. **Administrador (`admin.samae`)**
+O banco de dados local **`NexoAuthDB`** gerencia as stores `usuarios` e `auditoria`. Quando a store de usuários está vazia, o sistema cria duas contas de demonstração:
+1. **Administrador (`admin.nexo`)**
    * **Papel (Role):** `ADMIN`
-2. **Operador de Plantão (`agent.samae`)**
+2. **Operador de Plantão (`operador.nexo`)**
    * **Papel (Role):** `Agent`
 
 As senhas iniciais estão definidas no código-fonte e não são segredos. Troque-as antes de compartilhar o ambiente; essas contas locais não devem ser usadas como credenciais de produção. As contas e seus bloqueios ficam no armazenamento do navegador, associados à origem e ao perfil do navegador.
@@ -50,8 +50,8 @@ Toda senha definida no primeiro acesso ou por atualização local deve atender �
 * Pelo menos **1 caractere especial** (`@$!%*#?&`).
 * *Regex de Validação:* `/^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/`
 
-### C. Trilha de Auditoria de Segurança (`samaeSecurityLog`)
-As ações de segurança são adicionadas à variável `window.samaeSecurityLog` e gravadas na store `auditoria` do IndexedDB quando o armazenamento está disponível. Como os registros são locais, não constituem uma trilha inviolável:
+### C. Trilha de Auditoria de Segurança (`nexoSecurityLog`)
+As ações de segurança são adicionadas à variável `window.nexoSecurityLog` e gravadas na store `auditoria` do IndexedDB quando o armazenamento está disponível. Como os registros são locais, não constituem uma trilha inviolável:
 * Eventos registrados: `LOGIN_SUCESSO`, `LOGIN_FALHOU`, `LOGIN_BLOQUEADO`, `CONTA_BLOQUEADA_FORCA_BRUTA`, `ATUALIZAR_SENHA`, `CADASTRAR_USUARIO`.
 * Cada registro armazena `timestamp`, `usuario`, `acao` e `detalhes`.
 
@@ -68,8 +68,10 @@ As ações de segurança são adicionadas à variável `window.samaeSecurityLog`
    * O formulário de cadastro é apresentado no painel de configurações quando a sessão local tem perfil `ADMIN`; as restrições de perfil são aplicadas no navegador.
    * Permite cadastrar novos operadores (`Agent`) ou administradores (`ADMIN`) informando obrigatoriamente o e-mail corporativo individual (sem geração automática de e-mail).
 4. **Isolamento de Bancos IndexedDB:**
-   * **`SamaeAuthDB` (Versão 1):** Gerencia as stores `usuarios` e `auditoria`.
-   * **`SamaeHandlesDB` (Versão 1):** Gerencia os *handles* de arquivos do File System Access API separadamente, reduzindo conflitos de versão entre responsabilidades.
+   * **`NexoAuthDB` (Versão 2):** Gerencia as stores `usuarios` e `auditoria`.
+   * **`NexoHandlesDB` (Versão 1):** Gerencia os *handles* de arquivos do File System Access API separadamente, reduzindo conflitos de versão entre responsabilidades.
+
+A primeira inicialização após a troca de identidade migra os bancos e chaves locais anteriores, incluindo as contas de demonstração para `admin.nexo` e `operador.nexo`. Senhas, papéis, bloqueios, tentativas, sessões e demais dados são copiados; as bases antigas são mantidas como cópia de segurança.
 
 ---
 

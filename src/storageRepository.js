@@ -1,6 +1,6 @@
-// storageRepository.js - Repositório Durável em IndexedDB para ACKs e Logs CCO (SamaeCCOStorageDB)
+// storageRepository.js - Repositório Durável em IndexedDB para ACKs e Logs CCO
 
-const CCO_DB_NAME = "SamaeCCOStorageDB";
+const CCO_DB_NAME = "NexoCCOStorageDB";
 const CCO_DB_VERSION = 2;
 
 class StorageRepository {
@@ -58,35 +58,35 @@ class StorageRepository {
   }
 
   lerReconhecidosLocalStorage() {
-    const salvos = localStorage.getItem("samae_cco_reconhecidos");
+    const salvos = localStorage.getItem("nexo_hidrico_reconhecidos");
     return salvos ? new Map(Object.entries(JSON.parse(salvos))) : new Map();
   }
 
   lerMetadadosLocalStorage() {
-    const salvos = localStorage.getItem("samae_cco_ack_metadata");
+    const salvos = localStorage.getItem("nexo_hidrico_ack_metadata");
     return salvos ? new Map(Object.entries(JSON.parse(salvos))) : new Map();
   }
 
   lerTombstonesLocalStorage() {
-    const salvos = localStorage.getItem("samae_cco_ack_tombstones");
+    const salvos = localStorage.getItem("nexo_hidrico_ack_tombstones");
     const obj = salvos ? JSON.parse(salvos) : {};
     return new Map(Object.entries(obj));
   }
 
   salvarTombstonesLocalStorage(tombstones) {
-    localStorage.setItem("samae_cco_ack_tombstones", JSON.stringify(Object.fromEntries(tombstones)));
+    localStorage.setItem("nexo_hidrico_ack_tombstones", JSON.stringify(Object.fromEntries(tombstones)));
   }
 
   salvarSnapshotLocalStorage() {
     if (window.ccoReconhecidos) {
       localStorage.setItem(
-        "samae_cco_reconhecidos",
+        "nexo_hidrico_reconhecidos",
         JSON.stringify(Object.fromEntries(window.ccoReconhecidos.entries()))
       );
     }
     if (window.ccoAckMetadata) {
       localStorage.setItem(
-        "samae_cco_ack_metadata",
+        "nexo_hidrico_ack_metadata",
         JSON.stringify(Object.fromEntries(window.ccoAckMetadata.entries()))
       );
     }
@@ -254,7 +254,7 @@ class StorageRepository {
       console.warn("Erro ao carregar logs do IndexedDB; usando localStorage.", error);
     }
     try {
-      const logsSalvos = localStorage.getItem("samae_cco_incidents_log");
+      const logsSalvos = localStorage.getItem("nexo_hidrico_incidents_log");
       if (logsSalvos) logs = logs.concat(JSON.parse(logsSalvos));
     } catch (error) {
       console.error("Não foi possível complementar o histórico pelo localStorage.", error);
@@ -284,8 +284,8 @@ class StorageRepository {
       console.warn("Erro ao salvar log no IndexedDB; usando localStorage.", error);
     }
     try {
-      if (window.samaeIncidentsLog) {
-        localStorage.setItem("samae_cco_incidents_log", JSON.stringify(window.samaeIncidentsLog));
+      if (window.nexoIncidentsLog) {
+        localStorage.setItem("nexo_hidrico_incidents_log", JSON.stringify(window.nexoIncidentsLog));
       }
     } catch (error) {
       console.error("Não foi possível persistir o evento do alarme.", error);

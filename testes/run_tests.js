@@ -1,4 +1,4 @@
-// testes/run_tests.js - Test Runner principal do projeto SAMAE CCO
+// testes/run_tests.js - Test Runner principal do Nexo Hídrico
 const executarTestesNotificacoes = require('./test_notificacoes');
 const executarTestesMural = require('./test_mural');
 const executarTestesRegras = require('./test_regras');
@@ -12,7 +12,7 @@ const executarTestesAvisoCarregamento = require('./test_data_load_status_ui');
 
 async function executarSuíte() {
   console.log("==========================================================");
-  console.log("       SUÍTE DE TESTES AUTOMATIZADOS - SAMAE CCO          ");
+  console.log("       SUÍTE DE TESTES AUTOMATIZADOS - NEXO HÍDRICO       ");
   console.log("==========================================================");
 
   executarTestesNotificacoes();

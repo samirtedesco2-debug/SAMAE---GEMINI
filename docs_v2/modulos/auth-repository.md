@@ -6,15 +6,16 @@ O arquivo `src/authRepository.js` implementa a persistência local de autentica�
 
 ## Responsabilidades
 - **Persistência local de autenticação**:
-  - **`SamaeAuthDB` (Versão 1)**: Contém as stores `usuarios` e `auditoria`. O banco `SamaeHandlesDB`, usado para *handles* do File System Access API, é gerenciado separadamente em `app.js`.
+  - **`NexoAuthDB` (Versão 2)**: Contém as stores `usuarios` e `auditoria`. O banco `NexoHandlesDB`, usado para *handles* do File System Access API, é gerenciado separadamente em `app.js`.
+  - `legacyMigration.js` copia registros das bases anteriores e renomeia as contas `admin.samae` e `agent.samae` para seus novos identificadores, preservando senhas, papéis, bloqueios, tentativas e auditoria.
   - A separação dos bancos evita compartilhar stores e versões entre essas responsabilidades, mas não elimina qualquer falha possível do IndexedDB.
 - **Autoinicialização de contas de demonstração**:
-  - Na primeira inicialização de uma store `usuarios` vazia, são criadas as contas `admin.samae` (`ADMIN`) e `agent.samae` (`Agent`).
+  - Na primeira inicialização de uma store `usuarios` vazia, são criadas as contas `admin.nexo` (`ADMIN`) e `operador.nexo` (`Agent`).
   - As senhas iniciais de demonstração estão definidas no código-fonte. Não as trate como segredos nem use essas contas em produção; altere as credenciais antes de disponibilizar o sistema em qualquer ambiente compartilhado.
 - **Políticas de Segurança e Validação**:
   - Validação rigorosa de complexidade de senha via Regex (`/^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/`).
   - O contador de tentativas e o bloqueio após três senhas incorretas são associados à conta tentada. Um login bem-sucedido zera o contador; sair remove apenas a sessão e não desbloqueia contas.
-  - Os eventos de auditoria são mantidos em `window.samaeSecurityLog` e gravados em `SamaeAuthDB` quando o armazenamento está disponível; a gravação local não é uma trilha inviolável.
+  - Os eventos de auditoria são mantidos em `window.nexoSecurityLog` e gravados em `NexoAuthDB` quando o armazenamento está disponível; a gravação local não é uma trilha inviolável.
   - A interface não oferece recuperação segura. `atualizarSenha()` altera a senha e limpa o bloqueio local, mas não verifica identidade por um serviço confiável; não é um mecanismo adequado para recuperar contas em produção.
 - **Gerenciamento de Sessão e Redefinição**:
   - Verificação de sessão ativa no `localStorage`.

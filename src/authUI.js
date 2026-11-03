@@ -1,11 +1,11 @@
-// authUI.js - Interface de Autenticação, Login, Primeiro Acesso e Recuperação de Senha (CCO SAMAE)
+// authUI.js - Interface de autenticação, login e primeiro acesso
 
 class AuthUI {
   _obterOuCriarOverlay() {
-    let overlay = document.getElementById("samae-auth-overlay");
+    let overlay = document.getElementById("nexo-auth-overlay");
     if (!overlay) {
       overlay = document.createElement("div");
-      overlay.id = "samae-auth-overlay";
+      overlay.id = "nexo-auth-overlay";
       document.body.appendChild(overlay);
     }
 
@@ -26,7 +26,7 @@ class AuthUI {
   async verificarSessaoOuExibirLogin() {
     await window.AuthRepository.inicializarDB();
 
-    const sessaoStr = localStorage.getItem("samae_cco_session");
+    const sessaoStr = localStorage.getItem("nexo_hidrico_session");
     if (sessaoStr) {
       try {
         const sessao = JSON.parse(sessaoStr);
@@ -44,7 +44,7 @@ class AuthUI {
           return;
         }
       } catch (e) {
-        localStorage.removeItem("samae_cco_session");
+        localStorage.removeItem("nexo_hidrico_session");
       }
     }
 
@@ -71,10 +71,10 @@ class AuthUI {
           <p style="color: #94a3b8; margin: 0; font-size: 0.9rem;">Insira suas credenciais para continuar</p>
         </div>
 
-        <form id="samae-login-form" style="display: flex; flex-direction: column; gap: 16px; text-align: left;">
+        <form id="nexo-login-form" style="display: flex; flex-direction: column; gap: 16px; text-align: left;">
           <div style="display: flex; flex-direction: column; gap: 6px;">
             <label for="login-username" style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">Usuário</label>
-            <input type="text" id="login-username" autocomplete="username" required placeholder="Ex: admin.samae" style="
+            <input type="text" id="login-username" autocomplete="username" required placeholder="Ex: admin.nexo" style="
               background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.12); color: #fff;
               padding: 12px; border-radius: 8px; font-size: 0.95rem; outline: none;
             ">
@@ -106,7 +106,7 @@ class AuthUI {
       </div>
     `;
 
-    document.getElementById("samae-login-form").onsubmit = async (e) => {
+    document.getElementById("nexo-login-form").onsubmit = async (e) => {
       e.preventDefault();
       const u = document.getElementById("login-username").value.trim();
       const p = document.getElementById("login-password").value;
@@ -124,7 +124,7 @@ class AuthUI {
           return;
         }
 
-        localStorage.setItem("samae_cco_session", JSON.stringify({ username: user.username, role: user.role }));
+        localStorage.setItem("nexo_hidrico_session", JSON.stringify({ username: user.username, role: user.role }));
         overlay.remove();
         window.RBACManager.aplicarPermissoes();
         window.location.reload();
@@ -155,7 +155,7 @@ class AuthUI {
           <p style="color: #94a3b8; margin: 0; font-size: 0.9rem;">Olá ${user.username}, defina sua senha definitiva.</p>
         </div>
 
-        <form id="samae-primeiro-form" style="display: flex; flex-direction: column; gap: 16px; text-align: left;">
+        <form id="nexo-primeiro-form" style="display: flex; flex-direction: column; gap: 16px; text-align: left;">
           <div style="display: flex; flex-direction: column; gap: 6px;">
             <label for="primeiro-nova-senha" style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">Nova Senha Definitiva</label>
             <input type="password" id="primeiro-nova-senha" autocomplete="new-password" required placeholder="••••••••" style="
@@ -180,7 +180,7 @@ class AuthUI {
       </div>
     `;
 
-    document.getElementById("samae-primeiro-form").onsubmit = async (e) => {
+    document.getElementById("nexo-primeiro-form").onsubmit = async (e) => {
       e.preventDefault();
       const novaSenha = document.getElementById("primeiro-nova-senha").value;
       const errEl = document.getElementById("primeiro-error-msg");
@@ -188,7 +188,7 @@ class AuthUI {
 
       try {
         await window.AuthRepository.atualizarSenha(user.username, novaSenha);
-        localStorage.setItem("samae_cco_session", JSON.stringify({ username: user.username, role: user.role }));
+        localStorage.setItem("nexo_hidrico_session", JSON.stringify({ username: user.username, role: user.role }));
         overlay.remove();
         window.RBACManager.aplicarPermissoes();
         window.location.reload();
@@ -244,7 +244,7 @@ class AuthUI {
           <p style="color: #94a3b8; margin: 0; font-size: 0.9rem;">Olá ${user.username}, escolha uma nova senha forte.</p>
         </div>
 
-        <form id="samae-novasenha-form" style="display: flex; flex-direction: column; gap: 16px; text-align: left;">
+        <form id="nexo-novasenha-form" style="display: flex; flex-direction: column; gap: 16px; text-align: left;">
           <div style="display: flex; flex-direction: column; gap: 6px;">
             <label for="novasenha-input" style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">Nova Senha Definitiva</label>
             <input type="password" id="novasenha-input" autocomplete="new-password" required placeholder="••••••••" style="
@@ -269,7 +269,7 @@ class AuthUI {
       </div>
     `;
 
-    document.getElementById("samae-novasenha-form").onsubmit = async (e) => {
+    document.getElementById("nexo-novasenha-form").onsubmit = async (e) => {
       e.preventDefault();
       const novaSessionSenha = document.getElementById("novasenha-input").value;
       const errEl = document.getElementById("novasenha-error-msg");
@@ -277,7 +277,7 @@ class AuthUI {
 
       try {
         await window.AuthRepository.atualizarSenha(user.username, novaSessionSenha);
-        localStorage.setItem("samae_cco_session", JSON.stringify({ username: user.username, role: user.role }));
+        localStorage.setItem("nexo_hidrico_session", JSON.stringify({ username: user.username, role: user.role }));
         overlay.remove();
         window.RBACManager.aplicarPermissoes();
         window.location.reload();

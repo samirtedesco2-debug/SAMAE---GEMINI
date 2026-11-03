@@ -1,6 +1,6 @@
 /**
  * apiClient.js - Camada de Abstração de Consumo de Dados (API Client)
- * SAMAE Jaraguá do Sul - CCO
+ * Nexo Hídrico - CCO
  * 
  * Padroniza e isola o acesso a dados. Na transição futura para API REST, WebSockets 
  * ou Rádio, apenas este módulo precisará ser atualizado, preservando ui.js e regrasNegocio.js.
@@ -73,15 +73,15 @@ window.ApiClient = {
         if (data._estado_plantao.reconhecidos) {
           window.ccoReconhecidos = new Map(data._estado_plantao.reconhecidos);
           try {
-            localStorage.setItem("samae_cco_reconhecidos", JSON.stringify(Object.fromEntries(window.ccoReconhecidos.entries())));
+            localStorage.setItem("nexo_hidrico_reconhecidos", JSON.stringify(Object.fromEntries(window.ccoReconhecidos.entries())));
           } catch (erro) {
             this.registrarFalhaCarregamento("armazenamento local dos reconhecimentos", erro);
           }
         }
         if (data._estado_plantao.logsIncidentes) {
-          window.samaeIncidentsLog = data._estado_plantao.logsIncidentes;
+          window.nexoIncidentsLog = data._estado_plantao.logsIncidentes;
           try {
-            localStorage.setItem("samae_cco_incidents_log", JSON.stringify(window.samaeIncidentsLog));
+            localStorage.setItem("nexo_hidrico_incidents_log", JSON.stringify(window.nexoIncidentsLog));
           } catch (erro) {
             this.registrarFalhaCarregamento("armazenamento local do histórico de incidentes", erro);
           }

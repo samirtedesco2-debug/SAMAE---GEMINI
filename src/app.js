@@ -37,7 +37,7 @@ async function inicializarBancoAssincrono() {
         }
         const logs = await window.StorageRepository.carregarLogs();
         if (logs) {
-          window.samaeIncidentsLog = logs;
+          window.nexoIncidentsLog = logs;
         }
         window.ccoReconhecidosCarregado = true;
       } catch (err) {
@@ -70,7 +70,19 @@ async function carregarMesPorData(dataStr) {
     renderizarAvisoCarregamentoDados(window.ApiClient.listarAvisosCarregamento());
   }
 }
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    await window.NexoMigration.executar();
+  } catch (error) {
+    console.error("Não foi possível migrar os dados locais para o Nexo Hídrico.", error);
+    const aviso = document.createElement("div");
+    aviso.setAttribute("role", "alert");
+    aviso.style.cssText = "position:fixed;inset:0 0 auto;padding:16px;background:#7f1d1d;color:#fff;z-index:100000;text-align:center";
+    aviso.textContent = "A atualização dos dados locais não foi concluída. Seus dados antigos foram mantidos; feche outras janelas do sistema e recarregue a página.";
+    document.body.prepend(aviso);
+    return;
+  }
+
   if (window.AuthUI) {
     window.AuthUI.verificarSessaoOuExibirLogin();
   }
@@ -105,10 +117,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (btnMarcarTodasLidas) {
     btnMarcarTodasLidas.addEventListener("click", () => {
-      if (window.samaeExternalNotifications) {
-        window.samaeExternalNotifications.forEach(n => n.lida = true);
+      if (window.nexoExternalNotifications) {
+        window.nexoExternalNotifications.forEach(n => n.lida = true);
         try {
-          localStorage.setItem("samai_cco_external_notifications", JSON.stringify(window.samaeExternalNotifications));
+          localStorage.setItem("nexo_hidrico_external_notifications", JSON.stringify(window.nexoExternalNotifications));
         } catch(e) {}
         atualizarListaNotificacoes();
       }
@@ -131,8 +143,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (window.ccoMuralWindow && !window.ccoMuralWindow.closed) {
         window.ccoMuralWindow.close();
       }
-      if (window.samaeConfigWindow && !window.samaeConfigWindow.closed) {
-        window.samaeConfigWindow.close();
+      if (window.nexoConfigWindow && !window.nexoConfigWindow.closed) {
+        window.nexoConfigWindow.close();
       }
     } catch(e) {}
   });
@@ -174,13 +186,13 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function inicializarNotificacoesExternas() {
-  if (!window.samaeExternalNotifications) {
+  if (!window.nexoExternalNotifications) {
     try {
-      const salvos = localStorage.getItem("samai_cco_external_notifications");
+      const salvos = localStorage.getItem("nexo_hidrico_external_notifications");
       if (salvos) {
-        window.samaeExternalNotifications = JSON.parse(salvos);
+        window.nexoExternalNotifications = JSON.parse(salvos);
       } else {
-        window.samaeExternalNotifications = [
+        window.nexoExternalNotifications = [
           {
             id: 'notif-1',
             tipo: 'UPDATE',
@@ -206,16 +218,16 @@ function inicializarNotificacoesExternas() {
             lida: false
           }
         ];
-        localStorage.setItem("samai_cco_external_notifications", JSON.stringify(window.samaeExternalNotifications));
+        localStorage.setItem("nexo_hidrico_external_notifications", JSON.stringify(window.nexoExternalNotifications));
       }
     } catch (e) {
-      window.samaeExternalNotifications = [];
+      window.nexoExternalNotifications = [];
     }
   }
 }
 
 function tocarAlertaSonoroCCO() {
-  const somAtivo = localStorage.getItem("samai_cco_sound_enabled") !== "false";
+  const somAtivo = localStorage.getItem("nexo_hidrico_sound_enabled") !== "false";
   if (!somAtivo) return;
 
   try {
@@ -246,16 +258,16 @@ function inicializarControleAudioCCO() {
   const btnAudioToggle = document.getElementById("btn-cco-audio-toggle");
   const lblAudioIcon = document.getElementById("lbl-audio-icon");
   if (btnAudioToggle) {
-    let somLigado = localStorage.getItem("samai_cco_sound_enabled") !== "false";
+    let somLigado = localStorage.getItem("nexo_hidrico_sound_enabled") !== "false";
     if (lblAudioIcon) lblAudioIcon.textContent = somLigado ? "🔊" : "🔇";
     btnAudioToggle.title = somLigado ? "Alerta Sonoro Ativo (Clique para silenciar)" : "Alerta Sonoro Silenciado (Clique para ativar)";
 
     if (!btnAudioToggle.dataset.bound) {
       btnAudioToggle.dataset.bound = "true";
       btnAudioToggle.addEventListener("click", () => {
-        somLigado = localStorage.getItem("samai_cco_sound_enabled") !== "false";
+        somLigado = localStorage.getItem("nexo_hidrico_sound_enabled") !== "false";
         somLigado = !somLigado;
-        localStorage.setItem("samai_cco_sound_enabled", String(somLigado));
+        localStorage.setItem("nexo_hidrico_sound_enabled", String(somLigado));
         if (lblAudioIcon) lblAudioIcon.textContent = somLigado ? "🔊" : "🔇";
         btnAudioToggle.title = somLigado ? "Alerta Sonoro Ativo (Clique para silenciar)" : "Alerta Sonoro Silenciado (Clique para ativar)";
         if (somLigado) tocarAlertaSonoroCCO();
@@ -271,7 +283,7 @@ function atualizarListaNotificacoes() {
   const badgeNotif = document.getElementById("badge-alarmes-ativos");
   if (!lista) return;
 
-  const notifs = window.samaeExternalNotifications || [];
+  const notifs = window.nexoExternalNotifications || [];
   
   const naoLidas = notifs.filter(n => !n.lida).length;
   if (badgeNotif) {
@@ -315,12 +327,12 @@ function atualizarListaNotificacoes() {
 }
 
 window.marcarNotificacaoLida = function(id) {
-  if (!window.samaeExternalNotifications) return;
-  const n = window.samaeExternalNotifications.find(item => item.id === id);
+  if (!window.nexoExternalNotifications) return;
+  const n = window.nexoExternalNotifications.find(item => item.id === id);
   if (n) {
     n.lida = !n.lida;
     try {
-      localStorage.setItem("samai_cco_external_notifications", JSON.stringify(window.samaeExternalNotifications));
+      localStorage.setItem("nexo_hidrico_external_notifications", JSON.stringify(window.nexoExternalNotifications));
     } catch(e) {}
     atualizarListaNotificacoes();
   }
@@ -1992,10 +2004,10 @@ function inicializarConfiguracoes() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('view') !== 'configuracoes') {
       e.preventDefault();
-      if (window.samaeConfigWindow && !window.samaeConfigWindow.closed) {
-        window.samaeConfigWindow.focus();
+      if (window.nexoConfigWindow && !window.nexoConfigWindow.closed) {
+        window.nexoConfigWindow.focus();
       } else {
-        window.samaeConfigWindow = window.open('?view=configuracoes', 'samaeConfigWindow', 'width=1100,height=800');
+        window.nexoConfigWindow = window.open('?view=configuracoes', 'nexoConfigWindow', 'width=1100,height=800');
       }
       return;
     }
@@ -2037,7 +2049,7 @@ let configFileHandle = null;
 
 async function salvarHandleNoIndexedDB(handle) {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("SamaeHandlesDB", 1);
+    const request = indexedDB.open("NexoHandlesDB", 1);
     request.onupgradeneeded = (e) => {
       const db = e.target.result;
       if (!db.objectStoreNames.contains("handles")) {
@@ -2058,7 +2070,7 @@ async function salvarHandleNoIndexedDB(handle) {
 
 async function carregarHandleDoIndexedDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("SamaeHandlesDB", 1);
+    const request = indexedDB.open("NexoHandlesDB", 1);
     request.onupgradeneeded = (e) => {
       const db = e.target.result;
       if (!db.objectStoreNames.contains("handles")) {
@@ -2174,7 +2186,7 @@ function renderizarPainelConfiguracoes() {
 
   listaContainer.innerHTML = "";
 
-  const sessionStr = localStorage.getItem("samae_cco_session");
+  const sessionStr = localStorage.getItem("nexo_hidrico_session");
   let isAdmin = false;
   if (sessionStr) {
     try {
@@ -2362,8 +2374,8 @@ function renderizarFormularioCriacaoUsuario() {
   const container = document.getElementById("config-detalhe-container");
   if (!container) return;
 
-  const sessionStr = localStorage.getItem("samae_cco_session");
-  let currentAdmin = "admin.samae";
+  const sessionStr = localStorage.getItem("nexo_hidrico_session");
+  let currentAdmin = "admin.nexo";
   if (sessionStr) {
     try {
       currentAdmin = JSON.parse(sessionStr).username;
@@ -2392,7 +2404,7 @@ function renderizarFormularioCriacaoUsuario() {
 
         <div style="display: flex; flex-direction: column; gap: 6px;">
           <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-color);">E-mail Corporativo (Obrigatório)</label>
-          <input type="email" id="novo-email" required placeholder="carlos.silva@samae.sc.gov.br" style="
+          <input type="email" id="novo-email" required placeholder="usuario@exemplo.com" style="
             background: var(--surface-bg); border: 1px solid var(--border-color); color: var(--text-color);
             padding: 12px; border-radius: 8px; font-size: 0.95rem; outline: none;
           ">
@@ -2452,7 +2464,7 @@ function renderizarFormularioParametrosGlobais() {
   const container = document.getElementById("config-detalhe-container");
   if (!container) return;
 
-  const globalConfig = JSON.parse(localStorage.getItem("samai_global_config") || "{}");
+  const globalConfig = JSON.parse(localStorage.getItem("nexo_hidrico_global_config") || "{}");
 
   container.innerHTML = `
     <form id="form-parametros-globais" class="config-detail-form" style="max-width: 800px; margin: 0 auto; padding: 20px;">
@@ -2472,7 +2484,7 @@ function renderizarFormularioParametrosGlobais() {
           <legend>FORMULÁRIO I (Passagem de Plantão)</legend>
           <div class="config-field" style="margin-bottom: 12px;">
             <label for="cfg-emails-plantao">E-mails de Destino (separados por vírgula)</label>
-            <input type="text" id="cfg-emails-plantao" value="${globalConfig.emailsPlantao || 'plantao.cco@samae.sc.gov.br'}" placeholder="cco@samae.sc.gov.br" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+            <input type="text" id="cfg-emails-plantao" value="${globalConfig.emailsPlantao || 'operacao@exemplo.com'}" placeholder="operacao@exemplo.com" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
           </div>
           <div class="config-field" style="margin-bottom: 12px;">
             <label>Grade de Timers (Disparos Diários Agendados)</label>
@@ -2484,7 +2496,7 @@ function renderizarFormularioParametrosGlobais() {
           </div>
           <div class="config-field">
             <label for="cfg-caminho-local">Caminho Físico de Diretório Local</label>
-            <input type="text" id="cfg-caminho-local" value="${globalConfig.caminhoLocal || 'C:/Samae/Relatorios/Plantao'}" placeholder="C:/Samae/Relatorios/Plantao" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+            <input type="text" id="cfg-caminho-local" value="${globalConfig.caminhoLocal || 'C:/NexoHidrico/Relatorios/Plantao'}" placeholder="C:/NexoHidrico/Relatorios/Plantao" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
           </div>
         </fieldset>
 
@@ -2493,7 +2505,7 @@ function renderizarFormularioParametrosGlobais() {
           <legend>FORMULÁRIO II (Log de Erros e SLA)</legend>
           <div class="config-field" style="margin-bottom: 12px;">
             <label for="cfg-emails-manutencao">E-mails Analíticos da Manutenção</label>
-            <input type="text" id="cfg-emails-manutencao" value="${globalConfig.emailsManutencao || 'manutencao.telemetria@samae.sc.gov.br'}" placeholder="manutencao@samae.sc.gov.br" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+            <input type="text" id="cfg-emails-manutencao" value="${globalConfig.emailsManutencao || 'manutencao@exemplo.com'}" placeholder="manutencao@exemplo.com" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
           </div>
           <div class="config-field-row" style="margin-bottom: 12px;">
             <div class="config-field" style="flex: 1;">
@@ -2536,7 +2548,7 @@ function renderizarFormularioParametrosGlobais() {
       cronDia
     };
 
-    localStorage.setItem("samai_global_config", JSON.stringify(novaGlobal));
+    localStorage.setItem("nexo_hidrico_global_config", JSON.stringify(novaGlobal));
 
     const msgEl = document.getElementById("global-config-msg");
     msgEl.style.display = "block";
@@ -2873,7 +2885,7 @@ async function salvarConfiguracaoReservatorio(chave) {
   const emManutencao = document.getElementById("cfg-manutencao").checked;
   const possuiMedicaoVazao = document.getElementById("cfg-possui-vazao").checked;
 
-  const salvos = JSON.parse(localStorage.getItem("samai_reservatorios_config") || "{}");
+  const salvos = JSON.parse(localStorage.getItem("nexo_hidrico_reservatorios_config") || "{}");
   salvos[chave] = {
     capacidadeUtil,
     nivelAtencao: nivelAtencao !== "" ? Number(nivelAtencao) : 60,
@@ -2899,7 +2911,7 @@ async function salvarConfiguracaoReservatorio(chave) {
     nivelAlertaTempoCritico: nivelAlertaTempoCritico !== "" ? Number(nivelAlertaTempoCritico) : 30
   };
 
-  localStorage.setItem("samai_reservatorios_config", JSON.stringify(salvos));
+  localStorage.setItem("nexo_hidrico_reservatorios_config", JSON.stringify(salvos));
 
   if (configFileHandle) {
     try {
@@ -2924,12 +2936,12 @@ async function salvarConfiguracaoReservatorio(chave) {
 window.sincronizarEstadoAlarmesNoArquivo = async function() {
   if (!configFileHandle) return;
   try {
-    const salvosStr = localStorage.getItem("samai_reservatorios_config");
+    const salvosStr = localStorage.getItem("nexo_hidrico_reservatorios_config");
     if (!salvosStr) return;
     const salvos = JSON.parse(salvosStr);
 
     const reconhecidosArr = window.ccoReconhecidos ? Array.from(window.ccoReconhecidos.entries()) : [];
-    const logsArr = window.samaeIncidentsLog || [];
+    const logsArr = window.nexoIncidentsLog || [];
 
     salvos._estado_plantao = {
       reconhecidos: reconhecidosArr,
@@ -2956,13 +2968,13 @@ async function renderizarPainelLogsAuditoria() {
     try {
       logs = await window.AuthRepository.obterLogsAuditoria();
     } catch (e) {
-      logs = window.samaeSecurityLog || [];
+      logs = window.nexoSecurityLog || [];
     }
   } else {
-    logs = window.samaeSecurityLog || [];
+    logs = window.nexoSecurityLog || [];
   }
 
-  const incidentes = (window.samaeIncidentsLog || []).map(inc => ({
+  const incidentes = (window.nexoIncidentsLog || []).map(inc => ({
     timestamp: inc.timestamp,
     usuario: inc.admin || inc.operador || inc.usuario || 'Operador CCO',
     acao: `MURAL_${(inc.acao || '').toUpperCase()}`,
@@ -3213,12 +3225,12 @@ window.baixarLogsAuditoriaAdmin = async function() {
     try {
       logs = await window.AuthRepository.obterLogsAuditoria();
     } catch (e) {
-      logs = window.samaeSecurityLog || [];
+      logs = window.nexoSecurityLog || [];
     }
   } else {
-    logs = window.samaeSecurityLog || [];
+    logs = window.nexoSecurityLog || [];
   }
-  const incidentes = (window.samaeIncidentsLog || []).map(inc => ({
+  const incidentes = (window.nexoIncidentsLog || []).map(inc => ({
     timestamp: inc.timestamp,
     usuario: inc.admin || inc.operador || inc.usuario || 'Operador CCO',
     acao: `MURAL_${(inc.acao || '').toUpperCase()}`,
@@ -3234,12 +3246,12 @@ window.baixarLogsAuditoriaPDF = async function() {
     try {
       logs = await window.AuthRepository.obterLogsAuditoria();
     } catch (e) {
-      logs = window.samaeSecurityLog || [];
+      logs = window.nexoSecurityLog || [];
     }
   } else {
-    logs = window.samaeSecurityLog || [];
+    logs = window.nexoSecurityLog || [];
   }
-  const incidentes = (window.samaeIncidentsLog || []).map(inc => ({
+  const incidentes = (window.nexoIncidentsLog || []).map(inc => ({
     timestamp: inc.timestamp,
     usuario: inc.admin || inc.operador || inc.usuario || 'Operador CCO',
     acao: `MURAL_${(inc.acao || '').toUpperCase()}`,

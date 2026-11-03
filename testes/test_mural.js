@@ -5,7 +5,7 @@ function executarTestesMural() {
   console.log("-> Executando testes do Mural de Alertas Ativos e Governança RBAC...");
   global.window = {};
   window.ccoReconhecidos = new Map();
-  window.samaeIncidentsLog = [];
+  window.nexoIncidentsLog = [];
   window.ccoAlarmStartTimes = new Map();
   
   // 1. Teste de Reconhecimento (ACK)
@@ -21,7 +21,7 @@ function executarTestesMural() {
   assert.strictEqual(segundosAtivo >= 119, true);
 
   // 3. Teste de Restrição RBAC para Revogação (Apenas ADMIN pode desreconhecer)
-  let sessionAdmin = { username: "admin.samae", role: "ADMIN" };
+  let sessionAdmin = { username: "admin.nexo", role: "ADMIN" };
   let sessionOperator = { username: "operador.plantao", role: "Agent" };
 
   function simularRevogacao(session) {

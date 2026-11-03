@@ -113,7 +113,7 @@ class FakeIndexedDB {
 async function executarTestesStorageRepository() {
   console.log("-> Executando testes de persistência e migração do IndexedDB...");
 
-  const nomeBanco = "SamaeCCOStorageDB";
+  const nomeBanco = "NexoCCOStorageDB";
   const indexedDB = new FakeIndexedDB();
   indexedDB.criarBancoLegado(nomeBanco, 1, [{
     name: "reconhecidos",
@@ -126,8 +126,8 @@ async function executarTestesStorageRepository() {
   }]);
 
   const dadosLocalStorage = {
-    samae_cco_reconhecidos: JSON.stringify({ "R-LOCAL": "Atenção" }),
-    samae_cco_ack_metadata: JSON.stringify({ "R-LOCAL": { timestamp: "30/10/2026 09:00:00", operador: "local" } })
+    nexo_hidrico_reconhecidos: JSON.stringify({ "R-LOCAL": "Atenção" }),
+    nexo_hidrico_ack_metadata: JSON.stringify({ "R-LOCAL": { timestamp: "30/10/2026 09:00:00", operador: "local" } })
   };
   const localStorage = {
     getItem: (key) => dadosLocalStorage[key] || null,
@@ -136,7 +136,7 @@ async function executarTestesStorageRepository() {
   const window = {
     ccoReconhecidos: new Map(),
     ccoAckMetadata: new Map(),
-    samaeIncidentsLog: []
+    nexoIncidentsLog: []
   };
   const context = { window, indexedDB, localStorage, console, Map, Object, Date, Promise, setImmediate };
   const source = fs.readFileSync(path.join(__dirname, "../src/storageRepository.js"), "utf8");
@@ -152,14 +152,14 @@ async function executarTestesStorageRepository() {
 
   window.ccoReconhecidos = acknowledgements;
   window.ccoAckMetadata = metadata;
-  window.samaeIncidentsLog = [{
+  window.nexoIncidentsLog = [{
     timestamp: "2026-10-30T12:00:00.000Z",
     chave: "R-IDB",
     severidade: "Crítico",
     acao: "Reconhecido"
   }];
   await repository.salvarReconhecido("R-IDB", "Crítico", metadata.get("R-IDB"));
-  await repository.salvarLog(window.samaeIncidentsLog[0]);
+  await repository.salvarLog(window.nexoIncidentsLog[0]);
   const logs = await repository.carregarLogs();
   assert.strictEqual(logs.length, 1);
   assert.strictEqual(logs[0].acao, "Reconhecido");
@@ -167,8 +167,8 @@ async function executarTestesStorageRepository() {
   window.ccoReconhecidos.delete("R-IDB");
   window.ccoAckMetadata.delete("R-IDB");
   await repository.removerReconhecido("R-IDB");
-  dadosLocalStorage.samae_cco_reconhecidos = JSON.stringify({ "R-IDB": "Crítico", "R-LOCAL": "Atenção" });
-  dadosLocalStorage.samae_cco_ack_metadata = JSON.stringify({
+  dadosLocalStorage.nexo_hidrico_reconhecidos = JSON.stringify({ "R-IDB": "Crítico", "R-LOCAL": "Atenção" });
+  dadosLocalStorage.nexo_hidrico_ack_metadata = JSON.stringify({
     "R-IDB": { timestamp: "30/10/2026 08:00:00", operador: "operador" },
     "R-LOCAL": { timestamp: "30/10/2026 09:00:00", operador: "local" }
   });
@@ -178,9 +178,9 @@ async function executarTestesStorageRepository() {
   const metadadosRestantes = await repository.carregarMetadadosReconhecidos();
   assert.strictEqual(metadadosRestantes.has("R-IDB"), false);
 
-  const tombstones = JSON.parse(dadosLocalStorage.samae_cco_ack_tombstones);
+  const tombstones = JSON.parse(dadosLocalStorage.nexo_hidrico_ack_tombstones);
   delete tombstones["R-IDB"];
-  dadosLocalStorage.samae_cco_ack_tombstones = JSON.stringify(tombstones);
+  dadosLocalStorage.nexo_hidrico_ack_tombstones = JSON.stringify(tombstones);
   const fallbackReconhecidos = await repository.carregarReconhecidos();
   const fallbackMetadados = await repository.carregarMetadadosReconhecidos();
   assert.strictEqual(fallbackReconhecidos.has("R-IDB"), true);

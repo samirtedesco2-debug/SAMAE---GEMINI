@@ -2061,26 +2061,26 @@ function atualizarBadgeAlarmes() {
 
 function carregarReconhecidosLocalStorage() {
   window.ccoReconhecidos = window.ccoReconhecidos || new Map();
-  window.samaeIncidentsLog = window.samaeIncidentsLog || [];
+  window.nexoIncidentsLog = window.nexoIncidentsLog || [];
   window.ccoAlarmTriggerTimes = window.ccoAlarmTriggerTimes || new Map();
   window.ccoAckMetadata = window.ccoAckMetadata || new Map();
 
   try {
     if (!window.ccoReconhecidosCarregado) {
-      const salvos = localStorage.getItem("samae_cco_reconhecidos");
+      const salvos = localStorage.getItem("nexo_hidrico_reconhecidos");
       if (salvos) {
         window.ccoReconhecidos = new Map(Object.entries(JSON.parse(salvos)));
       }
-      const metaSalvos = localStorage.getItem("samae_cco_ack_metadata");
+      const metaSalvos = localStorage.getItem("nexo_hidrico_ack_metadata");
       if (metaSalvos) {
         window.ccoAckMetadata = new Map(Object.entries(JSON.parse(metaSalvos)));
       }
-      const logsSalvos = localStorage.getItem("samae_cco_incidents_log");
+      const logsSalvos = localStorage.getItem("nexo_hidrico_incidents_log");
       if (logsSalvos) {
-        window.samaeIncidentsLog = JSON.parse(logsSalvos);
+        window.nexoIncidentsLog = JSON.parse(logsSalvos);
       }
     }
-    const triggerTimesSalvos = localStorage.getItem("samae_cco_trigger_times");
+    const triggerTimesSalvos = localStorage.getItem("nexo_hidrico_trigger_times");
     if (triggerTimesSalvos) {
       const obj = JSON.parse(triggerTimesSalvos);
       window.ccoAlarmTriggerTimes = new Map(Object.entries(obj));
@@ -2097,31 +2097,31 @@ function salvarReconhecidosLocalStorage() {
         window.ccoReconhecidos = new Map(Object.entries(window.ccoReconhecidos));
       }
       const obj = Object.fromEntries(window.ccoReconhecidos.entries());
-      localStorage.setItem("samae_cco_reconhecidos", JSON.stringify(obj));
+      localStorage.setItem("nexo_hidrico_reconhecidos", JSON.stringify(obj));
     }
     if (window.ccoAckMetadata) {
       if (!(window.ccoAckMetadata instanceof Map)) {
         window.ccoAckMetadata = new Map(Object.entries(window.ccoAckMetadata));
       }
       const objMeta = Object.fromEntries(window.ccoAckMetadata.entries());
-      localStorage.setItem("samae_cco_ack_metadata", JSON.stringify(objMeta));
+      localStorage.setItem("nexo_hidrico_ack_metadata", JSON.stringify(objMeta));
     }
     if (window.ccoAlarmTriggerTimes) {
       if (!(window.ccoAlarmTriggerTimes instanceof Map)) {
         window.ccoAlarmTriggerTimes = new Map(Object.entries(window.ccoAlarmTriggerTimes));
       }
       const obj = Object.fromEntries(window.ccoAlarmTriggerTimes.entries());
-      localStorage.setItem("samae_cco_trigger_times", JSON.stringify(obj));
+      localStorage.setItem("nexo_hidrico_trigger_times", JSON.stringify(obj));
     }
-    if (window.samaeIncidentsLog) {
-      localStorage.setItem("samae_cco_incidents_log", JSON.stringify(window.samaeIncidentsLog));
+    if (window.nexoIncidentsLog) {
+      localStorage.setItem("nexo_hidrico_incidents_log", JSON.stringify(window.nexoIncidentsLog));
     }
     if (window.ccoChannel) {
       window.ccoChannel.postMessage({
         type: 'SYNC_RECONHECIDOS',
         reconhecidos: Object.fromEntries(window.ccoReconhecidos.entries()),
         ackMetadata: Object.fromEntries(window.ccoAckMetadata.entries()),
-        incidentsLog: window.samaeIncidentsLog
+        incidentsLog: window.nexoIncidentsLog
       });
     }
     if (typeof window.sincronizarEstadoAlarmesNoArquivo === 'function') {
@@ -2634,13 +2634,13 @@ window.toggleAckMural = async function(chave, severidade, nome) {
   window.ccoReconhecidos = window.ccoReconhecidos || new Map();
   carregarReconhecidosLocalStorage();
   const reconhecido = window.ccoReconhecidos.has(chave);
-  window.samaeIncidentsLog = window.samaeIncidentsLog || [];
+  window.nexoIncidentsLog = window.nexoIncidentsLog || [];
   const tempoRespostaMs = obterTempoRespostaMs(chave);
 
   let isAdmin = false;
   let session = {};
   try {
-    const sessionStr = localStorage.getItem("samae_cco_session");
+    const sessionStr = localStorage.getItem("nexo_hidrico_session");
     if (sessionStr) {
       session = JSON.parse(sessionStr);
       isAdmin = (session.role === "ADMIN");
@@ -2683,7 +2683,7 @@ window.toggleAckMural = async function(chave, severidade, nome) {
     acao: reconhecido ? 'Revogado' : 'Reconhecido',
     tempoRespostaMs
   };
-  window.samaeIncidentsLog.push(incidente);
+  window.nexoIncidentsLog.push(incidente);
 
   try {
     if (window.StorageRepository) {
@@ -2706,7 +2706,7 @@ window.toggleAckMural = async function(chave, severidade, nome) {
       window.ccoReconhecidos.delete(chave);
       window.ccoAckMetadata.delete(chave);
     }
-    window.samaeIncidentsLog.pop();
+    window.nexoIncidentsLog.pop();
     console.error("Não foi possível persistir a alteração do reconhecimento.", error);
     alert("Não foi possível salvar a alteração do alarme. Verifique o armazenamento do navegador e tente novamente.");
     salvarReconhecidosLocalStorage();

@@ -7,7 +7,8 @@ O sistema é uma aplicação web interativa desenvolvida em **Vanilla JavaScript
 - **`apiClient.js`**: Gerencia chamadas e integração com fontes externas de dados.
 - **`alarmTiming.js`**: Calcula o tempo de resposta a partir do timestamp de acionamento salvo, sem estimar valores quando não há horário válido.
 - **`app.js`**: Ponto de entrada principal que orquestra a aplicação, tratamento global de erros, exportações e eventos de UI.
-- **`authRepository.js`**: Camada local de persistência de usuários e auditoria no IndexedDB `SamaeAuthDB`. O banco de handles `SamaeHandlesDB` é gerenciado separadamente pelo `app.js`.
+- **`authRepository.js`**: Camada local de persistência de usuários e auditoria no IndexedDB `NexoAuthDB`. O banco de handles `NexoHandlesDB` é gerenciado separadamente pelo `app.js`.
+- **`legacyMigration.js`**: Migra dados locais de versões anteriores para os identificadores Nexo sem remover as bases legadas.
 - **`authUI.js`**: Gerencia a interface de login, primeiro acesso e mensagens de recuperação de acesso. O fundo da tela de login usa `manual-imagens/login.jfif`.
 - **`ccoSync.js`**: Sincronização em tempo real e gerenciamento de janela singleton (`ccoMuralWindow`) para o Mural de Alarmes CCO via `BroadcastChannel`.
 - **`dados.js`**: Carrega e processa dados históricos e índices temporais (`indice_datas.json`).

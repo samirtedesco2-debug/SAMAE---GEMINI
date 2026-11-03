@@ -10,7 +10,7 @@ function executarTestesRecuperacaoDesativada() {
     body: { appendChild() {} },
     createElement: () => overlay,
     getElementById: (id) => {
-      if (id === "samae-auth-overlay") return overlay;
+      if (id === "nexo-auth-overlay") return overlay;
       if (id === "link-voltar-login") return linkVoltar;
       return null;
     }
@@ -24,7 +24,7 @@ function executarTestesRecuperacaoDesativada() {
 
   assert.match(overlay.innerHTML, /A recuperação automática não está disponível nesta versão/);
   assert.match(overlay.innerHTML, /Não compartilhe sua senha/);
-  assert.strictEqual(overlay.innerHTML.includes("samae-recup-form"), false);
+  assert.strictEqual(overlay.innerHTML.includes("nexo-recup-form"), false);
   assert.strictEqual(typeof linkVoltar.onclick, "function");
 
   const contextoRepositorio = { window: {} };

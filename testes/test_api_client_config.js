@@ -7,7 +7,7 @@ function criarApiClient(estadoInicial, configuracao, fetchMock) {
   const localStorageData = {};
   const window = {
     ccoReconhecidos: new Map(estadoInicial.reconhecidos),
-    samaeIncidentsLog: estadoInicial.logs,
+    nexoIncidentsLog: estadoInicial.logs,
     ccoReconhecidosCarregado: estadoInicial.carregado
   };
   const context = {
@@ -43,9 +43,9 @@ async function executarTestesApiClientConfig() {
 
   await carregado.window.ApiClient.carregarConfiguracoes();
   assert.strictEqual(carregado.window.ccoReconhecidos.get("R-01"), "Crítico");
-  assert.strictEqual(carregado.window.samaeIncidentsLog[0].acao, "estado local recente");
-  assert.strictEqual(carregado.localStorageData.samae_cco_reconhecidos, undefined);
-  assert.strictEqual(carregado.localStorageData.samae_cco_incidents_log, undefined);
+  assert.strictEqual(carregado.window.nexoIncidentsLog[0].acao, "estado local recente");
+  assert.strictEqual(carregado.localStorageData.nexo_hidrico_reconhecidos, undefined);
+  assert.strictEqual(carregado.localStorageData.nexo_hidrico_incidents_log, undefined);
 
   const naoCarregado = criarApiClient({
     carregado: false,
@@ -55,9 +55,9 @@ async function executarTestesApiClientConfig() {
 
   await naoCarregado.window.ApiClient.carregarConfiguracoes();
   assert.strictEqual(naoCarregado.window.ccoReconhecidos.get("R-01"), "Atenção");
-  assert.strictEqual(naoCarregado.window.samaeIncidentsLog[0].acao, "snapshot antigo");
-  assert.notStrictEqual(naoCarregado.localStorageData.samae_cco_reconhecidos, undefined);
-  assert.notStrictEqual(naoCarregado.localStorageData.samae_cco_incidents_log, undefined);
+  assert.strictEqual(naoCarregado.window.nexoIncidentsLog[0].acao, "snapshot antigo");
+  assert.notStrictEqual(naoCarregado.localStorageData.nexo_hidrico_reconhecidos, undefined);
+  assert.notStrictEqual(naoCarregado.localStorageData.nexo_hidrico_incidents_log, undefined);
 
   const respostas = {
     "indice_datas.json": { ok: true, json: async () => ({ datasDisponiveis: ["01/10/2026", "01/11/2026"] }) },
