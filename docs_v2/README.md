@@ -34,5 +34,14 @@ O histórico cronológico de melhorias, com contexto de antes/depois, motivos e 
    - [Guia de Migração para Tempo Real](./funcionalidades/migracao-tempo-real.md)
    - [Possíveis Melhorias Futuras](./funcionalidades/possiveis-melhorias.md)
 
+## Convenções para novas alterações
+
+- Mantenha os nomes e o idioma consistentes com o módulo; no domínio do sistema, os identificadores JavaScript existentes usam principalmente português e `camelCase`.
+- Preserve as convenções de classes CSS já presentes; evite renomeações abrangentes sem benefício funcional.
+- Prefira regras de estilo em `styles.css` a novos estilos inline e mova estilos existentes apenas quando uma mudança relacionada justificar.
+- Faça extrações pequenas quando elas separarem responsabilidades e forem cobertas por testes; não divida módulos apenas para atingir um limite de linhas.
+- Execute `npm ci`, `npm test` e `npm run test:e2e` antes de integrar mudanças. No Linux, instale o Playwright e suas dependências de sistema com `npx playwright install --with-deps chromium`; em outros sistemas, use `npx playwright install chromium`. A integração contínua valida sintaxe e executa ambas as suítes.
+- Os testes de navegador usam contas e dados locais de demonstração. Não reutilize credenciais reais; o ensaio manual com operadores deve ocorrer em ambiente de teste, sem provocar alarmes reais.
+
 ---
 *SAMAE - Centro de Controle Operacional (CCO)*

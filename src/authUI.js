@@ -68,22 +68,22 @@ class AuthUI {
 
         <form id="samae-login-form" style="display: flex; flex-direction: column; gap: 16px; text-align: left;">
           <div style="display: flex; flex-direction: column; gap: 6px;">
-            <label style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">Usuário</label>
-            <input type="text" id="login-username" required placeholder="Ex: admin.samae" style="
+            <label for="login-username" style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">Usuário</label>
+            <input type="text" id="login-username" autocomplete="username" required placeholder="Ex: admin.samae" style="
               background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.12); color: #fff;
               padding: 12px; border-radius: 8px; font-size: 0.95rem; outline: none;
             ">
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 6px;">
-            <label style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">Senha</label>
-            <input type="password" id="login-password" required placeholder="••••••••" style="
+            <label for="login-password" style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">Senha</label>
+            <input type="password" id="login-password" autocomplete="current-password" required placeholder="••••••••" style="
               background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.12); color: #fff;
               padding: 12px; border-radius: 8px; font-size: 0.95rem; outline: none;
             ">
           </div>
 
-          <div id="login-error-msg" style="color: #f87171; font-size: 0.85rem; display: none; background: rgba(248,113,113,0.1); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(248,113,113,0.3);"></div>
+          <div id="login-error-msg" role="alert" style="color: #f87171; font-size: 0.85rem; display: none; background: rgba(248,113,113,0.1); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(248,113,113,0.3);"></div>
 
           <button type="submit" style="
             background: #0ea5e9; color: #fff; border: none; padding: 12px;
@@ -152,8 +152,8 @@ class AuthUI {
 
         <form id="samae-primeiro-form" style="display: flex; flex-direction: column; gap: 16px; text-align: left;">
           <div style="display: flex; flex-direction: column; gap: 6px;">
-            <label style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">Nova Senha Definitiva</label>
-            <input type="password" id="primeiro-nova-senha" required placeholder="••••••••" style="
+            <label for="primeiro-nova-senha" style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">Nova Senha Definitiva</label>
+            <input type="password" id="primeiro-nova-senha" autocomplete="new-password" required placeholder="••••••••" style="
               background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.12); color: #fff;
               padding: 12px; border-radius: 8px; font-size: 0.95rem; outline: none;
             ">
@@ -200,54 +200,23 @@ class AuthUI {
       <div style="
         background: rgba(17, 24, 39, 0.82); backdrop-filter: blur(20px);
         border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px;
-        padding: 40px; width: 100%; max-width: 420px; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        padding: 40px; width: 100%; max-width: 440px; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
         display: flex; flex-direction: column; gap: 20px; text-align: center;
       ">
         <div>
           <h2 style="color: #f8fafc; margin: 0 0 6px 0; font-size: 1.5rem; font-weight: 700;">Recuperação de Acesso</h2>
-          <p style="color: #94a3b8; margin: 0; font-size: 0.9rem;">Informe seu e-mail corporativo cadastrado.</p>
+          <p style="color: #cbd5e1; margin: 0; font-size: 0.9rem; line-height: 1.5;">
+            A recuperação automática não está disponível nesta versão. Informar um e-mail, sem confirmar a identidade por um canal confiável, não é suficiente para autorizar a redefinição da senha.
+          </p>
         </div>
 
-        <form id="samae-recup-form" style="display: flex; flex-direction: column; gap: 16px; text-align: left;">
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <label style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">E-mail Corporativo</label>
-            <input type="email" id="recup-email" required placeholder="ex: samirtedesco2@gmail.com" style="
-              background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.12); color: #fff;
-              padding: 12px; border-radius: 8px; font-size: 0.95rem; outline: none;
-            ">
-          </div>
-
-          <div id="recup-error-msg" style="color: #f87171; font-size: 0.85rem; display: none; background: rgba(248,113,113,0.1); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(248,113,113,0.3);"></div>
-
-          <button type="submit" style="
-            background: #0ea5e9; color: #fff; border: none; padding: 12px;
-            border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer;
-            transition: background 0.2s; margin-top: 4px; box-shadow: 0 4px 15px rgba(14,165,233,0.4);
-          ">
-            Solicitar Redefinição
-          </button>
-        </form>
+        <p style="color: #94a3b8; margin: 0; font-size: 0.85rem; line-height: 1.5;">
+          Procure o responsável técnico do sistema por um canal institucional para receber orientação. Esta versão não oferece uma ferramenta segura de redefinição. Não compartilhe sua senha.
+        </p>
 
         <a href="#" id="link-voltar-login" style="color: #94a3b8; text-decoration: none; font-size: 0.85rem; font-weight: 600;">← Voltar ao login</a>
       </div>
     `;
-
-    document.getElementById("samae-recup-form").onsubmit = async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("recup-email").value.trim();
-      const errEl = document.getElementById("recup-error-msg");
-      errEl.style.display = "none";
-
-      try {
-        const mailto = await window.AuthRepository.solicitarRecuperacao(email);
-        alert("Instrução de redefinição gerada. O aplicativo de e-mail será aberto.");
-        window.location.href = mailto;
-        this.exibirTelaLogin();
-      } catch (err) {
-        errEl.textContent = err.message;
-        errEl.style.display = "block";
-      }
-    };
 
     document.getElementById("link-voltar-login").onclick = (e) => {
       e.preventDefault();
@@ -272,8 +241,8 @@ class AuthUI {
 
         <form id="samae-novasenha-form" style="display: flex; flex-direction: column; gap: 16px; text-align: left;">
           <div style="display: flex; flex-direction: column; gap: 6px;">
-            <label style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">Nova Senha Definitiva</label>
-            <input type="password" id="novasenha-input" required placeholder="••••••••" style="
+            <label for="novasenha-input" style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">Nova Senha Definitiva</label>
+            <input type="password" id="novasenha-input" autocomplete="new-password" required placeholder="••••••••" style="
               background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.12); color: #fff;
               padding: 12px; border-radius: 8px; font-size: 0.95rem; outline: none;
             ">

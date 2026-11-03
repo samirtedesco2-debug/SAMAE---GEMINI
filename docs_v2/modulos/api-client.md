@@ -5,6 +5,8 @@ O arquivo `src/apiClient.js` é responsável por gerenciar a comunicação com f
 ## Responsabilidades Principais
 - Gerenciamento de persistência de configurações de reservatórios.
 - Interação com fontes de dados e tratamento de erros de carregamento assíncrono.
+- Registro de falhas de índice, arquivos mensais, configurações e taxonomia; o painel exibe os recursos que falharam e informa quando os dados podem estar incompletos.
+- Arquivos mensais com erro não impedem a abertura do painel, mas não são tratados como dados carregados. A interface alerta para revisar os dados antes de usá-los na operação.
 
 ## Precedência do estado de plantão
 - `carregarConfiguracoes()` pode importar `_estado_plantao` de `dados_historicos/config_reservatorios.json` como fallback.

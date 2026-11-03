@@ -45,15 +45,16 @@ async function inicializarBancoAssincrono() {
       }
     }
     window.bancoDeDados = await window.ApiClient.inicializarBanco();
+    renderizarAvisoCarregamentoDados(window.ApiClient.listarAvisosCarregamento());
     inicializarTema();
     if (typeof inicializarControleAudioCCO === 'function') inicializarControleAudioCCO();
     inicializarDashboard();
   } catch (erro) {
     console.error("Erro ao inicializar dados:", erro);
+    renderizarAvisoCarregamentoDados(window.ApiClient.listarAvisosCarregamento());
     const grid = document.getElementById("grid-reservatorios");
     if (grid) {
-      grid.innerHTML =
-        "<p style='color: #8e8e8e;'>Erro ao carregar dados históricos. Verifique os arquivos JSON.</p>";
+      grid.textContent = "Não foi possível iniciar o painel. Consulte o aviso de carregamento para identificar o problema.";
     }
   }
 }
@@ -66,6 +67,7 @@ async function carregarMesPorData(dataStr) {
     if (dadosMes && dadosMes.dias) {
       Object.assign(window.bancoDeDados.historico, dadosMes.dias);
     }
+    renderizarAvisoCarregamentoDados(window.ApiClient.listarAvisosCarregamento());
   }
 }
 document.addEventListener("DOMContentLoaded", () => {
@@ -136,12 +138,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('view') === 'exceccoes') {
-    setTimeout(() => {
-      const tabExceccoes = document.getElementById("tab-exceccoes");
-      if (tabExceccoes) tabExceccoes.click();
-    }, 400);
-  } else if (urlParams.get('view') === 'configuracoes') {
+  if (urlParams.get('view') === 'configuracoes') {
     document.body.classList.add("is-config-window-active");
     setTimeout(() => {
       const painelConfig = document.getElementById("painel-configuracoes");
@@ -402,6 +399,9 @@ function inicializarDashboard() {
   const seletorEscopo = document.getElementById("seletor-escopo-operacional");
   preencherSeletorFiltro(ultimaDataDoBanco, "TODOS");
   inicializarNavegacao();
+  if (new URLSearchParams(window.location.search).get("view") === "exceccoes") {
+    document.getElementById("tab-exceccoes")?.click();
+  }
   inicializarAnalises();
   inicializarEngenharia();
   inicializarConfiguracoes();

@@ -162,7 +162,7 @@ class AuthRepository {
 
     if (user.bloqueado) {
       await this.registrarAuditoria("LOGIN_BLOQUEADO", username, "Tentativa de login em conta bloqueada");
-      throw new Error("Conta bloqueada por segurança. Utilize a redefinição por e-mail.");
+      throw new Error("Conta bloqueada por segurança. Procure o responsável técnico do sistema por um canal institucional.");
     }
 
     if (user.senha !== senha) {
@@ -171,7 +171,7 @@ class AuthRepository {
         user.bloqueado = true;
         await this.salvarUsuario(user);
         await this.registrarAuditoria("CONTA_BLOQUEADA_FORCA_BRUTA", username, "Bloqueio automático após 3 falhas");
-        throw new Error("Conta bloqueada por segurança após 3 tentativas incorretas. Utilize a redefinição por e-mail.");
+        throw new Error("Conta bloqueada por segurança após 3 tentativas incorretas. Procure o responsável técnico do sistema por um canal institucional.");
       }
       await this.salvarUsuario(user);
       await this.registrarAuditoria("LOGIN_FALHOU", username, `Senha incorreta (tentativa ${user.tentativasFalhas}/3)`);
@@ -237,32 +237,6 @@ class AuthRepository {
     return true;
   }
 
-  async solicitarRecuperacao(email) {
-    const db = await this.abrirDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction("usuarios", "readonly");
-      const store = transaction.objectStore("usuarios");
-      const req = store.getAll();
-
-      req.onsuccess = async () => {
-        const usuarios = req.result || [];
-        const user = usuarios.find(u => u.email === email);
-        if (!user) {
-          await this.registrarAuditoria("RECUPERACAO_FALHOU", email, "E-mail não cadastrado");
-          return reject(new Error("E-mail não encontrado no sistema."));
-        }
-
-        user.requerRedefinicao = true;
-        user.bloqueado = false;
-        await this.salvarUsuario(user);
-        await this.registrarAuditoria("SOLICITAR_RECUPERACAO", user.username, "Solicitação de redefinição de acesso por e-mail");
-
-        const mailtoLink = `mailto:${user.email}?subject=Redefinição de Acesso - CCO SAMAE&body=Olá ${user.username}, clique no link para redefinir sua senha no sistema CCO SAMAE.`;
-        resolve(mailtoLink);
-      };
-      req.onerror = () => reject(req.error);
-    });
-  }
 }
 
 window.AuthRepository = new AuthRepository();

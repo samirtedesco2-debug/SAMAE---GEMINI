@@ -4,14 +4,12 @@ O arquivo `src/authUI.js` gerencia a interface de usuário relacionada à autent
 
 ## Responsabilidades
 - **Renderização da Tela de Login em Tela Cheia**:
-  - Overlay imersivo com fundo visual vetorial SVG em alta resolução codificado em Base64 (`btoa`), retratando uma estrutura de reservatório industrial de concreto brutalista com desfoque atmosférico (`backdrop-filter: blur(14px)`) e vinheta noturna.
-  - Formulário de credenciais com validação em tempo real e feedback visual de erros.
-- **Modais de Redefinição e Primeiro Acesso**:
-  - Exibição automática do modal de troca de senha obrigatória quando a flag `primeiroAcesso` ou `requerRedefinicao` está ativa.
+  - Overlay com imagem de fundo carregada de `manual-imagens/login.jfif`.
+  - Formulário de credenciais com campos rotulados e feedback visual quando a autenticação falha.
+- **Primeiro Acesso e Recuperação**:
+  - Exibição automática da troca de senha obrigatória quando a flag `primeiroAcesso` está ativa.
+  - A interface informa que a recuperação automática não está disponível e orienta procurar o responsável técnico por um canal institucional; informar um e-mail não comprova a identidade.
   - Validação estrita de complexidade de senha na UI.
-- **Painel ADMIN de Gerenciamento de Usuários**:
-  - Interface dedicada acessível através do botão `#btn-gerenciar-usuarios` no painel de configurações (disponível exclusivamente para perfis `ADMIN`).
-  - Formulário de cadastro de novos operadores exigindo obrigatoriamente o e-mail corporativo individual.
 - **Integração com o Fluxo de Inicialização**:
-  - Acionamento imediato no evento `DOMContentLoaded` (`src/app.js`) para garantir que nenhuma tela operacional seja acessada sem autenticação prévia.
-
+  - A verificação da sessão é iniciada no evento `DOMContentLoaded` de `src/app.js`. A sessão local é guardada em `localStorage`; isso controla a interface, mas não fornece autenticação validada por servidor.
+  - Após autenticação bem-sucedida, a página é recarregada. A ação de sair, configurada por `rbac.js`, remove a sessão local, mas não altera nem desbloqueia a conta.

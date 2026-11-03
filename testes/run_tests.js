@@ -6,6 +6,9 @@ const executarTestesMultiwindowSync = require('./test_multiwindow_sync');
 const executarTestesStorageRepository = require('./test_storage_repository');
 const executarTestesTempoAlarme = require('./test_alarm_timing');
 const executarTestesApiClientConfig = require('./test_api_client_config');
+const executarTestesRecuperacaoDesativada = require('./test_auth_recovery_disabled');
+const executarTestesFluxoLogin = require('./test_auth_login_flow');
+const executarTestesAvisoCarregamento = require('./test_data_load_status_ui');
 
 async function executarSuíte() {
   console.log("==========================================================");
@@ -16,11 +19,14 @@ async function executarSuíte() {
   executarTestesMural();
   executarTestesRegras();
   executarTestesMultiwindowSync();
+  executarTestesRecuperacaoDesativada();
+  await executarTestesFluxoLogin();
+  executarTestesAvisoCarregamento();
   executarTestesTempoAlarme();
   await executarTestesApiClientConfig();
   await executarTestesStorageRepository();
   console.log("\n==========================================================");
-  console.log("🎉 TODOS OS MÓDULOS FORAM VALIDADOS COM 100% DE SUCESSO!     ");
+  console.log("✓ Todos os testes passaram.");
   console.log("==========================================================");
 }
 

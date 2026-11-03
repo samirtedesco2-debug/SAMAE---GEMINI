@@ -30,5 +30,12 @@ Este documento registra as sugestões de evolução arquitetural e funcional lev
 * **Descrição:** Aprimoramento da exportação de relatórios de alarmes para formatos estruturados (PDF/CSV) contendo timbre oficial do SAMAE, sumário estatístico de ocorrências e identificação do operador responsável pelo plantão.
 * **Benefício:** Atendimento rigoroso a exigências regulatórias e auditorias externas.
 
+## 4. 🔐 Autenticação e Autorização para Uso em Produção
+
+### Centralização dos Controles de Acesso em um Serviço Confiável
+* **Descrição:** Quando houver infraestrutura de servidor disponível, migrar a validação de identidade, autorização por perfil, recuperação de senha e auditoria para um serviço confiável. O serviço deverá armazenar senhas com hash apropriado, emitir e validar sessões e permitir redefinição somente após comprovação de identidade por canal verificado.
+* **Motivo:** Na versão local, os dados e as verificações de acesso ficam no navegador e podem ser alterados por alguém com acesso ao dispositivo. O RBAC atual controla a interface, mas não oferece autorização resistente a adulteração.
+* **Até a implementação:** Tratar o login como uma barreira básica da interface, restringir o uso às estações controladas e não depender dele para proteger dados sensíveis ou permissões de produção.
+
 ---
 *SAMAE - Centro de Controle Operacional (CCO)*

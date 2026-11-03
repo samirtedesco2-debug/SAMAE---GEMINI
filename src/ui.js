@@ -2778,3 +2778,24 @@ function atualizarHeaderEnxutoInvestigacao(painelOperacional, filtroSelecionado,
     if (resumoOperacional) resumoOperacional.hidden = typeof analiseReservatorioAberta !== 'undefined' ? analiseReservatorioAberta : false;
   }
 }
+
+function renderizarAvisoCarregamentoDados(problemas) {
+  const aviso = document.getElementById("data-load-status");
+  if (!aviso) return;
+
+  aviso.hidden = problemas.length === 0;
+  aviso.replaceChildren();
+  if (problemas.length === 0) return;
+
+  const titulo = document.createElement("strong");
+  titulo.textContent = "Atenção: alguns dados podem estar incompletos ou não ter sido persistidos. Verifique os itens abaixo antes de usá-los na operação.";
+  aviso.appendChild(titulo);
+
+  const lista = document.createElement("ul");
+  problemas.forEach(({ recurso, motivo }) => {
+    const item = document.createElement("li");
+    item.textContent = `${recurso}: ${motivo}`;
+    lista.appendChild(item);
+  });
+  aviso.appendChild(lista);
+}

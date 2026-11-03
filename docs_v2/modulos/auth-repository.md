@@ -2,19 +2,21 @@
 
 O arquivo `src/authRepository.js` implementa a camada de repositório e persistência durável para autenticação, controle de usuários e auditoria de segurança no sistema **CCO SAMAE**.
 
+> Os dados de autenticação permanecem no navegador. Este mecanismo é um controle básico da interface e não substitui autenticação ou autorização validadas por servidor.
+
 ## Responsabilidades
-- **Gerenciamento de Bancos de Dados IndexedDB Isolados**:
-  - **`SamaeAuthDB` (Versão 1)**: Banco de dados dedicado exclusivamente à autenticação, contendo a store `usuarios` e a store `auditoria`. Isso elimina completamente conflitos de versão (*VersionError* ou *NotFoundError*) com outros storages da aplicação.
-  - **`SamaeHandlesDB` (Versão 1)**: Gerencia exclusivamente os *handles* de arquivos do File System Access API.
-- **Autoinicialização de Usuários Padrão de Fábrica**:
-  - `admin.samae` (`ADMIN` - Senha inicial: `Admin@2026`)
-  - `agent.samae` (`Agent` - Senha inicial: `Agent@2026`)
+- **Persistência local de autenticação**:
+  - **`SamaeAuthDB` (Versão 1)**: Contém as stores `usuarios` e `auditoria`. O banco `SamaeHandlesDB`, usado para *handles* do File System Access API, é gerenciado separadamente em `app.js`.
+  - A separação dos bancos evita compartilhar stores e versões entre essas responsabilidades, mas não elimina qualquer falha possível do IndexedDB.
+- **Autoinicialização de contas de demonstração**:
+  - Na primeira inicialização de uma store `usuarios` vazia, são criadas as contas `admin.samae` (`ADMIN`) e `agent.samae` (`Agent`).
+  - As senhas iniciais de demonstração estão definidas no código-fonte. Não as trate como segredos nem use essas contas em produção; altere as credenciais antes de disponibilizar o sistema em qualquer ambiente compartilhado.
 - **Políticas de Segurança e Validação**:
   - Validação rigorosa de complexidade de senha via Regex (`/^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/`).
-  - Monitoramento de tentativas de login falhas com bloqueio automático de conta na 3ª tentativa consecutiva (`bloqueado: true`).
-  - Geração de trilha de auditoria persistida na store `auditoria` do IndexedDB e na variável global `window.samaeSecurityLog`.
+  - O contador de tentativas e o bloqueio após três senhas incorretas são associados à conta tentada. Um login bem-sucedido zera o contador; sair remove apenas a sessão e não desbloqueia contas.
+  - Os eventos de auditoria são mantidos em `window.samaeSecurityLog` e gravados em `SamaeAuthDB` quando o armazenamento está disponível; a gravação local não é uma trilha inviolável.
+  - A interface não oferece recuperação segura. `atualizarSenha()` altera a senha e limpa o bloqueio local, mas não verifica identidade por um serviço confiável; não é um mecanismo adequado para recuperar contas em produção.
 - **Gerenciamento de Sessão e Redefinição**:
   - Verificação de sessão ativa no `localStorage`.
-  - Controle de flags `primeiroAcesso` e `requerRedefinicao`.
-  - Funções para cadastro de novos usuários com e-mail corporativo obrigatório (exclusivo para `ADMIN`).
-
+  - Controle da flag `primeiroAcesso`.
+  - Cadastro de usuários exige e-mail corporativo e verifica o papel ADMIN no repositório local. Como não há servidor, essa verificação não oferece autorização resistente a adulteração.

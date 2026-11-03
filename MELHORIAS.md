@@ -18,7 +18,7 @@ Este documento registra o histórico cronológico de melhorias, refatorações e
 
 ### 3. Fundo Visual Imersivo de Reservatório Industrial (Base64 SVG)
 * **Data:** 27 de Outubro de 2026
-* **Descrição:** Substituição do fundo da tela de login por uma arte vetorial SVG em alta resolução codificada em Base64 (`btoa`), retratando uma estrutura monumental de reservatório industrial de concreto brutalista com desfoque atmosférico (`backdrop-filter: blur(14px)`) e vinheta noturna.
+* **Descrição:** Na versão daquela data, o fundo da tela de login foi substituído por uma arte vetorial SVG em alta resolução codificada em Base64 (`btoa`), retratando uma estrutura monumental de reservatório industrial de concreto brutalista com desfoque atmosférico (`backdrop-filter: blur(14px)`) e vinheta noturna. A implementação atual carrega `manual-imagens/login.jfif`.
 
 ### 4. Painel ADMIN de Gerenciamento de Usuários
 * **Data:** 27 de Outubro de 2026
@@ -97,6 +97,12 @@ Este documento registra o histórico cronológico de melhorias, refatorações e
 * **Agora:** Contadores refletem todos os alarmes ativos, com nota explicativa; alarmes reconhecidos mantêm contraste e exibem selo próprio; cards e Kanban abrem detalhes com Enter/Espaço, e a tabela tem botão explícito para abrir o reservatório. Estados vazios agora permitem limpar a busca ou voltar a todos os alarmes.
 * **Por quê:** Manter os indicadores coerentes com a lista e tornar o estado do reconhecimento, a navegação e os resultados da busca mais claros.
 * **Validação:** Suíte automatizada, verificações de sintaxe e revisão do diff.
+
+### 16. Avisos de dados, autenticação e testes automatizados de navegador
+* **Data:** 3 de Novembro de 2026
+* **Agora:** Falhas de carregamento de dados são apresentadas no painel; a recuperação por e-mail foi desativada porque a versão local não verifica identidade; rótulos e preenchimento automático dos campos de login foram revisados; e o mural aberto por `?view=exceccoes` é selecionado após a inicialização da navegação.
+* **Validação:** CI verifica a sintaxe JavaScript e executa testes unitários e E2E no Chromium. Os cenários de navegador cobrem login, logout e novo login, isolamento de bloqueio entre contas, aviso de dados incompletos e persistência/sincronização de ACK. O usuário também informou que todos os itens do ensaio manual com operador foram concluídos com sucesso.
+* **Limitação:** a autenticação e os dados permanecem locais ao navegador. A aprovação dos testes automatizados e do ensaio operacional não substitui autenticação, autorização e persistência confiáveis para produção.
 
 ---
 *SAMAE - Centro de Controle Operacional (CCO)*

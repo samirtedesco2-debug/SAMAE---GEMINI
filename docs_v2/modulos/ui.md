@@ -2,6 +2,8 @@
 
 O arquivo `src/ui.js` é responsável por renderizar a interface de usuário (DOM).
 
+Também exibe os avisos de carregamento parcial dos dados, mantendo a apresentação desses estados fora do orquestrador `app.js`.
+
 ## Componentes Principais
 - **`criarPainelAutonomiaPreditiva`**: Renderiza o painel modal/expansível de autonomia preditiva contendo:
   - Card 1: Status do Reservatório (Nível atual, tendência, saldo última hora em vermelho se negativo via `--status-critical-color`).

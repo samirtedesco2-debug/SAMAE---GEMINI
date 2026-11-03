@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
-function criarApiClient(estadoInicial, configuracao) {
+function criarApiClient(estadoInicial, configuracao, fetchMock) {
   const localStorageData = {};
   const window = {
     ccoReconhecidos: new Map(estadoInicial.reconhecidos),
@@ -12,7 +12,7 @@ function criarApiClient(estadoInicial, configuracao) {
   };
   const context = {
     window,
-    fetch: async () => ({ ok: true, json: async () => configuracao }),
+    fetch: fetchMock || (async () => ({ ok: true, json: async () => configuracao })),
     localStorage: {
       getItem: (chave) => localStorageData[chave] ?? null,
       setItem: (chave, valor) => { localStorageData[chave] = String(valor); }
@@ -59,7 +59,75 @@ async function executarTestesApiClientConfig() {
   assert.notStrictEqual(naoCarregado.localStorageData.samae_cco_reconhecidos, undefined);
   assert.notStrictEqual(naoCarregado.localStorageData.samae_cco_incidents_log, undefined);
 
+  const respostas = {
+    "indice_datas.json": { ok: true, json: async () => ({ datasDisponiveis: ["01/10/2026", "01/11/2026"] }) },
+    "dados_historicos/config_reservatorios.json": { ok: false, status: 404 },
+    "dados_historicos/taxonomia_alarmes.json": { ok: true, json: async () => ({}) },
+    "dados_historicos/2026_10.json": { ok: true, json: async () => ({ dias: { "01/10/2026": { dados: [] } } }) },
+    "dados_historicos/2026_11.json": { ok: false, status: 404 }
+  };
+  const comFalhas = criarApiClient(
+    { carregado: false, reconhecidos: [], logs: [] },
+    {},
+    async (recurso) => respostas[recurso]
+  );
+  const banco = await comFalhas.window.ApiClient.inicializarBanco();
+  assert.strictEqual(Object.keys(banco.historico).length, 1);
+  assert.strictEqual(
+    JSON.stringify(comFalhas.window.ApiClient.listarAvisosCarregamento().map(({ recurso }) => recurso).sort()),
+    JSON.stringify(["dados_historicos/2026_11.json", "dados_historicos/config_reservatorios.json"])
+  );
+  assert.strictEqual(banco.configuracoes && Object.keys(banco.configuracoes).length, 0);
+
+  respostas["dados_historicos/2026_11.json"] = {
+    ok: true,
+    json: async () => ({ dias: { "01/11/2026": { dados: [] } } })
+  };
+  await comFalhas.window.ApiClient.carregarMes("2026_11");
+  assert.strictEqual(
+    JSON.stringify(comFalhas.window.ApiClient.listarAvisosCarregamento().map(({ recurso }) => recurso)),
+    JSON.stringify(["dados_historicos/config_reservatorios.json"])
+  );
+
+  const indiceIndisponivel = criarApiClient(
+    { carregado: false, reconhecidos: [], logs: [] },
+    {},
+    async (recurso) => {
+      if (recurso === "indice_datas.json") return { ok: false, status: 500 };
+      return { ok: false, status: 404 };
+    }
+  );
+  await assert.rejects(indiceIndisponivel.window.ApiClient.inicializarBanco(), /índice de datas/);
+  assert.strictEqual(
+    JSON.stringify(indiceIndisponivel.window.ApiClient.listarAvisosCarregamento().map(({ recurso }) => recurso).sort()),
+    JSON.stringify([
+      "dados_historicos/config_reservatorios.json",
+      "dados_historicos/taxonomia_alarmes.json",
+      "indice_datas.json"
+    ])
+  );
+
+  const respostasCompletas = {
+    "indice_datas.json": { ok: true, json: async () => ({ datasDisponiveis: ["01/10/2026"] }) },
+    "dados_historicos/config_reservatorios.json": { ok: true, json: async () => ({ reservatorios: [] }) },
+    "dados_historicos/taxonomia_alarmes.json": { ok: true, json: async () => ({ alarmes: [] }) },
+    "dados_historicos/2026_10.json": { ok: true, json: async () => ({ dias: { "01/10/2026": { reservatorios: [] } } }) }
+  };
+  const cargaCompleta = criarApiClient(
+    { carregado: false, reconhecidos: [], logs: [] },
+    {},
+    async (recurso) => respostasCompletas[recurso]
+  );
+  const bancoCompleto = await cargaCompleta.window.ApiClient.inicializarBanco();
+  assert.strictEqual(bancoCompleto.datasDisponiveis.length, 1);
+  assert.strictEqual(Object.keys(bancoCompleto.historico).length, 1);
+  assert.strictEqual(bancoCompleto.configuracoes.reservatorios.length, 0);
+  assert.strictEqual(cargaCompleta.window.ApiClient.listarAvisosCarregamento().length, 0);
+
   console.log("✓ Estado local carregado prevalece; configuração continua como fallback inicial.");
+  console.log("✓ Falhas de arquivos são reportadas e removidas quando a carga posterior funciona.");
+  console.log("✓ Falha do índice preserva também os avisos dos demais recursos.");
+  console.log("✓ Índice, configuração, taxonomia e histórico carregam sem avisos quando estão válidos.");
 }
 
 module.exports = executarTestesApiClientConfig;
