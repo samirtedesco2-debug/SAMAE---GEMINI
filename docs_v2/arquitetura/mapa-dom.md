@@ -36,6 +36,7 @@ Este documento fornece um mapa completo de todos os elementos estruturais (`head
 - `#tab-operacional` (class: `.view-tab.is-active`): Aba da Visão Operacional.
 - `#tab-analitico` (class: `.view-tab`): Aba da Visão Analítica.
 - `#tab-engenharia` (class: `.view-tab`): Aba da Visão de Engenharia.
+- `#tab-exceccoes` (class: `.view-tab`): Aba do Mural de Alertas CCO.
 
 ### Anunciador de Alarme CCO (`#cco-alarm-banner`)
 - **`.cco-banner-content`**: Conteúdo do banner de alerta preditivo.
@@ -62,6 +63,7 @@ Este documento fornece um mapa completo de todos os elementos estruturais (`head
   - `#operational-data-quality` (class: `.operational-data-quality`): Indicador de qualidade de dados.
 - `#grid-reservatorios` (class: `.dashboard-grid`): **Grid principal onde os cards dos reservatórios são injetados.**
 - `#analise-grafico-reservatorio` (class: `.reservoir-analysis-view`): Visão de gráfico detalhado por reservatório.
+- `#cco-lean-investigation-header` (class: `.cco-lean-investigation-header`): Cabeçalho contextual exibido ao filtrar um reservatório; quando a investigação é aberta pelo Mural, substitui visualmente o cabeçalho global e as abas, identifica o reservatório e apresenta `#cco-investigation-date` e `#cco-investigation-updated-at`. O botão `#btn-voltar-mural-alarmes` retorna ao Mural.
 
 ### Visão Analítica (`#painel-analitico`)
 - **`.analysis-intro`**: Introdução da visão analítica.

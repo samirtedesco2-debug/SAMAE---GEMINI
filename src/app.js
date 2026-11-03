@@ -133,6 +133,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && window.veioDeAlertasCCO) {
+      const btnVoltar = document.getElementById("btn-voltar-mural-alarmes");
+      if (btnVoltar) {
+        btnVoltar.click();
+      } else {
+        window.veioDeAlertasCCO = false;
+        const tabExceccoes = document.getElementById("tab-exceccoes");
+        if (tabExceccoes) tabExceccoes.click();
+      }
+    }
+  });
+
   // Tratamento Global de Erros Assíncronos
   window.addEventListener("unhandledrejection", (event) => {
     console.warn("Aviso assíncrono capturado:", event.reason);
@@ -769,6 +782,9 @@ function inicializarNavegacao() {
 
   function ativarAba(abaAtiva) {
     document.body.classList.toggle("is-cco-fullscreen-active", abaAtiva.id === "tab-exceccoes");
+    if (abaAtiva.id !== "tab-operacional") {
+      document.body.classList.remove("is-cco-investigation-active");
+    }
     abas.forEach((aba) => {
       const ativa = aba === abaAtiva;
       aba.classList.toggle("is-active", ativa);
@@ -1089,7 +1105,13 @@ async function renderizarDashboard() {
   const visaoGeral = filtroSelecionado === "TODOS";
 
   if (typeof atualizarHeaderEnxutoInvestigacao === "function") {
-    atualizarHeaderEnxutoInvestigacao(painelOperacional, filtroSelecionado, reservatorios);
+    atualizarHeaderEnxutoInvestigacao(
+      painelOperacional,
+      filtroSelecionado,
+      reservatorios,
+      dataSelecionada,
+      dadosDoDia,
+    );
   }
   const datas = banco.datasDisponiveis;
   const indiceData = datas.indexOf(dataSelecionada);

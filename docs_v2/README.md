@@ -2,7 +2,7 @@
 
 Esta é a documentação técnica e operacional do **Nexo Hídrico**, sistema de monitoramento de reservatórios, alarmes e apoio à operação.
 
-![Logotipo Nexo Hídrico](../manual-imagens/nexo-hidrico-logo.svg)
+![Logotipo Nexo Hídrico](../manual-imagens/nexo-hidrico-logo.jpg)
 
 ## Sobre o nome
 

@@ -413,34 +413,21 @@ function criarPainelInformativoAlarme(
   const titulo = document.createElement("h3");
   titulo.id = "reservoir-alarm-info-title";
   titulo.textContent = "Informativo do alarme";
-  const fechar = document.createElement("button");
-  fechar.type = "button";
-  fechar.className = "reservoir-alarm-info-close";
-  fechar.textContent = "Fechar";
-  fechar.addEventListener("click", () => {
-    const seletorFiltro = document.getElementById("seletor-filtro");
-    seletorFiltro.value = "TODOS";
-    seletorFiltro.dispatchEvent(new Event("change", { bubbles: true }));
-  });
   const cabecalho = document.createElement("div");
   cabecalho.className = "reservoir-alarm-info-heading";
   cabecalho.append(titulo);
-
-  if (window.veioDeAlertasCCO) {
-    const btnVoltarAlertas = document.createElement("button");
-    btnVoltarAlertas.type = "button";
-    btnVoltarAlertas.className = "reservoir-alarm-info-close";
-    btnVoltarAlertas.style.background = "var(--accent-color)";
-    btnVoltarAlertas.style.color = "#fff";
-    btnVoltarAlertas.textContent = "← Voltar para Alertas";
-    btnVoltarAlertas.addEventListener("click", () => {
-      window.veioDeAlertasCCO = false;
-      const tabExceccoes = document.getElementById("tab-exceccoes");
-      if (tabExceccoes) tabExceccoes.click();
+  if (!window.veioDeAlertasCCO) {
+    const fechar = document.createElement("button");
+    fechar.type = "button";
+    fechar.className = "reservoir-alarm-info-close";
+    fechar.textContent = "Fechar";
+    fechar.addEventListener("click", () => {
+      const seletorFiltro = document.getElementById("seletor-filtro");
+      seletorFiltro.value = "TODOS";
+      seletorFiltro.dispatchEvent(new Event("change", { bubbles: true }));
     });
-    cabecalho.append(btnVoltarAlertas);
+    cabecalho.append(fechar);
   }
-  cabecalho.append(fechar);
 
   const identificacao = document.createElement("p");
   identificacao.className = "reservoir-alarm-info-id";
@@ -641,15 +628,15 @@ function criarPainelAutonomiaPreditiva(
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
       <div>
         <h3 style="margin: 0; font-size: 1.25rem; color: var(--text-color); display: flex; align-items: center; gap: 8px;">
-          <span>📊</span> Autonomia Preditiva & Alertas Baseados em Tempo (${reservatorio?.nome || chave})
+          <span>📊</span> Autonomia Preditiva & Alertas Baseados em Tempo
         </h3>
-        <p style="margin: 4px 0 0 0; font-size: 0.9rem; color: var(--muted-color);">Visualização operacional em tempo real do motor de projeção de níveis e vazões do CCO SAMAE.</p>
+        <div style="margin: 4px 0 0 28px; font-size: 0.95rem; font-weight: 600; color: var(--accent-color);">${reservatorio?.nome || chave}</div>
       </div>
       <div style="display: flex; align-items: center; gap: 12px;">
         <span style="font-size: 0.85rem; padding: 4px 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 12px; color: ${corConf}; font-weight: 600;" title="Confiabilidade baseada na densidade de leituras válidas">
           Confiabilidade: ${conf}
         </span>
-        <button type="button" id="btn-fechar-esquema-autonomia" class="btn-guardar-config" style="padding: 8px 16px; background: var(--surface-bg); color: var(--accent-color); border: 1px solid var(--accent-color); cursor: pointer;">Voltar ao Monitoramento</button>
+        ${window.veioDeAlertasCCO ? '' : '<button type="button" id="btn-fechar-esquema-autonomia" class="btn-guardar-config" style="padding: 8px 16px; background: var(--surface-bg); color: var(--accent-color); border: 1px solid var(--accent-color); cursor: pointer;">Voltar ao Monitoramento</button>'}
       </div>
     </div>
 
@@ -2729,14 +2716,31 @@ window.toggleAckMural = async function(chave, severidade, nome) {
     );
   }
   salvarReconhecidosLocalStorage();
+  const idRes = obterIdentificacaoReservatorio(chave) || chave;
+  if (reconhecido) {
+    mostrarToast(`Reconhecimento do alarme ${idRes} revogado.`, "atencao");
+  } else {
+    mostrarToast(`Alarme ${idRes} reconhecido com sucesso por ${session.username || 'Operador'}.`, "sucesso");
+  }
   renderizarDashboardExceccoes();
 };
 
-function atualizarHeaderEnxutoInvestigacao(painelOperacional, filtroSelecionado, reservatorios) {
+function atualizarHeaderEnxutoInvestigacao(
+  painelOperacional,
+  filtroSelecionado,
+  reservatorios,
+  dataSelecionada,
+  dadosDoDia,
+) {
   let headerEnxuto = document.getElementById("cco-lean-investigation-header");
   const resumoOperacional = painelOperacional.querySelector(".operational-brief");
+  const filtroDeReservatorio = filtroSelecionado.startsWith("reservatorio:");
+  document.body.classList.toggle(
+    "is-cco-investigation-active",
+    filtroDeReservatorio && window.veioDeAlertasCCO === true,
+  );
 
-  if (filtroSelecionado.startsWith("reservatorio:")) {
+  if (filtroDeReservatorio) {
     const chave = filtroSelecionado.slice("reservatorio:".length);
     const res = reservatorios[chave];
     const nomeRes = res ? (res.nome || chave) : chave;
@@ -2746,14 +2750,17 @@ function atualizarHeaderEnxutoInvestigacao(painelOperacional, filtroSelecionado,
     if (!headerEnxuto) {
       headerEnxuto = document.createElement("div");
       headerEnxuto.id = "cco-lean-investigation-header";
-      headerEnxuto.style.cssText = "background: var(--surface-bg); border: 1px solid var(--border-color); border-left: 5px solid var(--accent-color); border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;";
+      headerEnxuto.className = "cco-lean-investigation-header";
+      headerEnxuto.setAttribute("role", "region");
       painelOperacional.insertBefore(headerEnxuto, resumoOperacional);
     }
     headerEnxuto.hidden = false;
     headerEnxuto.innerHTML = `
       <div>
         <span style="font-size: 0.7rem; color: var(--accent-color); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">Centro de Controle Operacional · Investigação de Alarme</span>
-        <h2 style="font-size: 1.25rem; color: var(--heading-color); margin-top: 4px;">Reservatório: ${nomeRes} (${chave})</h2>
+        <h2 id="cco-investigation-title" style="font-size: 1.25rem; color: var(--heading-color); margin-top: 4px;">${nomeRes}</h2>
+        <p class="cco-investigation-metadata"><strong>Data investigada:</strong> <span id="cco-investigation-date"></span></p>
+        <p class="cco-investigation-metadata"><strong>Última atualização dos dados:</strong> <span id="cco-investigation-updated-at"></span></p>
       </div>
       <div>
         <button type="button" id="btn-voltar-mural-alarmes" class="btn-guardar-config" style="padding: 8px 14px; font-size: 0.82rem; background: var(--accent-color); color: #fff; border: none; cursor: pointer; border-radius: 7px;">
@@ -2761,6 +2768,16 @@ function atualizarHeaderEnxutoInvestigacao(painelOperacional, filtroSelecionado,
         </button>
       </div>
     `;
+
+    headerEnxuto.setAttribute("aria-labelledby", "cco-investigation-title");
+    headerEnxuto.querySelector("#cco-investigation-date").textContent =
+      dataSelecionada || "Não informada";
+    const ultimaAtualizacao =
+      typeof dadosDoDia?.ultimaAtualizacao === "string"
+        ? dadosDoDia.ultimaAtualizacao.trim()
+        : "";
+    headerEnxuto.querySelector("#cco-investigation-updated-at").textContent =
+      ultimaAtualizacao || "Não informada";
 
     const btnVoltar = headerEnxuto.querySelector("#btn-voltar-mural-alarmes");
     if (btnVoltar) {
@@ -2771,6 +2788,7 @@ function atualizarHeaderEnxutoInvestigacao(painelOperacional, filtroSelecionado,
       };
     }
   } else {
+    document.body.classList.remove("is-cco-investigation-active");
     if (headerEnxuto) headerEnxuto.hidden = true;
     if (resumoOperacional) resumoOperacional.hidden = typeof analiseReservatorioAberta !== 'undefined' ? analiseReservatorioAberta : false;
   }
@@ -2796,3 +2814,29 @@ function renderizarAvisoCarregamentoDados(problemas) {
   });
   aviso.appendChild(lista);
 }
+
+window.mostrarToast = function(mensagem, tipo = "sucesso") {
+  let container = document.getElementById("nexo-toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "nexo-toast-container";
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `nexo-toast ${tipo}`;
+  toast.innerHTML = `
+    <span>${mensagem}</span>
+    <button type="button" style="background:none;border:none;color:inherit;cursor:pointer;font-weight:bold;font-size:1rem;" aria-label="Fechar notificação">&times;</button>
+  `;
+
+  const fechar = () => {
+    toast.style.animation = "toastOut 0.2s ease-in forwards";
+    setTimeout(() => toast.remove(), 200);
+  };
+
+  toast.querySelector("button").onclick = fechar;
+  container.appendChild(toast);
+
+  setTimeout(fechar, 4000);
+};

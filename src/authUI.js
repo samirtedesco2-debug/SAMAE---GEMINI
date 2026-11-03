@@ -64,9 +64,10 @@ class AuthUI {
         <div>
           <img
             class="auth-brand-logo"
-            src="manual-imagens/nexo-hidrico-logo.svg"
-            alt="Nexo Hídrico — Monitoramento e operação"
+            src="manual-imagens/nexo-hidrico-logo.jpg"
+            alt="Logo Nexo Hídrico"
           >
+          <p class="auth-brand-tagline">Inteligência Operacional</p>
           <h2 style="color: #f8fafc; margin: 0 0 6px 0; font-size: 1.6rem; font-weight: 700;">Acesso ao Sistema</h2>
           <p style="color: #94a3b8; margin: 0; font-size: 0.9rem;">Insira suas credenciais para continuar</p>
         </div>
@@ -82,10 +83,31 @@ class AuthUI {
 
           <div style="display: flex; flex-direction: column; gap: 6px;">
             <label for="login-password" style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">Senha</label>
-            <input type="password" id="login-password" autocomplete="current-password" required placeholder="••••••••" style="
-              background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.12); color: #fff;
-              padding: 12px; border-radius: 8px; font-size: 0.95rem; outline: none;
-            ">
+            <div class="login-password-input-wrap">
+              <input type="password" id="login-password" autocomplete="current-password" required placeholder="••••••••" style="
+                background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.12); color: #fff;
+                width: 100%; padding: 12px 88px 12px 12px; border-radius: 8px; font-size: 0.95rem; outline: none;
+              ">
+              <button
+                type="button"
+                id="login-password-toggle"
+                class="login-password-toggle"
+                aria-label="Mostrar senha"
+                aria-controls="login-password"
+                aria-pressed="false"
+              >
+                <svg id="login-password-eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg id="login-password-eye-off-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+                  <path d="m3 3 18 18"></path>
+                  <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"></path>
+                  <path d="M9.9 5.2A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a15.7 15.7 0 0 1-3.1 3.9"></path>
+                  <path d="M6.2 6.2C3.5 8.1 2 12 2 12s3.6 7 10 7c1 0 1.9-.2 2.8-.5"></path>
+                </svg>
+              </button>
+            </div>
           </div>
 
           <div id="login-error-msg" role="alert" style="color: #f87171; font-size: 0.85rem; display: none; background: rgba(248,113,113,0.1); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(248,113,113,0.3);"></div>
@@ -105,6 +127,19 @@ class AuthUI {
         </div>
       </div>
     `;
+
+    const campoSenha = document.getElementById("login-password");
+    const botaoVisibilidadeSenha = document.getElementById("login-password-toggle");
+    const iconeMostrarSenha = document.getElementById("login-password-eye-icon");
+    const iconeOcultarSenha = document.getElementById("login-password-eye-off-icon");
+    botaoVisibilidadeSenha.onclick = () => {
+      const mostrarSenha = campoSenha.type === "password";
+      campoSenha.type = mostrarSenha ? "text" : "password";
+      iconeMostrarSenha.toggleAttribute("hidden", mostrarSenha);
+      iconeOcultarSenha.toggleAttribute("hidden", !mostrarSenha);
+      botaoVisibilidadeSenha.setAttribute("aria-label", mostrarSenha ? "Ocultar senha" : "Mostrar senha");
+      botaoVisibilidadeSenha.setAttribute("aria-pressed", String(mostrarSenha));
+    };
 
     document.getElementById("nexo-login-form").onsubmit = async (e) => {
       e.preventDefault();

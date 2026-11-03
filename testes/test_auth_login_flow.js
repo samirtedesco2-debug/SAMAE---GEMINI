@@ -15,7 +15,42 @@ function criarContextoLogin(autenticar) {
     },
     "nexo-login-form": { onsubmit: null },
     "login-username": { value: "operador.teste" },
-    "login-password": { value: "Senha@2026" },
+    "login-password": { value: "Senha@2026", type: "password" },
+    "login-password-eye-icon": {
+      attributes: {},
+      get hidden() {
+        return "hidden" in this.attributes;
+      },
+      toggleAttribute(name, force) {
+        if (force) {
+          this.attributes[name] = "";
+        } else {
+          delete this.attributes[name];
+        }
+      }
+    },
+    "login-password-eye-off-icon": {
+      attributes: { hidden: "" },
+      get hidden() {
+        return "hidden" in this.attributes;
+      },
+      toggleAttribute(name, force) {
+        if (force) {
+          this.attributes[name] = "";
+        } else {
+          delete this.attributes[name];
+        }
+      }
+    },
+    "login-password-toggle": {
+      attributes: {
+        "aria-label": "Mostrar senha",
+        "aria-pressed": "false"
+      },
+      setAttribute(name, value) {
+        this.attributes[name] = value;
+      }
+    },
     "login-error-msg": { style: {}, textContent: "" },
     "link-esqueceu-senha": { onclick: null }
   };
@@ -55,6 +90,27 @@ async function executarTestesFluxoLogin() {
 
   assert.match(sucesso.elementos["nexo-auth-overlay"].innerHTML, /for="login-username"/);
   assert.match(sucesso.elementos["nexo-auth-overlay"].innerHTML, /for="login-password"/);
+  const campoSenha = sucesso.elementos["login-password"];
+  const botaoVisibilidadeSenha = sucesso.elementos["login-password-toggle"];
+  const iconeMostrarSenha = sucesso.elementos["login-password-eye-icon"];
+  const iconeOcultarSenha = sucesso.elementos["login-password-eye-off-icon"];
+  assert.strictEqual(campoSenha.type, "password");
+  assert.strictEqual(iconeMostrarSenha.hidden, false);
+  assert.strictEqual(iconeOcultarSenha.hidden, true);
+  assert.strictEqual(botaoVisibilidadeSenha.attributes["aria-pressed"], "false");
+  botaoVisibilidadeSenha.onclick();
+  assert.strictEqual(campoSenha.type, "text");
+  assert.strictEqual(campoSenha.value, "Senha@2026");
+  assert.strictEqual(iconeMostrarSenha.hidden, true);
+  assert.strictEqual(iconeOcultarSenha.hidden, false);
+  assert.strictEqual(botaoVisibilidadeSenha.attributes["aria-label"], "Ocultar senha");
+  assert.strictEqual(botaoVisibilidadeSenha.attributes["aria-pressed"], "true");
+  botaoVisibilidadeSenha.onclick();
+  assert.strictEqual(campoSenha.type, "password");
+  assert.strictEqual(iconeMostrarSenha.hidden, false);
+  assert.strictEqual(iconeOcultarSenha.hidden, true);
+  assert.strictEqual(botaoVisibilidadeSenha.attributes["aria-label"], "Mostrar senha");
+  assert.strictEqual(botaoVisibilidadeSenha.attributes["aria-pressed"], "false");
   await sucesso.elementos["nexo-login-form"].onsubmit({ preventDefault() {} });
   assert.strictEqual(
     sucesso.valoresLocalStorage.get("nexo_hidrico_session"),
